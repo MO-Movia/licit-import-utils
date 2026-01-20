@@ -672,7 +672,7 @@ export class LicitConverter {
         const childNode = children[j];
         let nextChildNode = children[j + 1];
 
-        // KNITE-1013: Handling paragraph combining logic for the case where
+        // Handling paragraph combining logic for the case where
         // heading is inside <OL>/<UL> and content is outside
         if (
           !nextChildNode &&
