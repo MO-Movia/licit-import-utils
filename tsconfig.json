@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "strict": false,
+    "target": "ES2022",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "lib": [
+      "ES2022",
+      "dom"
+    ],
+    "outDir": "dist",
+    "pretty": false,
+    "esModuleInterop": true,
+    // Ensure that .d.ts files are created by tsc, but not .js files
+    "declaration": true,
+    "tsBuildInfoFile": "./node_modules/build.tsbuildinfo"
+  },
+  "typeAcquisition": {
+    "enable": true
+  }
+}

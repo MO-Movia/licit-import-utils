@@ -1,0 +1,2599 @@
+/**
+ * @license MIT
+ * @copyright Copyright 2026 Modus Operandi Inc. All Rights Reserved.
+ */
+
+import type {
+  AddCellOptions,
+  TransformConfig,
+  ParserElement,
+} from './licit-transform';
+import { asTransformConfig, LicitConverter } from './licit-transform';
+import type {
+  LicitDocumentJSON,
+  LicitElement,
+  LicitTableRowElement,
+} from './licit-elements';
+import {
+  LicitBulletListElement,
+  LicitDocumentElement,
+  LicitTableCellImageElement,
+  LicitTableCellParagraph,
+} from './licit-elements';
+
+const testConfig = {
+  customStyles: [],
+  customStylesUrl: '',
+  replacementChars: [],
+  replaceCharacters: false,
+  replaceWithLinks: [],
+  stripSectionNumbers: false,
+};
+describe('Parser Service - getColWidthArray', () => {
+  let converter: LicitConverter;
+  let table: HTMLTableElement;
+  let tableGroup: HTMLTableColElement;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig);
+    table = document.createElement('table');
+    tableGroup = document.createElement('colgroup');
+    table.appendChild(tableGroup);
+  });
+
+  const addCols = (widths: (string | null)[]) => {
+    for (const w of widths) {
+      const col = document.createElement('col');
+      if (w !== null) {
+        if (w.endsWith('%')) col.style.width = w;
+        else if (w.endsWith('px')) col.style.width = w;
+        else col.setAttribute('width', w);
+      }
+      tableGroup.appendChild(col);
+    }
+  };
+
+  it('should calculate correct widths from %', () => {
+    addCols(['40%', '20%', '40%']);
+    const widths = converter.getColWidthArray(table);
+    expect(widths?.reduce((count, n) => count + n, 0)).toBe(619);
+    expect(widths).toEqual([247, 124, 248]);
+  });
+
+  it('should scale px widths correctly within 861 if total > 700', () => {
+    addCols(['100px', '400px', '300px']);
+    const widths = converter.getColWidthArray(table);
+    const sum = widths?.reduce((count, n) => count + n, 0) ?? 0;
+    expect(sum).toBe(861);
+  });
+
+  it('should return undefined for mixed % and px widths', () => {
+    addCols(['50%', '150px']);
+    const widths = converter.getColWidthArray(table);
+    expect(widths).toBeUndefined();
+  });
+
+  it('should return undefined if any column has no width', () => {
+    addCols(['50%', null]);
+    const widths = converter.getColWidthArray(table);
+    expect(widths).toBeUndefined();
+  });
+
+  it('should adjust totalPixelWidth if sum < 200', () => {
+    addCols(['10%', '10%', '10%']);
+    const widths = converter.getColWidthArray(table);
+    const sum = widths?.reduce((count, n) => count + n, 0) ?? 0;
+    expect(sum).toBeLessThan(200);
+  });
+  it('should handle renderEnhancedTable', () => {
+    jest.spyOn(converter, 'getColWidthArray').mockReturnValue([]);
+    const el = document.createElement('div');
+    el.setAttribute('capco', JSON.stringify({ portionMarking: 'TBD' }));
+    expect(
+      converter['renderEnhancedTable'](
+        {
+          node: {
+            getAttribute: () => {
+              return 'test';
+            },
+            querySelector: () => {
+              return el;
+            },
+          },
+        } as unknown as ParserElement,
+        {} as unknown as LicitDocumentElement
+      )
+    ).toBeUndefined();
+  });
+  it('should handle renderEnhancedTable when getColWidthArray returns valid widths', () => {
+    jest.spyOn(converter, 'getColWidthArray').mockReturnValue([1, 2]);
+    const el = document.createElement('div');
+    el.setAttribute('capco', JSON.stringify({ portionMarking: 'TBD' }));
+    expect(
+      converter['renderEnhancedTable'](
+        {
+          node: {
+            getAttribute: () => {
+              return 'test';
+            },
+            querySelector: () => {
+              return el;
+            },
+          },
+        } as unknown as ParserElement,
+        {} as unknown as LicitDocumentElement
+      )
+    ).toBeUndefined();
+  });
+  it('should handle getLicitTable when getColWidthArray returns value', () => {
+    jest.spyOn(converter, 'getColWidthArray').mockReturnValue([1, 2]);
+    const el = document.createElement('div');
+    el.setAttribute('capco', JSON.stringify({ portionMarking: 'TBD' }));
+    expect(
+      converter['getLicitTable'](
+        {
+          node: {
+            getAttribute: () => {
+              return 'test';
+            },
+            querySelector: () => {
+              return el;
+            },
+          },
+        } as unknown as ParserElement,
+        []
+      )
+    ).toBeDefined();
+  });
+  it('should handle removeEmptyATags', () => {
+    expect(
+      converter.removeEmptyATags({
+        childNodes: [{ nodeName: 'A', textContent: '', remove: () => {} }],
+      } as unknown as Node)
+    ).toBeUndefined();
+  });
+  it('should handle renderDocFigure when tag name P', () => {
+    expect(
+      converter['renderDocFigure'](
+        {
+          node: {
+            childNodes: [],
+            getAttribute: () => {
+              return 'test';
+            },
+            tagName: 'P',
+          },
+        } as unknown as ParserElement,
+        { appendElement: () => {} } as unknown as LicitDocumentElement
+      )
+    ).toBeUndefined();
+  });
+  it('should handle renderDocFigure when tag name IMG', () => {
+    expect(
+      converter['renderDocFigure'](
+        {
+          childNodes: [],
+          node: {
+            remove: () => {},
+            childNodes: [{ remove: () => {} }, { remove: () => {} }],
+            getAttribute: () => {
+              return 'test';
+            },
+            tagName: 'IMG',
+          },
+        } as unknown as ParserElement,
+        { appendElement: () => {} } as unknown as LicitDocumentElement
+      )
+    ).toBeUndefined();
+  });
+  it('should handle parseOL', () => {
+    expect(
+      converter.parseOL(
+        {
+          childNodes: [],
+          node: {
+            id: 'infoIcon',
+            removeChild: () => {},
+            childNodes: [{}, {}],
+            getAttribute: () => {
+              return 'test';
+            },
+            tagName: 'IMG',
+          },
+        } as unknown as ParserElement,
+        { appendElement: () => {} } as unknown as LicitDocumentElement
+      )
+    ).toBeUndefined();
+  });
+
+  it('should handle addTableImageCell for LC-Image-1 and LC-Image-2 cases', () => {
+    const converter = new LicitConverter(testConfig);
+
+    const testCases: {
+      id: string;
+      expectedColWidth: number[];
+      expectedHeight: string | null;
+    }[] = [
+      { id: 'LC-Image-1', expectedColWidth: [100, 625], expectedHeight: null },
+      { id: 'LC-Image-2', expectedColWidth: [100], expectedHeight: '70' },
+    ];
+
+    for (const { id, expectedColWidth, expectedHeight } of testCases) {
+      const cell = document.createElement('td');
+      const div = document.createElement('div');
+      const img = document.createElement('img');
+
+      img.id = id;
+      img.setAttribute('srcRelative', 'some/image/path.png');
+      img.alt = 'Test Alt';
+
+      div.appendChild(img);
+      cell.appendChild(div);
+
+      const result = converter['addTableImageCell'](
+        cell,
+        'initial',
+        false,
+        null,
+        'top'
+      );
+
+      expect(result.bgColor).toBe('#d8d8d8');
+      expect(result.isChapterHeader).toBeTruthy();
+      expect(
+        result.licitCell instanceof LicitTableCellImageElement
+      ).toBeTruthy();
+
+      const imageElement = result.licitCell as LicitTableCellImageElement;
+      expect(imageElement.fillImg).toBe(1);
+      expect(imageElement.colWidth).toEqual(expectedColWidth);
+      expect(imageElement.height).toBe(expectedHeight);
+    }
+  });
+
+  it('should add ". " to last text node if it does not end with period', () => {
+    const header = document.createElement('div');
+    header.className = 'header1';
+    header.textContent = 'Header Text';
+
+    const nextEl = document.createElement('span');
+    nextEl.textContent = 'More Info';
+
+    converter.parseHeader(header, nextEl);
+
+    const lastText = header.lastChild?.textContent ?? '';
+    expect(lastText.endsWith('. ')).toBeFalsy();
+
+    expect(header.contains(nextEl)).toBeTruthy();
+  });
+
+  it('should add " " if last text node already ends with period', () => {
+    const header = document.createElement('div');
+    header.className = 'header1';
+    header.textContent = 'Header Text.';
+
+    const nextEl = document.createElement('span');
+    nextEl.textContent = 'More Info';
+
+    converter.parseHeader(header, nextEl);
+
+    const lastText = header.firstChild?.textContent ?? '';
+    expect(lastText.endsWith('. ')).toBeTruthy();
+    expect(header.contains(nextEl)).toBeTruthy();
+  });
+
+  it('should only reset numbering for the first attachmentTitle', () => {
+    const node1 = document.createElement('div');
+    node1.className = 'attachmentTitle';
+    node1.textContent = 'Attachment 1';
+
+    const node2 = document.createElement('div');
+    node2.className = 'attachmentTitle';
+    node2.textContent = 'Attachment 2';
+
+    converter.elements = [
+      { type: 7, node: node1, subText: '' } as unknown as ParserElement,
+      { type: 7, node: node2, subText: '' } as unknown as ParserElement,
+    ];
+
+    const result = converter.render_FrameMakerHTML5_zip(
+      [node1, node2] as unknown as NodeList,
+      undefined,
+      undefined,
+      []
+    );
+
+    const content = result.content;
+
+    expect(content[0].reset).toBeUndefined();
+    expect(content[1].reset).toBeFalsy();
+  });
+});
+
+describe('Converter.addTableImageCell', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig);
+  });
+
+  it('should set chapter header properties for LC-Image-1', () => {
+    const cell = document.createElement('td');
+    const div = document.createElement('div');
+    const img = document.createElement('img');
+    img.id = 'LC-Image-1';
+    img.setAttribute('srcRelative', 'test/image1.png');
+    div.appendChild(img);
+    cell.appendChild(div);
+
+    const result = converter['addTableImageCell'](cell, '', false, null, 'top');
+    expect(result.bgColor).toBe('#d8d8d8');
+    expect(result.isChapterHeader).toBeTruthy();
+    expect(result.licitCell instanceof LicitTableCellImageElement).toBeTruthy();
+    expect((result.licitCell as LicitTableCellImageElement).fillImg).toBe(1);
+    expect((result.licitCell as LicitTableCellImageElement).colWidth).toEqual([
+      100, 625,
+    ]);
+    expect((result.licitCell as LicitTableCellImageElement).height).toBeNull();
+  });
+
+  it('should set chapter header properties for LC-Image-2', () => {
+    const cell = document.createElement('td');
+    const div = document.createElement('div');
+    const img = document.createElement('img');
+    img.id = 'LC-Image-2';
+    img.setAttribute('srcRelative', 'test/image2.png');
+    div.appendChild(img);
+    cell.appendChild(div);
+
+    const result = converter['addTableImageCell'](cell, '', false, null, 'top');
+    expect(result.bgColor).toBe('#d8d8d8');
+    expect(result.isChapterHeader).toBeTruthy();
+    expect(result.licitCell instanceof LicitTableCellImageElement).toBeTruthy();
+    expect((result.licitCell as LicitTableCellImageElement).fillImg).toBe(1);
+    expect((result.licitCell as LicitTableCellImageElement).colWidth).toEqual([
+      100,
+    ]);
+    expect((result.licitCell as LicitTableCellImageElement).height).toBe('70');
+  });
+
+  it('should set altText for other images', () => {
+    const cell = document.createElement('td');
+    const div = document.createElement('div');
+    const img = document.createElement('img');
+    img.id = 'other-image';
+    img.alt = 'Some Alt';
+    img.setAttribute('srcRelative', 'test/image3.png');
+    div.appendChild(img);
+    cell.appendChild(div);
+
+    const result = converter['addTableImageCell'](cell, '', false, null, 'top');
+    expect(result.bgColor).toBe('');
+    expect(result.isChapterHeader).toBeFalsy();
+    expect(result.licitCell instanceof LicitTableCellImageElement).toBeTruthy();
+    expect((result.licitCell as LicitTableCellImageElement).alt).toBe(
+      'Some Alt'
+    );
+  });
+
+  it('should fallback to LicitTableCellParagraph if no image src', () => {
+    const cell = document.createElement('td');
+    const div = document.createElement('div');
+    const img = document.createElement('img');
+    img.id = 'other-image';
+    div.appendChild(img);
+    cell.appendChild(div);
+
+    const result = converter['addTableImageCell'](cell, '', false, null, 'top');
+    expect(result.licitCell instanceof LicitTableCellParagraph).toBeTruthy();
+  });
+
+  it('should call handle addCell', () => {
+    const test = new LicitConverter(testConfig);
+    const mockTableCell = document.createElement('td');
+    mockTableCell.textContent = 'Test cell content';
+    mockTableCell.rowSpan = 2;
+    mockTableCell.colSpan = 3;
+    mockTableCell.setAttribute(
+      'style',
+      'border: 1px solid #000000; vertical-align: top;'
+    );
+    const spy = jest.fn();
+    test['addCell'](
+      mockTableCell,
+      {
+        addCell: spy,
+      } as unknown as LicitTableRowElement,
+      {
+        bgColor: '#ffffff',
+        isChapterHeader: false,
+        verAlign: 'top',
+        cellIndex: 0,
+        widthArray: [100, 200, 300],
+        isTransparent: false,
+      } as AddCellOptions
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should handle processChildNodesCapco', () => {
+    expect(
+      converter.processChildNodesCapco([
+        { nodeType: 1, className: 'Hidden' },
+      ] as unknown as NodeListOf<ChildNode>)
+    ).toBeUndefined();
+  });
+
+  it('should process text node and find P tag in processChildNodesCapco', () => {
+    expect(
+      converter.processChildNodesCapco([
+        {
+          parentElement: {
+            setAttribute: () => {},
+            tagName: 'P',
+            parentElement: { setAttribute: () => {} },
+          },
+          nodeType: 3,
+          className: 'Hidden',
+          textContent: 'This is a test',
+        },
+      ] as unknown as NodeListOf<ChildNode>)
+    ).toBeUndefined();
+  });
+
+  it('should process text node with parent div and grandparent P tag in processChildNodesCapco', () => {
+    expect(
+      converter.processChildNodesCapco([
+        {
+          parentElement: {
+            setAttribute: () => {},
+            tagName: 'div',
+            parentElement: { tagName: 'P', setAttribute: () => {} },
+          },
+          nodeType: 3,
+          className: 'Hidden',
+          textContent: 'This is a test',
+        },
+      ] as unknown as NodeListOf<ChildNode>)
+    ).toBeUndefined();
+  });
+
+  it('should remove µµ characters from text content', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<p> µµ </p><span>hello</span><p> µµ</p>';
+    converter.sanitizeText(el);
+    expect(el.textContent).toBe('hello');
+  });
+
+  it('should handle isTableFigureNode', () => {
+    const test = converter.isTableFigureNode({
+      tagName: 'DIV',
+      children: {
+        item: () => {
+          return { tagName: 'IMG' };
+        },
+      },
+      querySelector: () => {
+        return { textContent: 'test' };
+      },
+      querySelectorAll: () => {
+        return [{ textContent: 'test' }];
+      },
+    } as unknown as Element);
+    expect(test).toBeTruthy();
+  });
+  it('should handle handleNode', () => {
+    const arr = [
+      'DIV',
+      'P',
+      'SPAN',
+      'B',
+      'I',
+      'U',
+      'EM',
+      'STRONG',
+      'BR',
+      'A',
+      'UL',
+      'OL',
+      'LI',
+      'TABLE',
+      'TBODY',
+      'TR',
+      'TD',
+      'TH',
+      'COLGROUP',
+      'COL',
+      'IMG',
+      'FIGURE',
+      'FIGCAPTION',
+    ];
+    for (const tag of arr) {
+      const test = converter['handleNode'](
+        {
+          tagName: tag,
+          children: {
+            item: () => {
+              return { tagName: 'IM' };
+            },
+          },
+          querySelector: () => {
+            return {
+              textContent: 'test',
+              getElementsByTagName: () => {
+                return [];
+              },
+              getAttribute: () => {
+                return 'test';
+              },
+            };
+          },
+          querySelectorAll: () => {
+            return [{ textContent: 'test' }];
+          },
+          getAttribute: () => {
+            return 'test';
+          },
+        } as unknown as Element,
+        { appendElement: () => {} } as unknown as Element
+      );
+      expect(test).toEqual(0);
+    }
+  });
+  it('should handle handleNode with children.item() returning no IMG', () => {
+    const test = converter['handleNode'](
+      {
+        tagName: 'OL',
+        children: {
+          item: () => {
+            return { tagName: 'IMG' };
+          },
+        },
+        querySelector: () => {
+          return {
+            textContent: 'test',
+            getElementsByTagName: () => {
+              return [];
+            },
+          };
+        },
+        querySelectorAll: () => {
+          return [{ textContent: 'test' }];
+        },
+        getAttribute: () => {
+          return 'test';
+        },
+      } as unknown as Element,
+      { appendElement: () => {} } as unknown as Element
+    );
+    expect(test).toBe(0);
+  });
+  it('should handle handleNodes', () => {
+    expect(
+      converter['handleNodes']([
+        {
+          tagName: 'DIV',
+          children: {
+            item: () => {
+              return { tagName: 'IM' };
+            },
+          },
+          querySelector: () => {
+            return {
+              textContent: 'test',
+              getElementsByTagName: () => {
+                return [];
+              },
+            };
+          },
+          querySelectorAll: () => {
+            return [{ textContent: 'test' }];
+          },
+          getAttribute: () => {
+            return 'test';
+          },
+        } as unknown as Element,
+        {
+          tagName: 'DIV',
+          children: {
+            item: () => {
+              return { tagName: 'IM' };
+            },
+          },
+          querySelector: () => {
+            return {
+              textContent: 'test',
+              getElementsByTagName: () => {
+                return [];
+              },
+            };
+          },
+          querySelectorAll: () => {
+            return [{ textContent: 'test' }];
+          },
+          getAttribute: () => {
+            return 'test';
+          },
+        } as unknown as Element,
+      ] as unknown as NodeList)
+    ).toBeUndefined();
+  });
+
+  it('should handle handleNode title class styling', () => {
+    const node = document.createElement('div');
+    node.className = 'attTableTitle';
+
+    jest.spyOn(
+      converter as unknown as { parseElement: () => unknown },
+      'parseElement'
+    );
+
+    const result = converter['handleNode'](node, document.createElement('div'));
+
+    expect(node.style.textTransform).toBe('none');
+    expect(node.style.color).toBe('rgb(0, 0, 0)');
+    expect(result).toBe(0);
+  });
+
+  it('should handle DIV with IMG child (parseTableFigure)', () => {
+    const div = document.createElement('div');
+    div.appendChild(document.createElement('img'));
+
+    const spy = jest.spyOn(
+      converter as unknown as { parseTableFigure: () => unknown },
+      'parseTableFigure'
+    );
+
+    converter['handleNode'](div, document.createElement('div'));
+
+    expect(spy).toBeDefined();
+  });
+
+  it('should handle TABLE tag in handleNode', () => {
+    const table = document.createElement('table');
+    const spy = jest.spyOn(
+      converter as unknown as { parseTable: (a, b) => unknown },
+      'parseTable'
+    );
+
+    converter['handleNode'](table, document.createElement('div'));
+
+    expect(spy).toHaveBeenCalledWith(table, true);
+  });
+
+  it('should handle OL/UL via checkChildNode', () => {
+    const ol = document.createElement('ol');
+    const spy = jest
+      .spyOn(
+        converter as unknown as { checkChildNode: () => unknown },
+        'checkChildNode'
+      )
+      .mockReturnValue(0);
+
+    const result = converter['handleNode'](ol, document.createElement('div'));
+
+    expect(spy).toHaveBeenCalled();
+    expect(result).toBe(0);
+  });
+
+  it('should handle IMG tag in handleNode', () => {
+    const img = document.createElement('img');
+    const spy = jest.spyOn(
+      converter as unknown as { parseFigure: () => unknown },
+      'parseFigure'
+    );
+
+    converter['handleNode'](img, document.createElement('div'));
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should handle SPAN tag in handleNode', () => {
+    const span = document.createElement('span');
+    const spy = jest
+      .spyOn(
+        converter as unknown as { mergeSpans: () => unknown },
+        'mergeSpans'
+      )
+      .mockReturnValue(0);
+
+    const result = converter['handleNode'](
+      span,
+      document.createElement('span')
+    );
+
+    expect(spy).toHaveBeenCalled();
+    expect(result).toBe(0);
+  });
+
+  it('should handle default branch in handleNode', () => {
+    const p = document.createElement('p');
+    const spy = jest.spyOn(
+      converter as unknown as { parseElement: () => unknown },
+      'parseElement'
+    );
+
+    converter['handleNode'](p, document.createElement('div'));
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should handle parseDynamicHeader', () => {
+    const element = document.createElement('div');
+    element.textContent = 'Sample Header Text';
+
+    // Setup converter state
+    const tableNode = document.createElement('table');
+    converter.elements = [
+      {
+        type: 7,
+        node: document.createElement('div'),
+        class: '',
+        level: 1,
+        subText: '',
+      },
+      { type: 12, node: tableNode, class: '', level: 1, subText: '' },
+    ];
+
+    // Act
+    converter.parseDynamicHeader(element);
+
+    // Assert
+    expect(converter.elements.length).toBe(2); // still 2 elements
+    expect(converter.elements[0].node.textContent).toContain(
+      'Sample Header Text'
+    ); // moved content
+  });
+
+  it('should handle parseDynamicHeader when elements.type is not 7', () => {
+    const element = document.createElement('div');
+    element.textContent = '  Sample Header Text  ';
+    converter.elements = [
+      { type: 12, text: 'Existing Title', node: { appendChild: () => {} } },
+    ] as unknown as ParserElement[];
+    expect(converter.parseDynamicHeader(element)).toBeUndefined();
+  });
+});
+describe('Converter', () => {
+  let service: LicitConverter;
+
+  beforeEach(() => {
+    service = new LicitConverter(testConfig);
+  });
+  it('should return false if class is in exclusion list (exact match)', () => {
+    expect(service.matchClassToExcludeNumber('cellbody')).toBeFalsy();
+    expect(service.matchClassToExcludeNumber('cellheading')).toBeFalsy();
+    expect(service.matchClassToExcludeNumber('bolditalic')).toBeFalsy();
+  });
+
+  it('should trim whitespace before checking', () => {
+    expect(service.matchClassToExcludeNumber('   cellbody   ')).toBeFalsy();
+  });
+
+  it('should be case-insensitive', () => {
+    expect(service.matchClassToExcludeNumber('CellBody')).toBeFalsy();
+    expect(service.matchClassToExcludeNumber('BOLDITALIC')).toBeFalsy();
+  });
+
+  it('should return true if class is not in exclusion list', () => {
+    expect(service.matchClassToExcludeNumber('randomClass')).toBeTruthy();
+    expect(service.matchClassToExcludeNumber('paragraph')).toBeTruthy();
+  });
+
+  it('should handle empty string gracefully', () => {
+    expect(service.matchClassToExcludeNumber('')).toBeTruthy();
+  });
+
+  it('should return an instance of Map', () => {
+    const elementsMap = new LicitConverter(null).getElementsParsedMap();
+    expect(elementsMap instanceof Map).toBe(true);
+    expect(elementsMap.size).toBe(0);
+  });
+
+  it('should add elements to the map', () => {
+    const key = 'exampleKey';
+    const value = true;
+
+    service.elementsParsedMap.set(key, value);
+    const elementsMap = service.getElementsParsedMap();
+
+    expect(elementsMap.get(key)).toBe(value);
+  });
+
+  it('should clear the map', () => {
+    const key = 'exampleKey';
+    const value = true;
+
+    service.elementsParsedMap.set(key, value);
+    service.elementsParsedMap.clear();
+
+    const elementsMap = service.getElementsParsedMap();
+    expect(elementsMap.size).toBe(0);
+  });
+
+  it('should return the custom style when found', () => {
+    const customStyles = [{ styleName: 'style1' }, { styleName: 'style2' }];
+    const service = new LicitConverter({ customStyles } as TransformConfig);
+    const styleNameToFind = 'style1';
+
+    const result = service.getCustomStyle(styleNameToFind);
+
+    expect(result).toEqual({ styleName: 'style1' });
+  });
+
+  it('should render a simple paragraph', () => {
+    const div = document.createElement('div');
+    div.setAttribute('class', 'my-class');
+    const p = document.createElement('p');
+    const span = document.createElement('span');
+    div.setAttribute('class', 'inner-span');
+    div.appendChild(p);
+    div.appendChild(span);
+    expect(service.render(div.querySelectorAll('div'))).toBeTruthy();
+  });
+
+  it('should render a header element', () => {
+    const mockHeader = document.createElement('h1');
+    mockHeader.textContent = 'Header Text';
+
+    const result: LicitDocumentJSON = service.render([
+      mockHeader,
+    ] as unknown as NodeListOf<Element>);
+
+    const expectedOutput: LicitDocumentJSON = {
+      type: 'doc',
+      attrs: {
+        layout: null,
+        padding: null,
+        width: null,
+      },
+      content: [
+        {
+          type: 'heading',
+          attrs: {
+            level: 1,
+          },
+          content: [
+            {
+              type: 'text',
+              text: 'Header Text',
+            },
+          ],
+        },
+      ],
+    };
+    expect(result).not.toEqual(expectedOutput);
+  });
+
+  it('should handle render', () => {
+    const spy = jest.spyOn(service, 'parseElement');
+    const node1 = document.createElement('div');
+    node1.className = 'FM_chpara0';
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+
+    service.render([
+      node5,
+      node1,
+      node2,
+      node3,
+      node4,
+    ] as unknown as NodeListOf<Element>);
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should handle render_doc', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should replace unwanted characters in html', () => {
+    const config: TransformConfig = {
+      customStylesUrl: 'your-styles-url',
+      replacementChars: [
+        { find: 'old1', replace: 'new1' },
+        { find: 'old2', replace: 'new2' },
+      ],
+      replaceCharacters: true,
+      stripSectionNumbers: false,
+      replaceWithLinks: [],
+      customStyles: [],
+    };
+    let html = '<div>old1 and old2</div>';
+    const service = new LicitConverter(config);
+
+    html = service.replaceUnwantedChars(html);
+
+    expect(html).toEqual('<div>new1 and new2</div>');
+  });
+
+  it('should replace unwanted characters in html 2', () => {
+    const config: TransformConfig = {
+      customStylesUrl: 'your-styles-url',
+      replacementChars: [
+        { find: 'old1', replace: 'new1' },
+        { find: 'old2', replace: 'new2' },
+      ],
+      replaceCharacters: true,
+      stripSectionNumbers: false,
+      replaceWithLinks: [],
+      customStyles: [],
+    };
+    let html = '<div>old1 and old2</div>';
+    const service = new LicitConverter(config);
+
+    html = service.replaceUnwantedChars(html);
+
+    expect(html).toEqual('<div>new1 and new2</div>');
+  });
+
+  it('should sanitize an element', () => {
+    const config: TransformConfig = {
+      customStylesUrl: 'your-styles-url',
+      replacementChars: [
+        { find: 'old1', replace: 'new1' },
+        { find: 'old2', replace: 'new2' },
+      ],
+      replaceCharacters: true,
+      stripSectionNumbers: true,
+      replaceWithLinks: [],
+      customStyles: [],
+    };
+    const element = document.createElement('div');
+    element.innerHTML = '<p>[1]This is a test.•Bullet point</p>';
+    element.className = 'FM_someClass';
+
+    const service = new LicitConverter(config);
+    service.sanitizeElement(element);
+
+    expect(element.innerHTML).toEqual('<p>[1]This is a test.Bullet point</p>');
+    expect(element.className).toEqual('FM_someClass');
+  });
+
+  it('should return level from custom style', () => {
+    const className = 'someStyle';
+    const customStyle = {
+      styleName: 'mock',
+      styles: {
+        styleLevel: '5',
+      },
+    };
+    jest.spyOn(service, 'getCustomStyle').mockReturnValue(customStyle);
+
+    const result = service.extractLevel(className);
+
+    expect(result).toBe(5);
+  });
+
+  it('should return 0 if no level found', () => {
+    const className = 'noStyle';
+    jest.spyOn(service, 'getCustomStyle').mockReturnValue(null);
+
+    const result = service.extractLevel(className);
+
+    expect(result).toBe(0);
+  });
+
+  it('should return 0 if level is not defined in custom style', () => {
+    const className = 'someStyle';
+    const customStyle = {
+      styleName: 'mock',
+      styles: {},
+    };
+    jest.spyOn(service, 'getCustomStyle').mockReturnValue(customStyle);
+
+    const result = service.extractLevel(className);
+
+    expect(result).toBe(0);
+  });
+
+  it('should log a warning message', () => {
+    jest.spyOn(console, 'warn');
+    const element = document.createElement('div');
+    element.className = 'unknown-element';
+
+    element.className = 'unknown-element';
+
+    service.parseUnknownElement(
+      element,
+      'Ignoring "Cross_Reference" because cross-references text is not meant to be displayed.'
+    );
+
+    expect(console.warn).toHaveBeenCalledWith(
+      'Parsing unknown element: unknown-element.Ignoring "Cross_Reference" because cross-references text is not meant to be displayed.'
+    );
+  });
+
+  it('should set class correctly if classname attribute is present', () => {
+    const element = document.createElement('div');
+    element.className = 'paragraph';
+
+    element.setAttribute('classname', 'custom-class');
+
+    service.parseParagraph(element);
+
+    expect(service.elements[0].class).toBe('custom-class');
+  });
+
+  it('should set element as parsed in elementsParsedMap', () => {
+    const element = document.createElement('_AF_Example');
+    const nextElement = document.createElement('div');
+
+    service.parseElement_doc(element, nextElement);
+    expect(element.tagName).toEqual('_AF_EXAMPLE');
+    expect(service.elementsParsedMap.has('_AF_EXAMPLE')).toEqual(true);
+    expect(service.elementsParsedMap.get('_AF_EXAMPLE')).toEqual(true);
+  });
+
+  it('should parse _AF_Example', () => {
+    const element = { tagName: '_AF_Example' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseNote');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse HR', () => {
+    const element = { tagName: 'HR' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseHR');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse chapterTitle', () => {
+    const element = { tagName: 'chapterTitle' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseChapterTitle');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse H1', () => {
+    const element = { tagName: 'H1' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseHeader');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element, nextElement);
+  });
+
+  it('should parse chTableTitle', () => {
+    const element = { tagName: 'chTableTitle' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseTableTitle');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse chText', () => {
+    const element = { tagName: 'chText' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseChapterSubtitle');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse i_bullet', () => {
+    const element = { tagName: 'i_bullet' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseBullet');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse P', () => {
+    const element = document.createElement('P');
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseParagraph');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse chFigureTitle', () => {
+    const element = {
+      tagName: 'chFigureTitle',
+      querySelector: () => [],
+    } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseFigureTitle');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse chFigureTitle 2', () => {
+    const element = {
+      tagName: 'chFigureTitle',
+      querySelector: () => [],
+    } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseFigureTitle');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse ChangeBarPara', () => {
+    const element = { tagName: 'ChangeBarPara' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseChangeBarPara');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse sectionTitle', () => {
+    const element = { tagName: 'sectionTitle' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseSectionTitle');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should parse UL', () => {
+    const element = { tagName: 'UL' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'parseBullet');
+    service.parseElement_doc(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+  });
+
+  it('should set element as parsed in elementsParsedMap parseElement', () => {
+    const element = { className: '_AF_Example' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const spy = jest.spyOn(service, 'sanitizeElement');
+    service.parseElement(element, nextElement);
+    expect(spy).toHaveBeenCalledWith(element);
+    expect(service.elementsParsedMap.get('_AF_Example')).toEqual(true);
+  });
+
+  it('should parseElement chapterTitle', () => {
+    const element = { className: 'chapterTitle' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseChapterTitle');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement chpara0', () => {
+    const element = { className: 'chpara0' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseHeader');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element, nextElement);
+  });
+
+  it('should parseElement chTableTitle', () => {
+    const element = { className: 'chTableTitle' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseTableTitle');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement chText', () => {
+    const element = { className: 'chText' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseChapterSubtitle');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement i_bullet', () => {
+    const element = {
+      className: 'i_bullet',
+      getAttribute: () => null,
+    } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseParagraph');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement para', () => {
+    const element = {
+      className: 'para',
+      getAttribute: () => null,
+    } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseParagraph');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement chFigureTitle', () => {
+    const element = {
+      className: 'chFigureTitle',
+      querySelector: () => [],
+    } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseFigureTitle');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement ChangeBarPara', () => {
+    const element = { className: 'ChangeBarPara' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseChangeBarPara');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement sectionTitle', () => {
+    const element = { className: 'sectionTitle' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseSectionTitle');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(element);
+  });
+
+  it('should parseElement unknown-element', () => {
+    const element = {
+      className: 'unknown-element',
+      getAttribute: () => {},
+    } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseUnknownElement');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).not.toHaveBeenCalledWith(element, '');
+  });
+
+  it('should parseElement unknown-element 2', () => {
+    const element = { className: 'Cross_Reference' } as unknown as Element;
+    const nextElement = document.createElement('div');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const spy1 = jest.spyOn(cservice, 'parseUnknownElement');
+    cservice.parseElement(element, nextElement);
+    expect(spy1).toHaveBeenCalledWith(
+      element,
+      'Ignoring "Cross_Reference" because cross-references text is not meant to be displayed.'
+    );
+  });
+
+  it('should parse nested list correctly', () => {
+    const licitDocument = new LicitDocumentElement();
+    const spy = jest.spyOn(licitDocument, 'appendElement');
+    const cservice = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+    const indent = 0;
+    const mockNode = document.createElement('ul');
+    const mockChildNode = document.createElement('ul');
+    mockChildNode.innerHTML = '<li>Item 1</li><li>Item 2</li>';
+    mockNode.appendChild(mockChildNode);
+    cservice.ParseNestedList('UL', mockNode, licitDocument, indent);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should parse nested listType is not UL', () => {
+    const licitDocument = new LicitDocumentElement();
+    const spy = jest.spyOn(licitDocument, 'appendElement');
+    const indent = 0;
+    const mockNode = document.createElement('ul');
+    const mockChildNode = document.createElement('test');
+    mockChildNode.innerHTML = '<li>Item 1</li><li>Item 2</li>';
+    mockNode.appendChild(mockChildNode);
+    service.ParseNestedList('test', mockNode, licitDocument, indent);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('should parse nested list with recursion', () => {
+    const licitDocument = new LicitDocumentElement();
+    const spy = jest.spyOn(licitDocument, 'appendElement');
+    const indent = 0;
+    const mockNode = document.createElement('ul');
+    const mockChildNode = document.createElement('ul');
+    mockChildNode.innerHTML = '<li>Item 1</li><li>Item 2</li>';
+    const nestedMockChildNode = document.createElement('ul');
+    nestedMockChildNode.innerHTML =
+      '<li>Nested Item 1</li><li>Nested Item 2</li>';
+    mockChildNode.appendChild(nestedMockChildNode);
+    mockNode.appendChild(mockChildNode);
+    service.ParseNestedList('UL', mockNode, licitDocument, indent);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should parse bullet element and add it to elements array', () => {
+    const mockElement: Element = document.createElement('div');
+    mockElement.className = 'bullet-level-2';
+    service.parseBullet(mockElement);
+    expect(service.elements.length).toBe(1);
+    const parsedElement = service.elements[0];
+    expect(parsedElement.node).toBe(mockElement);
+    expect(parsedElement.class).toBe('bullet-level-2');
+    expect(parsedElement.level).toBe(2);
+    expect(parsedElement.subText).toBe('');
+  });
+
+  it('should parse ordered element and add it to elements array', () => {
+    const mockElement: Element = document.createElement('div');
+    mockElement.className = 'ordered-level-3';
+    service.parseOrdered(mockElement);
+    expect(service.elements.length).toBe(1);
+
+    const parsedElement = service.elements[0];
+    expect(parsedElement.node).toBe(mockElement);
+    expect(parsedElement.class).toBe('ordered-level-3');
+    expect(parsedElement.level).toBe(3);
+    expect(parsedElement.subText).toBe('');
+  });
+
+  it('should call parseTableFigure for div with img', () => {
+    const mocknode = document.createElement('span');
+    const mockImg = document.createElement('img');
+    const mockInfo = [];
+    mocknode.appendChild(mockImg);
+    const mockset = document.createElement('div');
+    mockset.appendChild(mocknode);
+    jest.spyOn(service, 'parseTableFigure');
+    service.render_doc(mockset.querySelectorAll('span'), mockInfo, 'moDocType');
+
+    expect(service.parseTableFigure).toHaveBeenCalledWith(mocknode);
+  });
+
+  it('should call parseTableFigure for div with tbody', () => {
+    const mocknode = document.createElement('div');
+    const mockImg = document.createElement('tbody');
+    const mockInfo = [];
+    mocknode.appendChild(mockImg);
+    const mockset = document.createElement('p');
+    mockset.appendChild(mocknode);
+    jest.spyOn(service, 'parseTable');
+    service.render_doc(mockset.querySelectorAll('div'), mockInfo, 'moDocType');
+
+    expect(service.parseTable).toHaveBeenCalledWith(mocknode, false);
+  });
+
+  it('should render a simple paragraph when element.type = ParserElementType.Paragraph', () => {
+    const div = document.createElement('div');
+    div.setAttribute('class', 'my-class');
+    const p = document.createElement('p');
+    const span = document.createElement('span');
+    div.setAttribute('class', 'inner-span');
+    div.appendChild(p);
+    div.appendChild(span);
+    const nodes = document.createElement('div');
+    nodes.appendChild(div);
+    const el = document.createElement('div');
+    el.textContent = 'table of contents';
+    el.setAttribute('align', 'left');
+    service.elements = [
+      { node: el, class: '', type: 5, level: 1, subText: 'test' },
+    ];
+    expect(service.render(nodes.querySelectorAll('div'))).toBeTruthy();
+  });
+  it('should handle render_doc when e.type  = Figure', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('P');
+    el.textContent = 'table of contents';
+    el.setAttribute('align', 'left');
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 12, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type  = paragraph', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('P');
+    el.textContent = 'table of contents';
+    el.setAttribute('align', 'left');
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 5, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type = Figure', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('img');
+    el.textContent = 'Text content';
+    el.setAttribute('align', 'left');
+    const img1 = document.createElement('img');
+    img1.src = 'path/to/image1.jpg';
+    img1.alt = '/ERR:Unsupported Image Format x-emf';
+    el.appendChild(img1);
+
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 12, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type = Table when thead is the tag name', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('OL');
+    el.textContent = 'Text content';
+    el.setAttribute('align', 'left');
+    const ul = document.createElement('thead');
+    el.appendChild(ul);
+    const ol = document.createElement('tbody');
+    el.appendChild(ol);
+
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 11, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type = Table when table is the tag name', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('OL');
+    el.textContent = 'Text content';
+    el.setAttribute('align', 'left');
+    const ul = document.createElement('table');
+    el.appendChild(ul);
+    const ol = document.createElement('tbody');
+    el.appendChild(ol);
+
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 11, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type = Table when something else is the tag name', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('OL');
+    el.textContent = 'Text content';
+    el.setAttribute('align', 'left');
+    const ul = document.createElement('ul');
+    el.appendChild(ul);
+    const ol = document.createElement('tbody');
+    el.appendChild(ol);
+
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 11, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type = vignet', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('OL');
+    el.textContent = 'Text content';
+    el.setAttribute('align', 'left');
+    const ul = document.createElement('img');
+    el.appendChild(ul);
+    const ol = document.createElement('tbody');
+    el.appendChild(ol);
+
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 15, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      'Non Specific'
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type = vignet when element.node.nodeName === P)', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('OL');
+    el.textContent = 'Text content';
+    el.setAttribute('align', 'left');
+    const ul = document.createElement('img');
+    ul.src = 'test';
+    ul.alt = '/ERR:Unsupported Image Format x-emf';
+    el.appendChild(ul);
+    const ol = document.createElement('img');
+    el.appendChild(ol);
+    const child = document.createElement('P');
+    el.appendChild(child);
+
+    //el.se
+    service.elements = [
+      { node: el, class: '', type: 15, level: 1, subText: 'test' },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      'Non Specific'
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle render_doc when e.type = vignet when element.node.nodeName === P) 2', () => {
+    const spy = jest.spyOn(service, 'parseTable');
+    const node1 = document.createElement('span');
+    node1.className = 'FM_chpara0';
+    node1.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+
+    const node2 = document.createElement('div');
+    node2.className = 'FM_attsubpara1';
+    const node3 = document.createElement('div');
+    node3.className = 'FM_attpara0';
+    const node4 = document.createElement('div');
+    node4.className = 'FM_chsubpara1';
+    const node5 = document.createElement('div');
+    node5.className = 'test';
+    const node6 = document.createElement('div');
+    node6.innerHTML = '<table><tr><td>Mock Table Content</td></tr></table>';
+    service.parseTableFigure(node1);
+    service.parseTable(node6, false);
+    const node7 = document.createElement('div');
+    node7.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseFigure(node7);
+    service.parseNote(node1);
+    service.parseHR(node1);
+    service.parseChapterTitle(node1);
+    service.parseChapterSubtitle(node1);
+
+    service.parseHeader(node1, node2);
+    const node8 = document.createElement('div');
+    node8.className = 'FM_chsubpara1';
+    node8.textContent = 'test';
+    node8.setAttribute('align', 'center');
+    node8.innerHTML = '<img src="mock-image.jpg" alt="Mock Image">';
+    service.parseParagraph(node8);
+    service.parseFigureTitle(node1);
+    service.parseChangeBarPara(node1);
+    service.parseTableTitle(node1);
+    service.parseSectionTitle(node1);
+    const el = document.createElement('OL');
+    el.textContent = 'Text content';
+    el.setAttribute('align', 'left');
+    const ul = document.createElement('img');
+    ul.src = 'test';
+    ul.alt = '/ERR:Unsupported Image Format x-emf';
+    el.appendChild(ul);
+    const ol = document.createElement('img');
+    el.appendChild(ol);
+    const child = document.createElement('P');
+    el.appendChild(child);
+    el.setAttribute('style', 'background-color:blue; border:40px; width:30px;');
+
+    //el.se
+    service.elements = [
+      {
+        node: {
+          getAttribute: () => {
+            return 'background-color:blue; border:40px; width:30px;';
+          },
+          childNodes: [child],
+        } as unknown as Element,
+        class: '',
+        type: 15,
+        level: 1,
+        subText: 'test',
+      },
+    ];
+    //service.elements =  [{node: , class:'', type:15, level:1, subText:'test'}];
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+    expect(spy).toHaveBeenCalled();
+    service.elements = [
+      {
+        node: {
+          getAttribute: () => {
+            return 'border:40px; width:30px;';
+          },
+          childNodes: [child],
+        } as unknown as Element,
+        class: '',
+        type: 15,
+        level: 1,
+        subText: 'test',
+      },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+    expect(spy).toHaveBeenCalled();
+    service.elements = [
+      {
+        node: {
+          getAttribute: () => {
+            return 'width:30px;';
+          },
+          childNodes: [child],
+        } as unknown as Element,
+        class: '',
+        type: 15,
+        level: 1,
+        subText: 'test',
+      },
+    ];
+
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+    expect(spy).toHaveBeenCalled();
+    service.elements = [
+      {
+        node: {
+          getAttribute: () => {
+            return 'width:800pt;';
+          },
+          childNodes: [child],
+        } as unknown as Element,
+        class: '',
+        type: 15,
+        level: 1,
+        subText: 'test',
+      },
+    ];
+    service.render_doc(
+      [node5, node1, node2, node3, node4] as unknown as NodeListOf<Element>,
+      [],
+      ''
+    );
+    expect(spy).toHaveBeenCalled();
+  });
+  it('parseOL', () => {
+    const child = document.createElement('UL');
+    const child1 = document.createElement('OL');
+    const licit = new LicitDocumentElement();
+    const spy = jest.spyOn(licit, 'appendElement');
+    service.parseOL(
+      {
+        node: {
+          textContent: 'text',
+          getAttribute: () => {
+            return 'width:800pt;';
+          },
+          childNodes: [child, child1],
+        } as unknown as Element,
+        class: '',
+        type: 15,
+        level: 1,
+        subText: 'test',
+      },
+      licit
+    );
+    expect(spy).toHaveBeenCalled();
+  });
+  it('should handle doParse_Multiple', () => {
+    const el = document.createElement('span');
+    const html = [el, el];
+
+    expect(service.parseFrameMakerHTML5(html)).toBeDefined();
+  });
+
+  it('should handle child nodes correctly', () => {
+    const parentNode = document.createElement('div');
+    const nextNode = document.createElement('div');
+    const childNode1 = document.createElement('div');
+    const childNode2 = document.createElement('div');
+
+    parentNode.appendChild(childNode1);
+    parentNode.appendChild(childNode2);
+
+    expect(service.checkChildNode(parentNode, nextNode)).toEqual(0);
+  });
+
+  it('should handle handleOrderedListItem', () => {
+    expect(
+      service.handleOrderedListItem(
+        {
+          node: { textContent: 'test' } as unknown as Element,
+          class: '',
+          type: 'ChapterTitle',
+          level: 0,
+          subText: '',
+        } as unknown as ParserElement,
+        { appendElement: () => {} } as unknown as LicitDocumentElement
+      )
+    ).toBeUndefined();
+  });
+
+  it('should handle renderTypeParagraph', () => {
+    expect(
+      service.renderTypeParagraph(
+        {
+          class: 'Chapter Header',
+          node: {
+            getAttribute: () => {},
+            childNodes: [{}],
+            querySelector: () => {
+              return {
+                getAttribute: () => {
+                  return {};
+                },
+              };
+            },
+          },
+        } as unknown as ParserElement,
+        { appendElement: () => {} } as unknown as LicitDocumentElement
+      )
+    ).toBeUndefined();
+  });
+
+  it('should call handle_UrlText when text contains a URL', () => {
+    const licitDocumentMock = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+    const e = { node: { textContent: 'Check https://example.com' }, level: 1 };
+    jest.spyOn(service, 'handle_UrlText');
+    jest.spyOn(service, 'text_WithoutUrl');
+
+    service.renderTypeParagraph(
+      e as unknown as ParserElement,
+      licitDocumentMock
+    );
+
+    expect(service.handle_UrlText).toHaveBeenCalledWith(
+      'Check https://example.com',
+      licitDocumentMock,
+      undefined
+    );
+    expect(service.text_WithoutUrl).not.toHaveBeenCalled();
+  });
+
+  it('should handle text without URLs correctly in handle_UrlText', () => {
+    const text = 'This is just plain text without any URL.';
+    const licitDocumentElementMock = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+
+    service.handle_UrlText(text, licitDocumentElementMock);
+
+    expect(licitDocumentElementMock.appendElement).toHaveBeenCalled();
+  });
+
+  it('should append anchor tags for URLs and text nodes for plain text in handle_UrlText', () => {
+    const text = 'https://example.com and https://another.com';
+    const spy = jest.fn();
+    const licitDocumentMock = {
+      appendElement: spy,
+    } as unknown as LicitDocumentElement;
+    const pElement = document.createElement('p');
+
+    spy.mockImplementation((el: LicitElement) => {
+      (el as unknown as Record<string, unknown>).element = pElement;
+    });
+
+    expect(service.handle_UrlText(text, licitDocumentMock)).toBeUndefined();
+  });
+
+  it('should return if text is empty and has no child nodes', () => {
+    const licitDocumentMock = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+    const e = { node: document.createElement('div'), level: 1 };
+    jest.spyOn(service, 'removeEmptyATags');
+
+    expect(
+      service.renderDocBulletItems(
+        e as unknown as ParserElement,
+        licitDocumentMock
+      )
+    ).toBeUndefined();
+  });
+
+  it('should add a bullet list item for text node', () => {
+    const licitDocumentMock = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+    const e = {
+      node: document.createElement('div'),
+      level: 2,
+    };
+    e.node.appendChild(document.createTextNode('Test bullet item'));
+    jest.spyOn(service, 'removeEmptyATags');
+
+    service.renderDocBulletItems(
+      e as unknown as ParserElement,
+      licitDocumentMock
+    );
+
+    expect(service.removeEmptyATags).toHaveBeenCalled();
+  });
+
+  it('should process child nodes if first child is not a text node', () => {
+    const licitDocumentMock = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+    const e = {
+      node: document.createElement('div'),
+      level: 1,
+    };
+    const ulNode = document.createElement('ul');
+    e.node.appendChild(ulNode);
+    const spy = jest.spyOn(service, 'removeEmptyATags');
+    const spy1 = jest.spyOn(service, 'processBulletNodes');
+
+    service.renderDocBulletItems(
+      e as unknown as ParserElement,
+      licitDocumentMock
+    );
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(spy1).not.toHaveBeenCalled();
+  });
+
+  it('should add bullet item if there are no UL or OL nodes', () => {
+    const licitDocumentMock = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+    const parentDiv = document.createElement('div');
+    const listItem = document.createElement('li');
+
+    parentDiv.appendChild(listItem);
+    const childNodes = Array.from(parentDiv.childNodes);
+    const bulletList = new LicitBulletListElement(0);
+    const e = { node: listItem };
+
+    service.processBulletNodes(childNodes, bulletList, licitDocumentMock, 0, e);
+
+    expect(bulletList.listItems.length).toBe(1);
+  });
+  it('should add an item to bulletList when no UL or OL nodes are found', () => {
+    const mockNode = {
+      childNodes: [],
+      nextSibling: true,
+    };
+    const childNodes = [mockNode];
+    const bulletList = { addItem: jest.fn(), listItems: [] };
+    const licitDocument = {};
+    const e = { node: {} };
+
+    jest.spyOn(service, 'parseOL');
+
+    service.processBulletNodes(
+      childNodes as unknown as Node[],
+      bulletList as unknown as LicitBulletListElement,
+      licitDocument,
+      0,
+      e
+    );
+
+    expect(bulletList.addItem).toHaveBeenCalled();
+    expect(service.parseOL).not.toHaveBeenCalled();
+  });
+
+  it('should call handleULNode when a UL node is found', () => {
+    const ulNode = { nodeName: 'UL' };
+    const mockNode = {
+      childNodes: [ulNode],
+      nextSibling: false,
+    };
+    const childNodes = [mockNode];
+    const bulletList = { addItem: () => undefined, listItems: [] };
+    const licitDocument = {};
+    const e = { node: {} };
+
+    jest.spyOn(service, 'parseOL');
+    service.processBulletNodes(
+      childNodes as unknown as Node[],
+      bulletList as unknown as LicitBulletListElement,
+      licitDocument,
+      0,
+      e
+    );
+
+    expect(service.parseOL).not.toHaveBeenCalled();
+  });
+
+  it('should call parseOL when an OL node is found', () => {
+    const olNode = { nodeName: 'OL' };
+    const mockNode = {
+      childNodes: [olNode],
+      nextSibling: false,
+    };
+    const childNodes = [mockNode];
+    const bulletList = { addItem: () => undefined, listItems: [] };
+    const licitDocument = {};
+    const e = { node: {} };
+
+    jest.spyOn(service, 'parseOL');
+    service.processBulletNodes(
+      childNodes as unknown as Node[],
+      bulletList as unknown as LicitBulletListElement,
+      licitDocument,
+      0,
+      e
+    );
+
+    expect(service.parseOL).toHaveBeenCalled();
+  });
+
+  it('should call processChildNodesCapco recursively for ELEMENT_NODE with children', () => {
+    const parentElement = document.createElement('div');
+    const childElement = document.createElement('span');
+    const textNode = document.createTextNode('CAPCO Test');
+
+    childElement.appendChild(textNode);
+    parentElement.appendChild(childElement);
+
+    const spy = jest.spyOn(service, 'processChildNodesCapco');
+
+    service.processChildNodesCapco(parentElement.childNodes);
+
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('should skip processing for nodes with nodeName "Hidden"', () => {
+    const hiddenElement = {
+      nodeName: 'Hidden',
+      setAttribute: () => {},
+    } as unknown as ChildNode;
+
+    const setAttrSpy = jest.spyOn(hiddenElement as HTMLElement, 'setAttribute');
+
+    service.processChildNodesCapco([
+      hiddenElement,
+    ] as unknown as NodeListOf<ChildNode>);
+
+    expect(setAttrSpy).not.toHaveBeenCalled();
+  });
+
+  it('should call handleImageChild for each child element', () => {
+    const mockNode = document.createElement('div');
+    mockNode.textContent = 'Figure 2: With Image';
+
+    const child1 = document.createElement('img');
+    const child2 = document.createElement('span');
+    mockNode.appendChild(child1);
+    mockNode.appendChild(child2);
+
+    const mockParserElement: ParserElement = {
+      node: mockNode,
+    } as unknown as ParserElement;
+
+    const mockDocument = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+
+    jest.spyOn(service, 'handleImageChild');
+
+    service.figureTitleCase(mockParserElement, mockDocument);
+
+    expect(service.handleImageChild).toHaveBeenCalledTimes(2);
+    expect(service.handleImageChild).toHaveBeenCalledWith(child1, mockDocument);
+    expect(service.handleImageChild).toHaveBeenCalledWith(child2, mockDocument);
+  });
+
+  it('should trim table title and append LicitHeaderElement to the document', () => {
+    const mockNode = document.createElement('div');
+    mockNode.textContent = 'Table 2.1 (TS) This is a Table Title';
+    mockNode.setAttribute('class', 'table-style');
+
+    const mockParserElement = {
+      node: mockNode,
+    } as unknown as ParserElement;
+
+    const mockDocument = {
+      appendElement: jest.fn(),
+    } as unknown as LicitDocumentElement;
+
+    jest.spyOn(service, 'handleImageChild');
+
+    service.figureTableTitleCase(mockParserElement, mockDocument);
+
+    expect(mockDocument.appendElement).toHaveBeenCalledTimes(1);
+  });
+
+  it('should return paragraphs containing anchor tags with non-empty hash values', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <p><a href="#section1">Link 1</a></p>
+      <p><a href="">Empty Link</a></p>
+      <p>Plain Text</p>
+    `;
+
+    const nodes = container.childNodes as NodeList;
+    const result = service.fetchRenderedContent(nodes);
+
+    expect(result.length).toBe(1);
+    expect(result[0].nodeName).toBe('P');
+  });
+
+  it('should update the NAME attribute of the second anchor and remove the first anchor in OL lists', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <ol>
+        <li><a name="123">&nbsp;</a></li>
+        <li><a href="#">Some Link</a></li>
+        <li><a href="#">Another Link</a></li>
+      </ol>
+    `;
+
+    const nodes = container.childNodes as NodeList;
+    service.fetchRenderedContent(nodes);
+
+    const updatedAnchor = container.querySelector('ol li:nth-child(3) a');
+    expect(updatedAnchor?.getAttribute('name')).toBe('123');
+
+    const removedAnchor = container.querySelector('ol li:nth-child(1) a');
+    expect(removedAnchor).toBeNull();
+  });
+  it('should handle getScaledWidth when width <200', () => {
+    expect(service.getScaledWidth(100)).toEqual('100');
+  });
+  it('should handle getScaledWidth when 200<width< 699', () => {
+    expect(service.getScaledWidth(300)).toEqual('624');
+  });
+  it('should handle getScaledWidth when width>700', () => {
+    expect(service.getScaledWidth(900)).toEqual('864');
+  });
+  it('should handle handleImageChild when src null', () => {
+    const el = document.createElement('IMG');
+    expect(
+      service.handleImageChild(el, {
+        appendElement: () => {},
+      } as unknown as LicitDocumentElement)
+    ).toBeUndefined();
+  });
+  it('should handle handleImageChild', () => {
+    const el = document.createElement('IMG');
+    el.setAttribute('src', 'test');
+    el.setAttribute('width', '10px');
+    expect(
+      service.handleImageChild(el, {
+        appendElement: () => {},
+      } as unknown as LicitDocumentElement)
+    ).toBeUndefined();
+  });
+  it('should return undefined when no <col> elements are found', () => {
+    const table = document.createElement('table');
+    expect(service.getColWidthArray(table)).toBeUndefined();
+  });
+
+  it('should convert percentage widths to pixel values', () => {
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <colgroup>
+        <col style="width: 50%">
+        <col style="width: 50%">
+      </colgroup>
+    `;
+    const result = service.getColWidthArray(table);
+    expect(result).toEqual([309, 310]);
+  });
+
+  it('should parse pixel widths correctly', () => {
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <colgroup>
+        <col style="width: 200px">
+        <col style="width: 420px">
+      </colgroup>
+    `;
+    const result = service.getColWidthArray(table);
+    expect(result).toEqual([200, 419]);
+  });
+
+  it('should use width attribute if style is not set', () => {
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <colgroup>
+        <col width="60%">
+        <col width="40%">
+      </colgroup>
+    `;
+    const result = service.getColWidthArray(table);
+    expect(result).toEqual([371, 248]);
+  });
+
+  it('should return undefined if one column is missing width', () => {
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <colgroup>
+        <col style="width: 200px">
+        <col>
+      </colgroup>
+    `;
+    const result = service.getColWidthArray(table);
+    expect(result).toBeUndefined();
+  });
+
+  it('should return sliced array of column widths', () => {
+    const colWidths = [100, 150, 200, 250];
+    const result = service.setCellWidth(2, 1, colWidths);
+    expect(result).toEqual([150, 200]);
+  });
+  it('should return #FFFFFF for checkCellStyle when border is 0', () => {
+    const style = 'border-left:0;border-right:0;border-top:0;';
+    const result = service.checkCellStyle(style);
+    expect(result).toBe('#FFFFFF');
+  });
+
+  it('should return null for checkCellStyle when no matching border found', () => {
+    const style = 'border-style:solid;border-radius:5px;';
+    const result = service.checkCellStyle(style);
+    expect(result).toBeNull();
+  });
+
+  it('should return true for isTransparentTable when a td has white border', () => {
+    const tableElement = document.createElement('table');
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.setAttribute('style', 'border:0');
+    tr.appendChild(td);
+    tableElement.appendChild(tr);
+
+    const result = service.isTransparentTable(tableElement);
+    expect(result).toBeTruthy();
+  });
+
+  it('should return false for isTransparentTable when no td has transparent border', () => {
+    const tableElement = document.createElement('table');
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.setAttribute('style', 'border:1px solid #000000');
+    tr.appendChild(td);
+    tableElement.appendChild(tr);
+
+    const result = service.isTransparentTable(tableElement);
+    expect(result).toBeFalsy();
+  });
+
+  it('should handle processTableCapco with no rows', () => {
+    const table = document.createElement('table');
+    const mockInnerTable = document.createElement('table');
+    table.querySelector = () => mockInnerTable;
+
+    Object.defineProperty(mockInnerTable, 'rows', {
+      value: [],
+    });
+
+    const result = service.processTableCapco(table);
+    expect(result).toBeUndefined();
+  });
+
+  it('should handle processTableCapco with 1 cell', () => {
+    const table = document.createElement('table');
+    const innerTable = document.createElement('table');
+    table.querySelector = () => innerTable;
+
+    const row = document.createElement('tr');
+    row.insertCell();
+    innerTable.appendChild(row);
+
+    const result = service.processTableCapco(table);
+    expect(result).toBeUndefined();
+  });
+
+  it('should handle processTableCapco with 2 cells', () => {
+    const table = document.createElement('table');
+    const innerTable = document.createElement('table');
+    table.querySelector = () => innerTable;
+
+    const row = document.createElement('tr');
+    row.insertCell();
+    row.insertCell();
+    innerTable.appendChild(row);
+
+    const result = service.processTableCapco(table);
+    expect(result).toBeUndefined();
+  });
+});

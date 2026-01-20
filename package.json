@@ -1,0 +1,52 @@
+{
+  "name": "@modusoperandi/licit-import-utils",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "subversion": "1",
+  "description": "A utility package for importing files like json or docx into Licit compatible documents",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MO-Movia/licit-import-utils.git"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest",
+    "test:coverage": "jest --env=jsdom --coverage",
+    "build:clean": "rm -rf dist/ && rm -f modusoperandi-*.*.*.tgz",
+    "lint": "eslint src",
+    "ci:build": "tsc -b tsconfig.prod.json --clean && tsc -b tsconfig.prod.json && npx copyfiles@2.4.1 package.json LICENSE dist",
+    "ci:bom": "npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --short-PURLs --output-format XML --output-file dist/bom.xml",
+    "verify": "npm run lint -- --fix && npm run ci:build && npm run test:coverage && echo 'All Tests Passed!'"
+  },
+  "peerDependencies": {
+    "@modusoperandi/mammoth": "^1.7.0-6",
+    "jszip": "^3.10.1"
+  },
+  "peerDependenciesMeta": {
+    "@modusoperandi/mammoth": {
+      "optional": true
+    },
+    "jszip": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@modusoperandi/mammoth": "^1.7.0-6",
+    "@modusoperandi/eslint-config": "^3.0.3",
+    "@types/jest": "^30.0.0",
+    "jszip": "^3.10.1",
+    "eslint": "^9.39.2",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jest-junit": "^16.0.0",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
