@@ -38,7 +38,27 @@ describe('transform.zip', () => {
       );
     });
 
-    it('should process HTM files successfully', async () => {
+    it('should fail with empty HTM files', async () => {
+      const mockFile = new File([''], 'test.zip', { type: 'application/zip' });
+      const mockZip = {
+        files: {
+          'test.htm': {
+            name: 'test.htm',
+            async: jest.fn().mockResolvedValue(''),
+          },
+        },
+        file: jest.fn().mockReturnValue([]),
+      };
+      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
+      (transformUtils.updateImageSrc as jest.Mock).mockResolvedValue('');
+
+      const updateSrc = jest.fn().mockResolvedValue('data:image/png;base64,');
+      await expect(
+        parseFrameMakerHTM5Zip(mockFile, updateSrc)
+      ).rejects.toBeInstanceOf(Error);
+    });
+
+    it('should fail with contentless HTM files', async () => {
       const mockFile = new File([''], 'test.zip', { type: 'application/zip' });
       const mockZip = {
         files: {
@@ -57,12 +77,38 @@ describe('transform.zip', () => {
       (transformUtils.updateImageSrc as jest.Mock).mockResolvedValue('');
 
       const updateSrc = jest.fn().mockResolvedValue('data:image/png;base64,');
+      await expect(
+        parseFrameMakerHTM5Zip(mockFile, updateSrc)
+      ).rejects.toBeInstanceOf(Error);
+    });
+
+    it('should process HTM files successfully', async () => {
+      const mockFile = new File([''], 'test.zip', { type: 'application/zip' });
+      const mockZip = {
+        files: {
+          'test.htm': {
+            name: 'test.htm',
+            async: jest
+              .fn()
+              .mockResolvedValue(
+                '<html lang="en-US"><head><title>Test</title></head><body><span>test</span></body></html>'
+              ),
+          },
+        },
+        file: jest.fn().mockReturnValue([]),
+      };
+      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
+      (transformUtils.updateImageSrc as jest.Mock).mockResolvedValue('');
+
+      const updateSrc = jest.fn().mockResolvedValue('data:image/png;base64,');
       const result = await parseFrameMakerHTM5Zip(mockFile, updateSrc);
       expect(Array.isArray(result)).toBe(true);
     });
 
     it('should handle files with toc.js', async () => {
-      const mockFile = new File([''], 'test.zip', { type: 'application/zip' });
+      const mockFile = new File([''], 'test.zip', {
+        type: 'application/zip',
+      });
       const tocContent =
         '<?xml version="1.0"?><toc><item url="chapter1.htm"></item></toc>';
       const mockZip = {
@@ -76,7 +122,7 @@ describe('transform.zip', () => {
             async: jest
               .fn()
               .mockResolvedValue(
-                '<html lang="en-US"><head><title>Ch1</title></head><body></body></html>'
+                '<html lang="en-US"><head><title>Ch1</title></head><body><span>test</span></body></html>'
               ),
           },
         },

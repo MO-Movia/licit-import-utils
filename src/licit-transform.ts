@@ -145,8 +145,8 @@ export interface AddCellOptions {
 }
 
 export class LicitConverter {
-  elementsParsedMap = new Map<string, boolean>();
-  elements: ParserElement[] = [];
+  private readonly elementsParsedMap = new Map<string, boolean>();
+  private elements: ParserElement[] = [];
   constructor(private readonly config: TransformConfig) {}
   public parseHTML(
     html: Document,
@@ -208,7 +208,7 @@ export class LicitConverter {
     );
   }
 
-  render_FrameMakerHTML5_zip(
+  private render_FrameMakerHTML5_zip(
     nodes: NodeList,
     infoIconData?: HTMLOListElement[],
     _moDocType?: string,
@@ -233,7 +233,7 @@ export class LicitConverter {
     return licitDocument.render();
   }
 
-  render_FrameMakerHTML5_zip_SwitchHelper(
+  private render_FrameMakerHTML5_zip_SwitchHelper(
     e: ParserElement,
     infoIconData: HTMLOListElement[],
     renderedContentList: Node[],
@@ -350,7 +350,7 @@ export class LicitConverter {
     }
   }
 
-  fetchRenderedContent(nodes: NodeList): Node[] {
+  private fetchRenderedContent(nodes: NodeList): Node[] {
     const renderedArr: Node[] = [];
 
     // Process paragraph nodes with anchor tags that have hash values
@@ -401,18 +401,15 @@ export class LicitConverter {
 
     return renderedArr;
   }
-  /**
-   * Returns a map elements which were parsed.
-   *
-   * @returns Map of elements
-   */
-  getElementsParsedMap(): Map<string, boolean> {
-    return this.elementsParsedMap;
-  }
-  getCustomStyle(styleName: string): StyleInfo | undefined {
+
+  private getCustomStyle(styleName: string): StyleInfo | undefined {
     return this.config.customStyles?.find((s) => s.styleName === styleName);
   }
-  handleOrderedListItem(e: ParserElement, licitDocument: LicitDocumentElement) {
+
+  private handleOrderedListItem(
+    e: ParserElement,
+    licitDocument: LicitDocumentElement
+  ) {
     const orderedList = new LicitOrderedListElement(0);
     const text = e.node.textContent;
     if (text) {
@@ -428,7 +425,7 @@ export class LicitConverter {
    *
    * @returns The document as an `LicitDocumentJSON` object
    */
-  render(nodes: NodeListOf<Element>): LicitDocumentJSON {
+  private render(nodes: NodeListOf<Element>): LicitDocumentJSON {
     // Build elements, joining special cases
     this.buildElements(nodes);
 
@@ -441,7 +438,10 @@ export class LicitConverter {
     return licitDocument.render();
   }
 
-  renderSwitchHelper(e: ParserElement, licitDocument: LicitDocumentElement) {
+  private renderSwitchHelper(
+    e: ParserElement,
+    licitDocument: LicitDocumentElement
+  ) {
     switch (e.type) {
       case ParserElementType.ChapterTitle:
       case ParserElementType.ChapterSubtitle:
@@ -655,7 +655,7 @@ export class LicitConverter {
     }
   }
 
-  checkChildNode(
+  private checkChildNode(
     node: HTMLElement | Element,
     nextNode: HTMLElement | Element
   ): number {
@@ -688,7 +688,7 @@ export class LicitConverter {
     return skipCount;
   }
 
-  render_doc(
+  private render_doc(
     nodes: NodeListOf<Element>,
     infoIconData: HTMLOListElement[] | undefined,
     moDocType: string
@@ -724,7 +724,7 @@ export class LicitConverter {
     return licitDocument.render();
   }
 
-  render_docSwitchHelper(
+  private render_docSwitchHelper(
     e: ParserElement,
     licitDocument: LicitDocumentElement,
     tocRemoved: boolean,
@@ -828,7 +828,7 @@ export class LicitConverter {
     return tocRemoved;
   }
 
-  renderTypeParagraph(
+  private renderTypeParagraph(
     e: ParserElement,
     licitDocument: LicitDocumentElement,
     infoIconData?: HTMLOListElement[]
@@ -866,7 +866,7 @@ export class LicitConverter {
     }
   }
 
-  handle_UrlText(
+  private handle_UrlText(
     text: string,
     licitDocument: LicitDocumentElement,
     infoIconData?: HTMLOListElement[]
@@ -897,7 +897,7 @@ export class LicitConverter {
     licitDocument.appendElement(paragraph);
   }
 
-  text_WithoutUrl(
+  private text_WithoutUrl(
     n: Node,
     licitDocument: LicitDocumentElement,
     infoIconData?: HTMLOListElement[]
@@ -960,7 +960,7 @@ export class LicitConverter {
   }
 
   //Merge consecutive spans below the table into a single paragraph
-  mergeSpans(node: Element, nextNode: Element): number {
+  private mergeSpans(node: Element, nextNode: Element): number {
     const p = document.createElement('p');
     p.classList.add('dynamicTableHeader');
 
@@ -1002,7 +1002,7 @@ export class LicitConverter {
     return consumed - 1;
   }
 
-  updateChildCapcoContent(e: ParserElement) {
+  private updateChildCapcoContent(e: ParserElement) {
     if (e.node.textContent === '') {
       return;
     }
@@ -1034,7 +1034,7 @@ export class LicitConverter {
     }
   }
 
-  updateChildCapcoContentLoopHelper(
+  private updateChildCapcoContentLoopHelper(
     childNodes: ChildNode[],
     res: UpdatedCapco
   ) {
@@ -1045,7 +1045,7 @@ export class LicitConverter {
     }
   }
 
-  processChildNodesCapco(childNodes: NodeListOf<ChildNode>) {
+  private processChildNodesCapco(childNodes: NodeListOf<ChildNode>) {
     // For skipping trimStart logic for the case while handling " "
     for (const child of Array.from(childNodes)) {
       //Hidden -> contine;
@@ -1077,7 +1077,7 @@ export class LicitConverter {
     }
   }
 
-  updateCapcoToParagraph(child: ChildNode, res: UpdatedCapco) {
+  private updateCapcoToParagraph(child: ChildNode, res: UpdatedCapco) {
     child.textContent = res.updatedTextContent;
 
     // Find the nearest paragraph
@@ -1090,7 +1090,7 @@ export class LicitConverter {
       parent.setAttribute('capco', JSON.stringify(res.capco));
     }
   }
-  processTableCapco(tableNode: HTMLTableElement) {
+  private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
     const rows = table?.rows;
     if (!rows || rows.length === 0) {
@@ -1115,7 +1115,10 @@ export class LicitConverter {
     table.deleteRow(lastRowIndex);
   }
 
-  figureTitleCase(e: ParserElement, licitDocument: LicitDocumentElement) {
+  private figureTitleCase(
+    e: ParserElement,
+    licitDocument: LicitDocumentElement
+  ) {
     let text = e.node.textContent;
     const styleName = e.node.getAttribute('class') ?? 'normal';
     if (text) {
@@ -1145,7 +1148,10 @@ export class LicitConverter {
     }
   }
 
-  handleImageChild(child: Element, licitDocument: LicitDocumentElement): void {
+  private handleImageChild(
+    child: Element,
+    licitDocument: LicitDocumentElement
+  ): void {
     if (child.tagName !== 'IMG') return;
 
     const src = child.getAttribute('src');
@@ -1166,7 +1172,10 @@ export class LicitConverter {
     licitDocument.appendElement(imageElement);
   }
 
-  renderNewFigureTitle(e: ParserElement, licitDocument: LicitDocumentElement) {
+  private renderNewFigureTitle(
+    e: ParserElement,
+    licitDocument: LicitDocumentElement
+  ) {
     let text = e.node.textContent;
     const styleName = e.node.getAttribute('class') ?? 'normal';
     const capco = getCapcoFromNode(e.node as HTMLElement);
@@ -1201,7 +1210,7 @@ export class LicitConverter {
       licitDocument.appendElement(licitEnhancedImage);
     }
   }
-  figureParagraphCase(
+  private figureParagraphCase(
     e: ParserElement,
     licitDocument: LicitDocumentElement,
     infoIconData: HTMLOListElement[] | undefined,
@@ -1222,12 +1231,18 @@ export class LicitConverter {
     }
   }
 
-  figureNoteCase(e: ParserElement, licitDocument: LicitDocumentElement) {
+  private figureNoteCase(
+    e: ParserElement,
+    licitDocument: LicitDocumentElement
+  ) {
     const paragraph = new LicitParagraphNote(e.node as HTMLElement);
     licitDocument.appendElement(paragraph);
   }
 
-  figureTableTitleCase(e: ParserElement, licitDocument: LicitDocumentElement) {
+  private figureTableTitleCase(
+    e: ParserElement,
+    licitDocument: LicitDocumentElement
+  ) {
     let text = e.node.textContent;
     const styleName = e.node.getAttribute('class') ?? 'normal';
     if (text) {
@@ -1340,7 +1355,7 @@ export class LicitConverter {
     licitDocument.appendElement(licitTable);
   }
 
-  parseTypedDocVignetHelper(
+  private parseTypedDocVignetHelper(
     val: string,
     bgColor: string,
     borderColor: string,
@@ -1470,7 +1485,7 @@ export class LicitConverter {
     return licitTable;
   }
   //To get Image node from the dom and return the Licit Enhanced Image Element.
-  renderNewLicitImage(
+  private renderNewLicitImage(
     imageElement: HTMLImageElement,
     capco: string | null
   ): LicitEnhancedImageElement {
@@ -1491,7 +1506,10 @@ export class LicitConverter {
     licitEnhancedImage.addCapco(licitCapco);
     return licitEnhancedImage;
   }
-  renderDocBulletItems(e: ParserElement, licitDocument: LicitDocumentElement) {
+  private renderDocBulletItems(
+    e: ParserElement,
+    licitDocument: LicitDocumentElement
+  ) {
     const indent = 0;
     const bulletList = new LicitBulletListElement(indent);
     const text = e.node.textContent;
@@ -1517,7 +1535,7 @@ export class LicitConverter {
     }
   }
 
-  processBulletNodes(
+  private processBulletNodes(
     childNodes: Node[],
     bulletList: LicitBulletListElement,
     licitDocument,
@@ -1551,13 +1569,13 @@ export class LicitConverter {
     }
   }
 
-  addElementLicit(licitDocument, bulletList: LicitBulletListElement) {
+  private addElementLicit(licitDocument, bulletList: LicitBulletListElement) {
     if (bulletList.listItems.length > 0) {
       licitDocument?.appendElement(bulletList);
     }
   }
 
-  removeEmptyATags(node: Node) {
+  private removeEmptyATags(node: Node) {
     const childNodes = Array.from(node.childNodes);
     for (const childNode of childNodes) {
       if (childNode.nodeName === 'A' && childNode.textContent === '') {
@@ -1600,7 +1618,7 @@ export class LicitConverter {
       }
     }
   }
-  renderImage(
+  private renderImage(
     imgElement: HTMLImageElement,
     licitDocument: LicitDocumentElement
   ) {
@@ -1623,7 +1641,7 @@ export class LicitConverter {
       }
     }
   }
-  parseOL(e: ParserElement, licitDocument: LicitDocumentElement) {
+  private parseOL(e: ParserElement, licitDocument: LicitDocumentElement) {
     if (e.node.id === 'infoIcon') {
       return;
     }
@@ -1663,7 +1681,7 @@ export class LicitConverter {
    * @returns void
    */
 
-  parseTableContent(
+  private parseTableContent(
     _e,
     tableTag,
     querySel,
@@ -1699,7 +1717,7 @@ export class LicitConverter {
     }
   }
 
-  parseTableContentInnerLoopHelper(
+  private parseTableContentInnerLoopHelper(
     cells,
     _cellIndex: number,
     isChapterHeader: boolean,
@@ -1800,7 +1818,7 @@ export class LicitConverter {
     licitRow.addCell(licitCell);
   }
 
-  checkCellStyle(style: string | null): string | null {
+  private checkCellStyle(style: string | null): string | null {
     let borderColor: string = null;
     if (style != null) {
       const styleVals = style.split(';');
@@ -1867,7 +1885,7 @@ export class LicitConverter {
     return { bgColor, isChapterHeader, licitCell };
   }
 
-  ParseNestedList(
+  private ParseNestedList(
     _listType: string,
     node: ChildNode,
     licitDocument: LicitDocumentElement,
@@ -1918,7 +1936,7 @@ export class LicitConverter {
    * @param className - The className of the element
    * @returns The level as a number or zero if the level cannot be determined
    */
-  extractLevel(className: string): number {
+  private extractLevel(className: string): number {
     const customStyle = this.getCustomStyle(className);
 
     if (customStyle) {
@@ -1933,7 +1951,7 @@ export class LicitConverter {
   /**
    * Determines if an element is a table or image then calls the appropriate parse method
    */
-  parseTableFigure(element: Element): void {
+  private parseTableFigure(element: Element): void {
     if (element.querySelector('img')) {
       this.parseFigure(element);
     }
@@ -1942,7 +1960,7 @@ export class LicitConverter {
   /**
    * Parse a table element
    */
-  parseTable(element: Element, useEnhancedTables: boolean): void {
+  private parseTable(element: Element, useEnhancedTables: boolean): void {
     this.sanitizeElement(element);
 
     let tableType: ParserElementType = ParserElementType.Table;
@@ -1963,7 +1981,7 @@ export class LicitConverter {
   /**
    * Parse a table element
    */
-  parseVignet(element: Element): void {
+  private parseVignet(element: Element): void {
     this.elements.push({
       node: element,
       type: ParserElementType.vignet,
@@ -1975,7 +1993,7 @@ export class LicitConverter {
   /**
    * Parse a figure (image) element
    */
-  parseFigure(element: Element): void {
+  private parseFigure(element: Element): void {
     this.elements.push({
       node: element,
       type: ParserElementType.Figure,
@@ -1988,7 +2006,7 @@ export class LicitConverter {
   /**
    * Parse a note element
    */
-  parseNote(element: Element): void {
+  private parseNote(element: Element): void {
     const level = this.extractLevel(element.className);
 
     this.elements.push({
@@ -2003,7 +2021,7 @@ export class LicitConverter {
   /**
    * Parse a hr element
    */
-  parseHR(element: Element): void {
+  private parseHR(element: Element): void {
     this.elements.push({
       node: element,
       type: ParserElementType.hr,
@@ -2015,7 +2033,7 @@ export class LicitConverter {
   /**
    * Parse a chapter title element
    */
-  parseChapterTitle(element: Element): void {
+  private parseChapterTitle(element: Element): void {
     const level = this.extractLevel(element.className);
     this.elements.push({
       node: element,
@@ -2029,7 +2047,7 @@ export class LicitConverter {
   /**
    * Parse a chapter subtitle element
    */
-  parseChapterSubtitle(element: Element): void {
+  private parseChapterSubtitle(element: Element): void {
     const level = this.extractLevel(element.className);
 
     this.elements.push({
@@ -2044,7 +2062,7 @@ export class LicitConverter {
   /**
    * Parse a header element
    */
-  parseHeader(element: Element, nextElement: Element): void {
+  private parseHeader(element: Element, nextElement: Element): void {
     const level = this.extractLevel(element.className);
 
     function updateTextContent(el: Element) {
@@ -2101,7 +2119,7 @@ export class LicitConverter {
   /**
    * Parse a bullet point item element
    */
-  parseBullet(element: Element): void {
+  private parseBullet(element: Element): void {
     const level = this.extractLevel(element.className);
 
     this.elements.push({
@@ -2116,7 +2134,7 @@ export class LicitConverter {
   /**
    * Parse a ordered list point item element
    */
-  parseOrdered(element: Element): void {
+  private parseOrdered(element: Element): void {
     const level = this.extractLevel(element.className);
 
     this.elements.push({
@@ -2131,7 +2149,7 @@ export class LicitConverter {
   /**
    * Parse a paragraph element
    */
-  parseParagraph(element: Element): void {
+  private parseParagraph(element: Element): void {
     this.sanitizeText(element);
     const level = this.extractLevel(element.className);
     this.elements.push({
@@ -2143,7 +2161,7 @@ export class LicitConverter {
     });
   }
 
-  parseDynamicHeader(element: Element): void {
+  private parseDynamicHeader(element: Element): void {
     const level = this.extractLevel(element.className);
 
     const headerElement = {
@@ -2182,7 +2200,7 @@ export class LicitConverter {
   }
   /** Sanitize the text content by removing specific characters */
 
-  sanitizeText(element: Element) {
+  private sanitizeText(element: Element) {
     for (const node of Array.from(element.childNodes ?? [])) {
       if (
         node.nodeType === 1 &&
@@ -2196,7 +2214,7 @@ export class LicitConverter {
   /**
    * Parse a figure (image) title element
    */
-  parseFigureTitle(element: Element): void {
+  private parseFigureTitle(element: Element): void {
     const level = this.extractLevel(element.className);
     const img = element.querySelector('img');
     const isNewFiguretype = img?.width > 200;
@@ -2215,7 +2233,7 @@ export class LicitConverter {
   /**
    * Parse a ChangeBarPara element
    */
-  parseChangeBarPara(element: Element): void {
+  private parseChangeBarPara(element: Element): void {
     const level = this.extractLevel(element.className);
 
     this.elements.push({
@@ -2230,7 +2248,7 @@ export class LicitConverter {
   /**
    * Parse a table title element
    */
-  parseTableTitle(element: Element): void {
+  private parseTableTitle(element: Element): void {
     const level = this.extractLevel(element.className);
 
     this.elements.push({
@@ -2245,7 +2263,7 @@ export class LicitConverter {
   /**
    * Parse an unknown element. Currently does nothing besides printing a warning to the console.
    */
-  parseUnknownElement(element: Element, message: string): void {
+  private parseUnknownElement(element: Element, message: string): void {
     console.warn(`Parsing unknown element: ${element.className}.${message}`);
     this.config.messageSink?.(
       'Warning',
@@ -2256,7 +2274,7 @@ export class LicitConverter {
   /**
    * Parse a section title element
    */
-  parseSectionTitle(element: Element): void {
+  private parseSectionTitle(element: Element): void {
     const level = this.extractLevel(element.className);
 
     this.elements.push({
@@ -2273,7 +2291,7 @@ export class LicitConverter {
    *
    * @param element - The `Element` to be parsed
    */
-  parseElement(element: Element, nextElement: Element): void {
+  private parseElement(element: Element, nextElement: Element): void {
     this.sanitizeElement(element);
 
     const className = element.className?.trim();
@@ -2432,7 +2450,7 @@ export class LicitConverter {
     }
   }
 
-  parseElement_doc(element: Element, nextElement: Element): void {
+  private parseElement_doc(element: Element, nextElement: Element): void {
     // SL-12
 
     this.elementsParsedMap.set(element.tagName, true);
@@ -2555,25 +2573,14 @@ export class LicitConverter {
   /**
    * Cleans up the HTML by calling certain helper methods
    */
-  sanitizeHTML(html: string): string {
+  private sanitizeHTML(html: string): string {
     return this.replaceKeywordsWithLinks(html);
-  }
-
-  /**
-   * Replaces characters in the HTML as defined by the `replacementChars` parameter in the config
-   */
-  replaceUnwantedChars(html: string): string {
-    const chars = this.config.replacementChars;
-    for (const char of chars) {
-      html = html.replace(char.find, char.replace);
-    }
-    return html;
   }
 
   /**
    * Replaces keywords in the HTML with links, as defined by the `replaceWithLinks` parameter in the config
    */
-  replaceKeywordsWithLinks(html: string): string {
+  private replaceKeywordsWithLinks(html: string): string {
     const arr = this.config.replaceWithLinks;
     for (const e of arr) {
       const regex = new RegExp(String.raw`\b${e.find}\b`, 'gi');
@@ -2582,14 +2589,14 @@ export class LicitConverter {
     }
     return html;
   }
-  //FS : For skipping triming inside table, add more classes to the class list for future use
-  matchClassToExcludeNumber(className: string) {
+  // For skipping triming inside table, add more classes to the class list for future use
+  private matchClassToExcludeNumber(className: string) {
     let trimmedClassName = className.trim();
     trimmedClassName = trimmedClassName.toLowerCase();
     const classList = ['cellbody', 'cellheading', 'bolditalic'];
     return !classList.includes(trimmedClassName);
   }
-  sanitizeElement(element: Element) {
+  private sanitizeElement(element: Element) {
     const stripTextContent = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         const parentClass =
@@ -2621,18 +2628,8 @@ export class LicitConverter {
 
     stripTextContent(element);
   }
-  removeLastNumber(inputString: string) {
-    let lastNonDigitIndex = inputString.length - 1;
-    while (
-      lastNonDigitIndex >= 0 &&
-      !Number.isNaN(Number.parseInt(inputString[lastNonDigitIndex]))
-    ) {
-      lastNonDigitIndex--;
-    }
-    return inputString.slice(0, lastNonDigitIndex + 1);
-  }
 
-  getScaledWidth(width: number): string {
+  private getScaledWidth(width: number): string {
     if (width <= 200) {
       return width.toString();
     } else if (width <= 699) {
@@ -2642,7 +2639,7 @@ export class LicitConverter {
     }
   }
 
-  isTransparentTable(element: Element): boolean {
+  private isTransparentTable(element: Element): boolean {
     const firstRow = element.querySelector('tr');
     let isTransparent = false;
     const transparentColors = new Set([
@@ -2683,7 +2680,7 @@ export class LicitConverter {
    * @param {HTMLTableElement} table - The HTML table element from which column widths are to be extracted.
    * @returns {number[] | undefined} An array of column widths in pixels, or `undefined` if the widths are invalid or missing.
    */
-  getColWidthArray(table: HTMLTableElement): number[] | undefined {
+  private getColWidthArray(table: HTMLTableElement): number[] | undefined {
     const colElements: HTMLTableColElement[] = Array.from(
       table.querySelectorAll('colgroup > col')
     );
@@ -2729,14 +2726,14 @@ export class LicitConverter {
     widthArray[0] += totalPixelWidth - sum;
     return widthArray;
   }
-  setCellWidth(
+  private setCellWidth(
     colSpan: number,
     cellIndex: number,
     colWidthArray: number[]
   ): number[] {
     return colWidthArray.slice(cellIndex, cellIndex + colSpan);
   }
-  scaleWidthArray(rawWidthArray: number[]) {
+  private scaleWidthArray(rawWidthArray: number[]) {
     const sum = this.getSumOfArray(rawWidthArray);
     if (sum < 200) {
       return rawWidthArray;
@@ -2748,7 +2745,7 @@ export class LicitConverter {
       return scaledWidths;
     }
   }
-  getSumOfArray(array: number[]): number {
+  private getSumOfArray(array: number[]): number {
     if (array.length == 0) {
       return 0;
     }
@@ -2760,7 +2757,7 @@ export class LicitConverter {
    * @param {number} totalWidth - The total width (in pixels) used to determine orientation.
    * @returns {'portrait' | 'landscape'} Returns 'portrait' if the width is less than 700 pixels; otherwise, returns 'landscape'.
    */
-  findOrientation(totalWidth: number): 'portrait' | 'landscape' {
+  private findOrientation(totalWidth: number): 'portrait' | 'landscape' {
     return totalWidth < 700 ? 'portrait' : 'landscape';
   }
 
@@ -2770,7 +2767,7 @@ export class LicitConverter {
    * @param {HTMLImageElement} img - The image element to extract information from.
    * @returns {{ src: string; alt: string; width: number; height: number }} An object containing the image's source URL, alt text, width, and height.
    */
-  extractImageInfo(img: HTMLImageElement): ImageInfo {
+  private extractImageInfo(img: HTMLImageElement): ImageInfo {
     return {
       src: img.src,
       alt: img.alt,
@@ -2845,7 +2842,7 @@ export class LicitConverter {
    * @returns {boolean} `true` if the element qualifies as a table figure, otherwise `false`.
    */
 
-  isTableFigureNode(node: Element): boolean {
+  private isTableFigureNode(node: Element): boolean {
     const isImage =
       node.tagName !== 'DIV' && node.children.item(0)?.tagName === 'IMG';
 

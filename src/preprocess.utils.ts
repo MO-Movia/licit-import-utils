@@ -128,7 +128,7 @@ export function extractStyleNamesFromHTML(doc: Document): string[] {
   // Extract class names from HTML elements and add to style names
   const elementsWithClass = doc.querySelectorAll('[class]');
   for (const element of Array.from(elementsWithClass)) {
-    const classes = element.className.split(/\s+/); // Split by whitespace
+    const classes = element.className.split(/\s{1,100}/); // Split by whitespace
     styleNames.push(...classes);
   }
 

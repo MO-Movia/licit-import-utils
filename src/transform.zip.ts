@@ -216,6 +216,9 @@ async function loopHTMLFiles(
         .map((f) => processFile(f, htmlFiles.imageFiles, updateSrc))
     )
   ).filter((x) => x?.length);
+  if (processedHtmlContents.length === 0 && htmlFiles.files.length > 0) {
+    throw new Error(`File contents are empty`);
+  }
   return sortedNodeList(processedHtmlContents);
 }
 
@@ -226,22 +229,33 @@ async function processFile(
 ): Promise<Element[]> {
   const htmlContent = await file.content();
   const htmlFileName = file.name ?? 'Unknown file';
+
+  // Reject files with zero bytes
+  if (!htmlContent?.length) {
+    throw new Error(`File ${htmlFileName} has zero bytes`);
+  }
+
   // Get content before <head> (first 1000 chars should be enough)
   const beforeHead = htmlContent.substring(0, 1000);
-  // Check 1: Reject old DOCTYPE declarations
+
+  // Reject old DOCTYPE declarations
   if (beforeHead.includes('<!DOCTYPE HTML PUBLIC')) {
-    throw new Error(`Incorrect file format: ${htmlFileName}`);
+    throw new Error(
+      `Incorrect file format (was "!DOCTYPE HTML PUBLIC"): ${htmlFileName}`
+    );
   }
 
-  // Check 2: Reject XML declarations (XHTML format)
+  // Reject XML declarations (XHTML format)
   if (beforeHead.trimStart().startsWith('<?xml')) {
-    throw new Error(`Incorrect file format: ${htmlFileName}`);
+    throw new Error(`Incorrect file format (was "XHTML"): ${htmlFileName}`);
   }
 
-  // Check 3: Must have <html lang="...">
+  // Must have <html lang="...">
   // Option A: Exact match for en-US
   if (!beforeHead.includes('<html lang="en-US">')) {
-    throw new Error(`Incorrect file format: ${htmlFileName}`);
+    throw new Error(
+      `Incorrect file format (missing "<html lang=..."): ${htmlFileName}`
+    );
   }
   const domCollection = new DOMParser().parseFromString(
     htmlContent,
