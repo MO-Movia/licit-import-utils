@@ -204,6 +204,16 @@ interface LicitOrderedListJSON extends LicitElementJSON {
   content: LicitBulletListItemJSON[];
 }
 
+interface CellStyleInfo {
+  className?: string;
+  id?: string;
+  marginTop?: string;
+  marginBottom?: string;
+  fontSize?: string;
+  letterSpacing?: string;
+  cellWidth?: string;
+}
+
 export interface LicitDocumentJSON extends LicitElementJSON {
   type: 'doc';
   attrs: LicitDocumentAttrsJSON;
@@ -2373,16 +2383,19 @@ export class LicitTableCellParagraph extends LicitElement {
   colWidth: [number];
   content = [];
   vAlign: string;
+  cellStyleInfo?: CellStyleInfo;
   constructor(
     node: HTMLElement,
     bgColor?: string,
     colwidth?: [number],
-    vericalAlignment?: string
+    vericalAlignment?: string,
+    cellStyleInfo?: CellStyleInfo,
   ) {
     super();
     this.bgColor = bgColor;
     this.colWidth = colwidth;
     this.vAlign = vericalAlignment;
+    this.cellStyleInfo = cellStyleInfo;
     const paragraph = new NewLicitParagraphElement(node, null);
     if (paragraph) {
       this.content.push(paragraph.render());
@@ -2511,6 +2524,7 @@ export class LicitTableCellImageElement extends LicitElement {
   alt: string;
   fillImg: number;
   fitToParent: number;
+  cellStyleInfo?: CellStyleInfo;
 
   constructor(
     src: string,
@@ -2519,7 +2533,8 @@ export class LicitTableCellImageElement extends LicitElement {
     bgColor?: string,
     imgHeight?: string,
     colWidth?: [number],
-    alt?: string
+    alt?: string,
+    cellStyleInfo?: CellStyleInfo,
   ) {
     super();
 
@@ -2530,6 +2545,7 @@ export class LicitTableCellImageElement extends LicitElement {
     this.alt = alt;
     this.fillImg = fillImg;
     this.fitToParent = fitToParent;
+    this.cellStyleInfo = cellStyleInfo;
   }
 
   render(): LicitTableCellImageJSON {
@@ -2725,6 +2741,12 @@ export class LicitTableCellParaElement extends LicitElement {
         colwidth: this.colWidth || defaultColWidth,
         background: this.bgColor || defaultBgColor,
         vAlign: this.vAlign || 'middle',
+        cellWidth: this.cellStyleInfo?.cellWidth ?? null,     
+        cellStyle: this.cellStyleInfo?.className ?? null,     
+        fontSize: this.cellStyleInfo?.fontSize ?? null,        
+        letterSpacing: this.cellStyleInfo?.letterSpacing ?? null, 
+        marginTop: this.cellStyleInfo?.marginTop ?? null,       
+        marginBottom: this.cellStyleInfo?.marginBottom ?? null, 
       },
       content: [],
     };
@@ -2739,13 +2761,15 @@ export class LicitTableCellParaElement extends LicitElement {
   vAlign: string;
   isTableHeader: boolean;
   isTransparentTable: boolean;
+  cellStyleInfo?: CellStyleInfo;
   constructor(
     node: HTMLElement,
     bgColor?: string,
     colwidth?: [number],
     vericalAlignment?: string,
     isTableHeader?: boolean,
-    isTransparentTable?: boolean
+    isTransparentTable?: boolean,
+    cellStyleInfo?: CellStyleInfo,
   ) {
     super();
     this.bgColor = bgColor;
@@ -2753,6 +2777,7 @@ export class LicitTableCellParaElement extends LicitElement {
     this.vAlign = vericalAlignment;
     this.isTableHeader = isTableHeader;
     this.isTransparentTable = isTransparentTable;
+    this.cellStyleInfo = cellStyleInfo;
     this.ConvertElements(node);
   }
 
@@ -2881,9 +2906,12 @@ export class LicitTableCellParaElement extends LicitElement {
 }
 
 export class LicitTableRowElement extends LicitElement {
+  height?: string;
+  rowHeight?: string; 
   getBaseElement(): LicitTableRowJSON {
     return {
       type: 'table_row',
+      rowHeight: this.rowHeight ?? null,
       content: [],
     };
   }
@@ -2913,6 +2941,8 @@ export class LicitTableElement extends LicitElement {
         marginLeft: null,
         vignette: this.isVignette,
         capco: this.capco,
+        noOfColumns: this.noOfColumns ?? null,   
+        tableHeight: this.tableHeight ?? null, 
       },
       content: [],
     };
@@ -2921,6 +2951,9 @@ export class LicitTableElement extends LicitElement {
   rows: LicitTableRowElement[] = [];
   isVignette = false;
   capco?: string;
+  noOfColumns?: number;    
+  tableHeight?: string;
+  
   constructor(isVignette?: boolean, capco?: string) {
     super();
     this.isVignette = isVignette;

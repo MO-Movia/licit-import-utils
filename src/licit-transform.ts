@@ -144,6 +144,15 @@ export interface AddCellOptions {
   isTransparent: boolean;
 }
 
+interface CellStyleInfo {
+  className?: string;
+  id?: string;
+  marginTop?: string;
+  marginBottom?: string;
+  fontSize?: string;
+  letterSpacing?: string;
+  cellWidth?: string;
+}
 export class LicitConverter {
   private readonly elementsParsedMap = new Map<string, boolean>();
   private elements: ParserElement[] = [];
@@ -1386,6 +1395,7 @@ export class LicitConverter {
   ) {
     const licitTable = new LicitTableElement();
     const colWidthsArray = this.getColWidthArray(e.node as HTMLTableElement);
+    licitTable.noOfColumns = colWidthsArray?.length ?? 0;
     const tableHead = e.node.querySelector('thead');
     const table = e.node.querySelector('tbody');
     licitTable.capco = getCapcoFromNode(table);
@@ -1691,6 +1701,7 @@ export class LicitConverter {
     isTransparent: boolean
   ) {
     const rows = tableTag.querySelectorAll('tr');
+    let totalTableHeight = 0; 
     for (let i = 0; i < rows.length; i++) {
       if (
         !isTransparent &&
@@ -1701,6 +1712,13 @@ export class LicitConverter {
         isChapterHeader = true;
       }
       const licitRow = new LicitTableRowElement();
+      // ** Capture row height **
+      const rowHeight = rows[i].getAttribute('height');
+      if (rowHeight) {
+        licitRow.height = rowHeight;
+        licitRow.rowHeight = rowHeight;     
+        totalTableHeight += parseFloat(rowHeight);
+      }
       const cells = rows[i].querySelectorAll(querySel);
 
       this.parseTableContentInnerLoopHelper(
@@ -1714,6 +1732,9 @@ export class LicitConverter {
 
       licitTable.addRow(licitRow);
       isChapterHeader = false;
+    }
+    if (totalTableHeight > 0) {
+      licitTable.tableHeight = `${totalTableHeight}px`;
     }
   }
 
@@ -1774,6 +1795,13 @@ export class LicitConverter {
     let licitCell = null;
 
     const text = cell.textContent ?? '';
+    // Extract cell-level style information**
+    const cellStyleInfo = this.extractCellStyles(cell);
+    if (widthArray?.length > 0) {
+      const computedWidth = this.setCellWidth(colspan, cellIndex, widthArray);
+      cellStyleInfo.cellWidth = computedWidth?.join(',');
+    }
+
     if (cell.childNodes?.length <= 0) {
       //condition
       licitCell = new LicitTableCellParaElement(
@@ -1782,7 +1810,8 @@ export class LicitConverter {
         null,
         verAlign,
         isChapterHeader,
-        isTransparent
+        isTransparent,
+        cellStyleInfo,
       );
     } else if (
       '' === text &&
@@ -1793,7 +1822,8 @@ export class LicitConverter {
         bgColor,
         isChapterHeader,
         licitCell,
-        verAlign
+        verAlign,
+        cellStyleInfo,
       ));
     } else {
       if (isChapterHeader) {
@@ -1807,7 +1837,8 @@ export class LicitConverter {
         colWidth,
         verAlign,
         isChapterHeader,
-        isTransparent
+        isTransparent,
+        cellStyleInfo,
       );
     }
     licitCell.rowspan = rowspan;
@@ -1817,8 +1848,96 @@ export class LicitConverter {
     }
     licitRow.addCell(licitCell);
   }
+/**
+ * Extracts style information from a table cell element per the ingest requirements.
+ * Captures: margins (top/bottom), font-size overrides, and letter-spacing for non-breaking spaces.
+ * 
+ * @param cell - The HTMLTableCellElement to extract styles from
+ * @returns Object containing extracted style information
+ */
+  private extractCellStyles(cell: HTMLTableCellElement): CellStyleInfo {
+    const styleInfo: CellStyleInfo = {};
 
-  private checkCellStyle(style: string | null): string | null {
+    // Capture class and ID from the paragraph inside the cell
+    const paragraph = cell.querySelector('p');
+    if (paragraph) {
+      if (paragraph.className) {
+        styleInfo.className = paragraph.className;
+      }
+      if (paragraph.id) {
+        styleInfo.id = paragraph.id;
+      }
+
+      // Extract style attributes from the paragraph's style attribute
+      const style = paragraph.getAttribute('style');
+      if (style) {
+        this.extractParagraphStyles(style, styleInfo);
+      }
+
+      // Extract letter-spacing for non-breaking spaces
+      const spans = paragraph.querySelectorAll('span[style*="letter-spacing"]');
+      this.extractLetterSpacing(spans, styleInfo);
+    }
+    return styleInfo;
+  }
+
+  /**
+   * Extracts margin and font-size properties from a style string.
+   * 
+   * @param style - The style attribute string
+   * @param styleInfo - The style info object to populate
+   */
+  private extractParagraphStyles(
+    style: string,
+    styleInfo: {
+      marginTop?: string;
+      marginBottom?: string;
+      fontSize?: string;
+    }
+  ): void {
+    const styleProps = style.split(';');
+    for (const prop of styleProps) {
+      const trimmedProp = prop.trim();
+
+      if (trimmedProp.startsWith('margin-top')) {
+        styleInfo.marginTop = trimmedProp.split(':')[1]?.trim();
+      } else if (trimmedProp.startsWith('margin-bottom')) {
+        styleInfo.marginBottom = trimmedProp.split(':')[1]?.trim();
+      } else if (trimmedProp.startsWith('font-size')) {
+        styleInfo.fontSize = trimmedProp.split(':')[1]?.trim();
+      }
+    }
+  }
+
+  /**
+   * Extracts the first letter-spacing value from spans containing non-breaking spaces.
+   * 
+   * @param spans - NodeList of span elements with letter-spacing styles
+   * @param styleInfo - The style info object to populate
+   */
+  private extractLetterSpacing(
+    spans: NodeListOf<Element>,
+    styleInfo: { letterSpacing?: string }
+  ): void {
+    const letterSpacingRegex = /letter-spacing\s*:\s*([^;]+)/;
+
+    for (const span of Array.from(spans)) {
+      // Check if this span contains a non-breaking space
+      const content = span.innerHTML;
+      if (content.includes('&#160;') || content.includes('&nbsp;')) {
+        const spanStyle = (span as HTMLElement).getAttribute('style');
+        if (spanStyle) {
+          const match = letterSpacingRegex.exec(spanStyle);
+          if (match) {
+            // Store the first letter-spacing value found
+            styleInfo.letterSpacing = match[1].trim();
+            break;
+          }
+        }
+      }
+    }
+  }
+  checkCellStyle(style: string | null): string | null {
     let borderColor: string = null;
     if (style != null) {
       const styleVals = style.split(';');
@@ -1844,7 +1963,8 @@ export class LicitConverter {
     bgColor: string,
     isChapterHeader: boolean,
     licitCell: LicitElement,
-    verAlign: string
+    verAlign: string,
+    cellStyleInfo?: CellStyleInfo, 
   ) {
     const image = (cell.childNodes[0] as Element).querySelector('img');
     let altText = null;
@@ -1872,14 +1992,16 @@ export class LicitConverter {
         bgColor,
         imgHeight,
         colWidth,
-        altText
+        altText,
+        cellStyleInfo,
       );
     } else {
       licitCell = new LicitTableCellParagraph(
         cell,
         bgColor,
         colWidth,
-        verAlign
+        verAlign,
+        cellStyleInfo,
       );
     }
     return { bgColor, isChapterHeader, licitCell };
