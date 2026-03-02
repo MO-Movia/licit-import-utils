@@ -1919,7 +1919,7 @@ export class LicitConverter {
     spans: NodeListOf<Element>,
     styleInfo: { letterSpacing?: string }
   ): void {
-    const letterSpacingRegex = /letter-spacing\s*:\s*([^;]+)/;
+    const letterSpacingRegex = /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
 
     for (const span of Array.from(spans)) {
       // Check if this span contains a non-breaking space
