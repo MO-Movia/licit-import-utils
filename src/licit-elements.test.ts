@@ -7,13 +7,18 @@
 import {
   LicitDocumentElement,
   LicitDocumentJSON,
+  LicitEnhancedTableElement,
+  LicitEnhancedTableFigureBodyElement,
   LicitHeaderElement,
   LicitImageElement,
+  LicitNewImageElement,
   LicitParagraphElement,
   NewLicitParagraphElement,
   LicitParagraphImageElement,
+  LicitTableElement,
   LicitTableCellParaElement,
   LicitTableCellParagraph,
+  LicitTableRowElement,
   NewLicitTableCellParagraph,
   LicitVignetteElement,
   LicitElement,
@@ -2459,7 +2464,11 @@ describe('NewLicitParagraphElement branch coverage additions', () => {
     infoNode.appendChild(infoRef);
 
     const data = [document.createElement('ol')];
-    const result = para['getEmInfoIconMark'](infoNode, data);
+    const result = (
+      para as unknown as {
+        getEmInfoIconMark: (infoIcon: HTMLElement, data: HTMLElement[]) => Mark | undefined;
+      }
+    ).getEmInfoIconMark(infoNode, data);
     expect(result).toBeUndefined();
   });
 
@@ -2575,9 +2584,15 @@ describe('NewLicitParagraphElement deep branch additions', () => {
     dataItem.innerText = 'Common access card required for this action';
     dataRoot.appendChild(dataItem);
 
-    const mark = para['getEmInfoIconMark'](infoIcon, [dataRoot]);
+    const mark = (
+      para as unknown as {
+        getEmInfoIconMark: (info: HTMLElement, data: HTMLElement[]) => Mark | undefined;
+      }
+    ).getEmInfoIconMark(infoIcon, [dataRoot]);
     expect(mark).toBeDefined();
-    expect((mark as any)?.attrs?.description).toContain('Common access card required');
+    expect((mark as { attrs?: { description?: string } } | undefined)?.attrs?.description).toContain(
+      'Common access card required'
+    );
   });
 
   it('getSuperScriptMarks returns lock icon json for CAC-required descriptions', () => {
@@ -2596,7 +2611,9 @@ describe('NewLicitParagraphElement deep branch additions', () => {
 
     const mark = para.getSuperScriptMarks(sup, [dataRoot]);
     expect(mark).toBeDefined();
-    expect((mark as any)?.attrs?.description).toContain('Common access card required');
+    expect((mark as { attrs?: { description?: string } } | undefined)?.attrs?.description).toContain(
+      'Common access card required'
+    );
   });
 });
 
@@ -2692,8 +2709,9 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     const textNode = document.createTextNode('alpha');
 
     const result = para.parseSubMarks(textNode, null as never, true, [] as never);
-    expect((result as any)?.text).toBe('alpha');
-    expect((result as any)?.marks).toBeUndefined();
+    const parsed = result as { text?: string; marks?: unknown[] } | null;
+    expect(parsed?.text).toBe('alpha');
+    expect(parsed?.marks).toBeUndefined();
   });
 
   it('parseSubMarks FONT with multiple children walks all children', () => {
@@ -2731,7 +2749,9 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     sup.innerText = '2';
 
     const mark = para.getSuperScriptMarks(sup, []);
-    expect((mark as any)?.marks?.[0]?.type).toBe('super');
+    expect((mark as { marks?: Array<{ type: string }> } | undefined)?.marks?.[0]?.type).toBe(
+      'super'
+    );
   });
 });
 
@@ -2843,7 +2863,7 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     font.appendChild(document.createTextNode('alpha'));
 
     const result = para.parseSubMarks(font, { type: 'text', marks: [] }, true, [] as never);
-    expect((result as any)?.type).toBe('text');
+    expect((result as { type?: string } | null)?.type).toBe('text');
   });
 
   it('parseSubMarks A path with empty text keeps return mark null', () => {
@@ -2928,12 +2948,12 @@ describe('Licit table/vignette/enhanced element branch boosts', () => {
   });
 
   it('LicitEnhancedTableElement removeLastRow covers no-op and pop branches', () => {
-    const enhanced = new (require('./licit-elements').LicitEnhancedTableElement)();
+    const enhanced = new LicitEnhancedTableElement();
     enhanced.removeLastRow();
 
-    const body = new (require('./licit-elements').LicitEnhancedTableFigureBodyElement)();
-    const table = new (require('./licit-elements').LicitTableElement)();
-    const row = new (require('./licit-elements').LicitTableRowElement)();
+    const body = new LicitEnhancedTableFigureBodyElement();
+    const table = new LicitTableElement();
+    const row = new LicitTableRowElement();
     table.addRow(row);
     body.addTable(table);
     enhanced.addBody(body);
@@ -2943,7 +2963,7 @@ describe('Licit table/vignette/enhanced element branch boosts', () => {
   });
 
   it('LicitEnhancedTableElement render handles empty optional sections', () => {
-    const enhanced = new (require('./licit-elements').LicitEnhancedTableElement)();
+    const enhanced = new LicitEnhancedTableElement();
     const rendered = enhanced.render();
     expect(rendered.content).toEqual([]);
   });
@@ -2951,8 +2971,7 @@ describe('Licit table/vignette/enhanced element branch boosts', () => {
 
 describe('Licit elements targeted fallback branch boosts', () => {
   it('LicitImageElement render applies nullish defaults for alt and align', () => {
-    const mod = require('./licit-elements');
-    const img = new mod.LicitImageElement('https://example.com/a.png');
+    const img = new LicitImageElement('https://example.com/a.png');
     const rendered = img.render();
 
     expect(rendered.attrs.src).toBe('https://example.com/a.png');
@@ -2961,15 +2980,25 @@ describe('Licit elements targeted fallback branch boosts', () => {
   });
 
   it('LicitNewImageElement render covers nullish and non-nullish branches', () => {
-    const mod = require('./licit-elements');
-
-    const withValues = new mod.LicitNewImageElement('https://example.com/a.png', '100', '80', 'alt', 'cap');
+    const withValues = new LicitNewImageElement(
+      'https://example.com/a.png',
+      '100',
+      '80',
+      'alt',
+      'cap'
+    );
     const renderedWithValues = withValues.render();
     expect(renderedWithValues.attrs.alt).toBe('alt');
     expect(renderedWithValues.attrs.width).toBe('100');
     expect(renderedWithValues.attrs.height).toBe('80');
 
-    const withNullish = new mod.LicitNewImageElement('https://example.com/b.png', undefined as any, undefined as any, undefined as any, undefined as any);
+    const withNullish = new LicitNewImageElement(
+      'https://example.com/b.png',
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
     const renderedWithNullish = withNullish.render();
     expect(renderedWithNullish.attrs.alt).toBe('');
     expect(renderedWithNullish.attrs.width).toBeNull();
@@ -2977,24 +3006,22 @@ describe('Licit elements targeted fallback branch boosts', () => {
   });
 
   it('LicitNewImageElement getBaseElement defaults capco to empty string', () => {
-    const mod = require('./licit-elements');
-    const img = new mod.LicitNewImageElement('https://example.com/c.png', '10', '10', 'alt');
+    const img = new LicitNewImageElement('https://example.com/c.png', '10', '10', 'alt');
     const base = img.getBaseElement();
     expect(base.attrs.capco).toBe('');
   });
 
   it('NewLicitTableCellParagraph getBaseElement uses defaults and provided values', () => {
-    const mod = require('./licit-elements');
     const p = document.createElement('p');
     p.textContent = 'cell';
 
-    const defaults = new mod.NewLicitTableCellParagraph(p);
+    const defaults = new NewLicitTableCellParagraph(p);
     const defaultsBase = defaults.getBaseElement();
     expect(defaultsBase.attrs.colwidth).toBe(100);
     expect(defaultsBase.attrs.background).toBe('#FFFFFF');
     expect(defaultsBase.attrs.vAlign).toBe('top');
 
-    const provided = new mod.NewLicitTableCellParagraph(p, '#eeeeee', [140], 'middle');
+    const provided = new NewLicitTableCellParagraph(p, '#eeeeee', [140], 'middle');
     const providedBase = provided.getBaseElement();
     expect(providedBase.attrs.colwidth).toEqual([140]);
     expect(providedBase.attrs.background).toBe('#eeeeee');
@@ -3002,12 +3029,11 @@ describe('Licit elements targeted fallback branch boosts', () => {
   });
 
   it('LicitVignetteElement ConvertElements ignores IMG nodes without source', () => {
-    const mod = require('./licit-elements');
     const root = document.createElement('div');
     const img = document.createElement('img');
     root.appendChild(img);
 
-    const vignette = new mod.LicitVignetteElement(root, '#undefined', '', 120);
+    const vignette = new LicitVignetteElement(root, '#undefined', '', 120);
     const rendered = vignette.render();
 
     expect(rendered.attrs.borderColor).toBe('#36598d');

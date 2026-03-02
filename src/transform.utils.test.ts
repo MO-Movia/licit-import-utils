@@ -59,14 +59,26 @@ describe('transform.utils coverage additions', () => {
 
   it('applyImageSizes applies width and height attributes to all img tags', async () => {
     jest.spyOn(globalThis, 'Image').mockImplementation(() => {
+      let onloadHandler: null | ((value: unknown) => void) = null;
+      let onerrorHandler: null | ((value: unknown) => void) = null;
       const image = {
         width: 1200,
         height: 600,
         set src(_value: string) {
-          setTimeout(() => this.onload?.(null), 0);
+          setTimeout(() => onloadHandler?.(null), 0);
         },
-        onload: undefined as null | ((value: unknown) => void),
-        onerror: undefined as null | ((value: unknown) => void),
+        get onload() {
+          return onloadHandler;
+        },
+        set onload(handler: null | ((value: unknown) => void)) {
+          onloadHandler = handler;
+        },
+        get onerror() {
+          return onerrorHandler;
+        },
+        set onerror(handler: null | ((value: unknown) => void)) {
+          onerrorHandler = handler;
+        },
       };
       return image as unknown as HTMLImageElement;
     });
@@ -170,9 +182,7 @@ describe('transform.utils coverage additions', () => {
     await transformUtils.updateImageSrc(
       new File(['x'], 'a.png', { type: 'image/png' }),
       img,
-      async () => {
-        throw new Error('upload-failed');
-      },
+      () => Promise.reject(new Error('upload-failed')),
       Promise.resolve('fallback-src')
     );
 
@@ -187,12 +197,24 @@ describe('transform.utils coverage additions', () => {
 
     img.setAttribute('src', 'data:image/png;base64,QUJD');
 
+    let onloadHandler: null | ((value: unknown) => void) = null;
+    let onerrorHandler: null | ((value: unknown) => void) = null;
     const mockImage = {
       set src(_value: string) {
-        setTimeout(() => this.onerror?.(new Error('bad-image')), 0);
+        setTimeout(() => onerrorHandler?.(new Error('bad-image')), 0);
       },
-      onload: undefined as null | ((value: unknown) => void),
-      onerror: undefined as null | ((value: unknown) => void),
+      get onload() {
+        return onloadHandler;
+      },
+      set onload(handler: null | ((value: unknown) => void)) {
+        onloadHandler = handler;
+      },
+      get onerror() {
+        return onerrorHandler;
+      },
+      set onerror(handler: null | ((value: unknown) => void)) {
+        onerrorHandler = handler;
+      },
       width: 0,
       height: 0,
     };

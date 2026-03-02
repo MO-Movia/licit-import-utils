@@ -2650,13 +2650,21 @@ describe('Converter', () => {
   });
   it('should return #FFFFFF for checkCellStyle when border is 0', () => {
     const style = 'border-left:0;border-right:0;border-top:0;';
-    const result = service['checkCellStyle'](style);
+    const result = (
+      service as unknown as {
+        checkCellStyle: (styleText: string) => string | null;
+      }
+    ).checkCellStyle(style);
     expect(result).toBe('#FFFFFF');
   });
 
   it('should return null for checkCellStyle when no matching border found', () => {
     const style = 'border-style:solid;border-radius:5px;';
-    const result = service['checkCellStyle'](style);
+    const result = (
+      service as unknown as {
+        checkCellStyle: (styleText: string) => string | null;
+      }
+    ).checkCellStyle(style);
     expect(result).toBeNull();
   });
 
@@ -3448,12 +3456,22 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
 
   it('extractCellStyles handles cells with and without paragraph/style/letter-spacing', () => {
     const td1 = document.createElement('td');
-    const s1 = converter['extractCellStyles'](td1 as HTMLTableCellElement);
+    const converterWithExtract = converter as unknown as {
+      extractCellStyles: (cell: HTMLTableCellElement) => {
+        className?: string;
+        id?: string;
+        marginTop?: string;
+        marginBottom?: string;
+        fontSize?: string;
+        letterSpacing?: string;
+      };
+    };
+    const s1 = converterWithExtract.extractCellStyles(td1);
     expect(s1).toEqual({});
 
     const td2 = document.createElement('td');
     td2.innerHTML = '<p id="p1" class="cellbody" style="margin-top:1pt;margin-bottom:2pt;font-size:9pt;"><span style="letter-spacing: 1.5pt;">&#160;</span></p>';
-    const s2 = converter['extractCellStyles'](td2 as HTMLTableCellElement);
+    const s2 = converterWithExtract.extractCellStyles(td2);
     expect(s2.className).toBe('cellbody');
     expect(s2.id).toBe('p1');
     expect(s2.marginTop).toBe('1pt');
@@ -3533,7 +3551,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
       .mockReturnValue(false);
 
     converter['parseTable'](el, true);
-    const last = (converter as unknown as { elements: ParserElement[] })['elements'].slice(-1)[0];
+    const last = (converter as unknown as { elements: ParserElement[] }).elements.slice(-1)[0];
     expect(last.type).toBe(12);
     expect(transparentSpy).toHaveBeenCalled();
   });

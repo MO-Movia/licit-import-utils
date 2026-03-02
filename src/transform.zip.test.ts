@@ -8,6 +8,9 @@ import * as transformUtils from './transform.utils';
 import JSZip from 'jszip';
 
 import { parseFrameMakerHTM5Zip } from './transform.zip';
+const actualZipUtils = jest.requireActual<typeof import('./zip.utils')>(
+  './zip.utils'
+);
 
 jest.mock('./zip.utils');
 jest.mock('./transform.utils');
@@ -196,7 +199,7 @@ describe('transform.zip coverage additions', () => {
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'a.zip'),
-      async () => 'x'
+      () => Promise.resolve('x')
     );
     expect(result).toHaveLength(2);
     expect((result[0] as HTMLElement).id).toBe('c');
@@ -229,7 +232,7 @@ describe('transform.zip coverage additions', () => {
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'b.zip'),
-      async () => 'x'
+      () => Promise.resolve('x')
     );
     expect(result).toHaveLength(1);
     expect((result[0] as HTMLElement).id).toBe('ok');
@@ -251,7 +254,7 @@ describe('transform.zip coverage additions', () => {
     (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
 
     await expect(
-      parseFrameMakerHTM5Zip(new File(['x'], 'c.zip'), async () => 'x')
+      parseFrameMakerHTM5Zip(new File(['x'], 'c.zip'), () => Promise.resolve('x'))
     ).rejects.toThrow('!DOCTYPE HTML PUBLIC');
   });
 
@@ -271,7 +274,7 @@ describe('transform.zip coverage additions', () => {
     (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
 
     await expect(
-      parseFrameMakerHTM5Zip(new File(['x'], 'd.zip'), async () => 'x')
+      parseFrameMakerHTM5Zip(new File(['x'], 'd.zip'), () => Promise.resolve('x'))
     ).rejects.toThrow('Incorrect file format (was "XHTML")');
   });
 
@@ -291,7 +294,7 @@ describe('transform.zip coverage additions', () => {
     (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
 
     await expect(
-      parseFrameMakerHTM5Zip(new File(['x'], 'e.zip'), async () => 'x')
+      parseFrameMakerHTM5Zip(new File(['x'], 'e.zip'), () => Promise.resolve('x'))
     ).rejects.toThrow('missing "<html lang=..."');
   });
 
@@ -314,7 +317,7 @@ describe('transform.zip coverage additions', () => {
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'f.zip'),
-      async () => 'x'
+      () => Promise.resolve('x')
     );
 
     const chapterTitle = result.find((node) =>
@@ -358,14 +361,26 @@ describe('transform.zip coverage additions', () => {
     });
 
     jest.spyOn(globalThis, 'Image').mockImplementation(() => {
+      let onloadHandler: null | ((value: unknown) => void) = null;
+      let onerrorHandler: null | ((value: unknown) => void) = null;
       const image = {
         width: 100,
         height: 50,
         set src(_value: string) {
-          setTimeout(() => this.onload?.(null), 0);
+          setTimeout(() => onloadHandler?.(null), 0);
         },
-        onload: undefined as null | ((value: unknown) => void),
-        onerror: undefined as null | ((value: unknown) => void),
+        get onload() {
+          return onloadHandler;
+        },
+        set onload(handler: null | ((value: unknown) => void)) {
+          onloadHandler = handler;
+        },
+        get onerror() {
+          return onerrorHandler;
+        },
+        set onerror(handler: null | ((value: unknown) => void)) {
+          onerrorHandler = handler;
+        },
       };
       return image as unknown as HTMLImageElement;
     });
@@ -379,7 +394,7 @@ describe('transform.zip coverage additions', () => {
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'g.zip'),
-      async () => 'x'
+      () => Promise.resolve('x')
     );
     const img = result.find((node) => node.tagName === 'IMG') as HTMLImageElement;
 
@@ -408,11 +423,7 @@ describe('openZip coverage additions merged', () => {
     const hugeFile = new File(['x'], 'huge.zip');
     Object.defineProperty(hugeFile, 'size', { value: 1073741825 });
 
-    const { openZip } = jest.requireActual('./zip.utils') as {
-      openZip: (file: File) => Promise<unknown>;
-    };
-
-    await expect(openZip(hugeFile)).rejects.toThrow(
+    await expect(actualZipUtils.openZip(hugeFile)).rejects.toThrow(
       'Size of the file is more than the limit 1GB'
     );
     expect(loadAsyncSpy).not.toHaveBeenCalled();
@@ -425,11 +436,7 @@ describe('openZip coverage additions merged', () => {
     );
     loadAsyncSpy.mockResolvedValue({ files } as never);
 
-    const { openZip } = jest.requireActual('./zip.utils') as {
-      openZip: (file: File) => Promise<unknown>;
-    };
-
-    await expect(openZip(new File(['x'], 'many.zip'))).rejects.toThrow(
+    await expect(actualZipUtils.openZip(new File(['x'], 'many.zip'))).rejects.toThrow(
       'Total number of files exceeded the limit 10000'
     );
   });
@@ -437,11 +444,7 @@ describe('openZip coverage additions merged', () => {
   it('throws when zip has no files', async () => {
     loadAsyncSpy.mockResolvedValue({ files: {} } as never);
 
-    const { openZip } = jest.requireActual('./zip.utils') as {
-      openZip: (file: File) => Promise<unknown>;
-    };
-
-    await expect(openZip(new File(['x'], 'empty.zip'))).rejects.toThrow(
+    await expect(actualZipUtils.openZip(new File(['x'], 'empty.zip'))).rejects.toThrow(
       'No files found in the zip'
     );
   });
@@ -450,11 +453,7 @@ describe('openZip coverage additions merged', () => {
     const zip = { files: { 'one.htm': {} } };
     loadAsyncSpy.mockResolvedValue(zip as never);
 
-    const { openZip } = jest.requireActual('./zip.utils') as {
-      openZip: (file: File) => Promise<unknown>;
-    };
-
-    await expect(openZip(new File(['x'], 'ok.zip'))).resolves.toBe(zip);
+    await expect(actualZipUtils.openZip(new File(['x'], 'ok.zip'))).resolves.toBe(zip);
   });
 });
 

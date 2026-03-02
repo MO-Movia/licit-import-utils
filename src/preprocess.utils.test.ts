@@ -16,10 +16,11 @@ jest.mock('jszip', () => ({
 
 jest.mock('./transform.docx', () => ({
   DocxTransformer: jest.fn().mockImplementation((_docType: string, logFn) => ({
-    transform: async (_arrayBuffer: ArrayBuffer) => {
+    transform: (_arrayBuffer: ArrayBuffer) => {
       logFn('info', 'Style ID: Heading1)');
       logFn('info', 'Style ID: Heading1)');
       logFn('info', 'Style ID: BodyText)');
+      return Promise.resolve();
     },
   })),
 }));
