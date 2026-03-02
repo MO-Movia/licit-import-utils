@@ -143,7 +143,9 @@ interface LicitTableAttrsJSON extends LicitElementAttrsJSON {
   marginLeft: null;
   vignette: boolean;
 }
-
+interface LicitTableRowAttrsJSON extends LicitElementAttrsJSON {
+  rowHeight: string;
+}
 interface LicitTableCellAttrsJSON extends LicitElementAttrsJSON {
   colspan: number;
   rowspan: number;
@@ -173,6 +175,7 @@ interface LicitTableCellImageJSON extends LicitElementJSON {
 
 interface LicitTableRowJSON extends LicitElementJSON {
   type: 'table_row';
+  attrs: LicitTableRowAttrsJSON;
   content: LicitTableCellJSON[];
 }
 
@@ -2911,8 +2914,11 @@ export class LicitTableRowElement extends LicitElement {
   getBaseElement(): LicitTableRowJSON {
     return {
       type: 'table_row',
-      rowHeight: this.rowHeight ?? null,
+      attrs: {
+        rowHeight: this.rowHeight,
+      },
       content: [],
+
     };
   }
 

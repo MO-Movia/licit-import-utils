@@ -5,7 +5,24 @@
  */
 
 import type { Message } from './types';
+import JSZip from 'jszip';
 import * as DocumentPreprocessUtils from './preprocess.utils';
+jest.mock('jszip', () => ({
+  __esModule: true,
+  default: {
+    loadAsync: jest.fn(),
+  },
+}));
+
+jest.mock('./transform.docx', () => ({
+  DocxTransformer: jest.fn().mockImplementation((_docType: string, logFn) => ({
+    transform: async (_arrayBuffer: ArrayBuffer) => {
+      logFn('info', 'Style ID: Heading1)');
+      logFn('info', 'Style ID: Heading1)');
+      logFn('info', 'Style ID: BodyText)');
+    },
+  })),
+}));
 
 describe('DocumentPreprocessUtils', () => {
   let service = DocumentPreprocessUtils;
@@ -215,3 +232,105 @@ function stringToArrayBuffer(str: string): ArrayBuffer {
 
   return buffer;
 }
+
+describe('DocumentPreprocessUtils coverage additions', () => {
+  const loadAsync = JSZip.loadAsync as unknown as jest.Mock;
+  let confirmSpy: jest.SpiedFunction<typeof globalThis.confirm>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    confirmSpy = jest.spyOn(globalThis, 'confirm').mockReturnValue(true);
+  });
+
+  it('should parse and de-duplicate style ids', () => {
+    const result = DocumentPreprocessUtils.extractUniqueStyleIds([
+      { type: 'info', message: 'Style ID: A)' },
+      { type: 'info', message: 'Style ID: B)' },
+      { type: 'info', message: 'Style ID: A)' },
+    ] as never);
+
+    expect(result).toEqual(['A', 'B']);
+  });
+
+  it('should extract styles for doc through transformer', async () => {
+    const buffer = new TextEncoder().encode('x').buffer;
+
+    const result = await DocumentPreprocessUtils.extractStylesForDoc(
+      buffer,
+      'docx'
+    );
+    expect(result.styles).toEqual(['Heading1', 'BodyText']);
+  });
+
+  it('should throw for non-object JSON payload', () => {
+    const payload = new TextEncoder().encode('42').buffer;
+    expect(() => DocumentPreprocessUtils.extractStylesForJSON(payload)).toThrow(
+      'Invalid JSON document'
+    );
+  });
+
+  it('should extract unique class names from HTML', async () => {
+    const html = '<div class="a b"></div><span class="b c"></span>';
+    const buffer = new TextEncoder().encode(html).buffer;
+
+    await expect(DocumentPreprocessUtils.processHTML(buffer)).resolves.toEqual({
+      styles: ['a', 'b', 'c'],
+    });
+  });
+
+  it('should reject oversized zip when user declines', async () => {
+    confirmSpy.mockReturnValue(false);
+
+    const hugeFile = new File(['x'], 'huge.zip');
+    Object.defineProperty(hugeFile, 'size', { value: 1073741825 });
+
+    await expect(
+      DocumentPreprocessUtils.extractStylesFromZip(hugeFile)
+    ).rejects.toThrow('Size of the file is more than the limit 25 mb');
+  });
+
+  it('should reject zip with excessive file count when user declines', async () => {
+    confirmSpy.mockReturnValue(false);
+    const files = Object.fromEntries(
+      Array.from({ length: 10001 }, (_, i) => [`${i}.htm`, { async: jest.fn() }])
+    );
+    loadAsync.mockResolvedValue({ files });
+
+    await expect(
+      DocumentPreprocessUtils.extractStylesFromZip(new File(['x'], 'many.zip'))
+    ).rejects.toThrow('exceeds the limit');
+  });
+
+  it('should read .htm files and merge unique styles', async () => {
+    const files = {
+      'a.htm': {
+        async: jest
+          .fn()
+          .mockResolvedValue(
+            new TextEncoder().encode('<div class="a b"></div>').buffer
+          ),
+      },
+      'b.htm': {
+        async: jest
+          .fn()
+          .mockResolvedValue(
+            new TextEncoder().encode('<p class="b c"></p>').buffer
+          ),
+      },
+      'readme.txt': {
+        async: jest
+          .fn()
+          .mockResolvedValue(new TextEncoder().encode('ignore').buffer),
+      },
+    };
+    loadAsync.mockResolvedValue({ files });
+
+    const result = await DocumentPreprocessUtils.extractStylesFromZip(
+      new File(['x'], 'ok.zip')
+    );
+
+    expect(result.styles).toEqual(['a', 'b', 'c']);
+  });
+});
+
+
