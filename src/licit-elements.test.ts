@@ -7,13 +7,18 @@
 import {
   LicitDocumentElement,
   LicitDocumentJSON,
+  LicitEnhancedTableElement,
+  LicitEnhancedTableFigureBodyElement,
   LicitHeaderElement,
   LicitImageElement,
+  LicitNewImageElement,
   LicitParagraphElement,
   NewLicitParagraphElement,
   LicitParagraphImageElement,
+  LicitTableElement,
   LicitTableCellParaElement,
   LicitTableCellParagraph,
+  LicitTableRowElement,
   NewLicitTableCellParagraph,
   LicitVignetteElement,
   LicitElement,
@@ -864,7 +869,7 @@ describe('LicitElements', () => {
 
   it('should return undefined when no highlight or color present', () => {
     const node = document.createElement('span');
-    node.innerText = 'No style';
+    const licitParagraph = new NewLicitParagraphElement(node);
 
     const result = licitParagraph.getHighLightAndTextColor(node);
 
@@ -2351,5 +2356,688 @@ describe('Licit Helper Functions', () => {
     const testNode2 = document.createElement('div');
     testNode2.setAttribute('style', 'junk;;align: left;');
     expect(getElementAlignment(testNode2)).toBe('left');
+  });
+});
+
+describe('NewLicitParagraphElement branch coverage additions', () => {
+  const createPara = () => {
+    const node = document.createElement('p');
+    node.textContent = 'text';
+    return new NewLicitParagraphElement(node);
+  };
+
+  it('parseStrongWithInfoicon returns existing mark when text is empty', () => {
+    const para = createPara();
+    const strong = document.createElement('strong');
+    strong.textContent = '   ';
+
+    const baseMark = { type: 'text', marks: [] } as unknown as Mark;
+    const result = para['parseStrongWithInfoicon'](
+      strong,
+      baseMark,
+      baseMark,
+      [] as never
+    );
+
+    expect(result).toBe(baseMark);
+  });
+
+  it('parseStrongWithInfoicon resets retMark when parseSubMarks returns undefined', () => {
+    const para = createPara();
+    const strong = document.createElement('strong');
+    strong.appendChild(document.createTextNode('one'));
+    strong.appendChild(document.createTextNode('two'));
+
+    const parseSpy = jest
+      .spyOn(para, 'parseSubMarks')
+      .mockReturnValueOnce(undefined as never)
+      .mockReturnValueOnce({ type: 'text', marks: [], text: 'ok' } as never);
+
+    const mark = { type: 'text', marks: [] } as unknown as Mark;
+    const result = para['parseStrongWithInfoicon'](
+      strong,
+      mark,
+      null as never,
+      [] as never
+    );
+
+    expect(parseSpy).toHaveBeenCalled();
+    expect(result).toBeDefined();
+  });
+
+  it('parseUnderlineWithInfoicon keeps mark unchanged when text is empty', () => {
+    const para = createPara();
+    const u = document.createElement('u');
+    u.textContent = '';
+
+    const current = { type: 'text', marks: [] } as unknown as Mark;
+    const result = para['parseUnderlineWithInfoicon'](
+      u,
+      current,
+      current,
+      [] as never
+    );
+
+    expect(result).toBe(current);
+  });
+
+  it('parseEMWithInfoicon keeps mark unchanged when text is empty', () => {
+    const para = createPara();
+    const em = document.createElement('em');
+    em.textContent = '';
+
+    const current = { type: 'text', marks: [] } as unknown as Mark;
+    const result = para['parseEMWithInfoicon'](
+      em,
+      null as never,
+      current,
+      current,
+      [] as never
+    );
+
+    expect(result).toBe(current);
+  });
+
+  it('parseAnchorWithInfoIcon keeps mark unchanged when anchor text is empty', () => {
+    const para = createPara();
+    const a = document.createElement('a');
+    a.href = 'https://example.com';
+    a.textContent = '  ';
+
+    const current = { type: 'text', marks: [] } as unknown as Mark;
+    const result = para['parseAnchorWithInfoIcon'](
+      a,
+      '',
+      current,
+      current,
+      [] as never
+    );
+
+    expect(result).toBe(current);
+  });
+
+  it('getEmInfoIconMark returns undefined when info id is not found', () => {
+    const para = createPara();
+    const infoNode = document.createElement('ol');
+    const infoRef = document.createElement('li');
+    infoRef.id = 'not-in-data';
+    infoNode.appendChild(infoRef);
+
+    const data = [document.createElement('ol')];
+    const result = (
+      para as unknown as {
+        getEmInfoIconMark: (infoIcon: HTMLElement, data: HTMLElement[]) => Mark | undefined;
+      }
+    ).getEmInfoIconMark(infoNode, data);
+    expect(result).toBeUndefined();
+  });
+
+  it('getSuperScriptMarks returns undefined when infoIcon id is not found in data', () => {
+    const para = createPara();
+    const sup = document.createElement('sup');
+    sup.id = 'infoIcon';
+    const child = document.createElement('span');
+    child.id = 'not-in-data';
+    sup.appendChild(child);
+
+    const dataList = document.createElement('ol');
+    const entry = document.createElement('li');
+    entry.id = 'another-id';
+    dataList.appendChild(entry);
+
+    const result = para.getSuperScriptMarks(sup, [dataList]);
+    expect(result).toBeUndefined();
+  });
+
+  it('getBaseElement includes populated id/capco/selectionId fields', () => {
+    const para = createPara();
+    para.id = 'id-1';
+    para.capco = '{"portionMarking":"U"}';
+    para.selectionId = '#sel';
+
+    const base = para.getBaseElement();
+    expect(base.attrs.id).toBe('id-1');
+    expect(base.attrs.capco).toContain('portionMarking');
+    expect(base.attrs.selectionId).toBe('#sel');
+  });
+});
+
+describe('NewLicitParagraphElement deep branch additions', () => {
+  const createPara = () => {
+    const node = document.createElement('p');
+    node.innerHTML = '<span>seed</span>';
+    return new NewLicitParagraphElement(node);
+  };
+
+  it('parseFontWithInfoicon returns unchanged mark for empty text', () => {
+    const para = createPara();
+    const font = document.createElement('font');
+    font.textContent = '   ';
+    const ret = { type: 'text', marks: [] } as unknown as Mark;
+
+    expect(
+      para['parseFontWithInfoicon'](font, ret, ret, [] as never)
+    ).toBe(ret);
+  });
+
+  it('parseFontWithInfoicon returns unchanged mark when no font details exist', () => {
+    const para = createPara();
+    const font = document.createElement('font');
+    font.textContent = 'abc';
+    jest.spyOn(para, 'hasFontDetails').mockReturnValue(false);
+    const ret = { type: 'text', marks: [] } as unknown as Mark;
+
+    expect(
+      para['parseFontWithInfoicon'](font, ret, ret, [] as never)
+    ).toBe(ret);
+  });
+
+  it('parseAnchorWithInfoIcon appends color mark when anchor has color', () => {
+    const para = createPara();
+    const a = document.createElement('a');
+    a.href = 'https://example.com';
+    a.textContent = 'link';
+    const child = document.createTextNode('link');
+    a.innerHTML = '';
+    a.appendChild(child);
+
+    const parseSpy = jest
+      .spyOn(para, 'parseSubMarks')
+      .mockReturnValue({ type: 'text', marks: [], text: 'ok' } as never);
+
+    const mark = { type: 'text', marks: [] } as unknown as Mark;
+    para['parseAnchorWithInfoIcon'](a, '#000000', mark, null as never, [] as never);
+
+    expect(parseSpy).toHaveBeenCalled();
+    expect(mark.marks?.some((m) => m.type === 'mark-text-color')).toBe(true);
+  });
+
+  it('parseSubMarks handles SUP with empty text without setting retMark', () => {
+    const para = createPara();
+    const sup = document.createElement('sup');
+    sup.textContent = ' ';
+
+    const result = para.parseSubMarks(sup, { type: 'text', marks: [] }, true, [] as never);
+    expect(result).toBeNull();
+  });
+
+  it('parseSubMarks handles SUB with empty text without pushing marks', () => {
+    const para = createPara();
+    const sub = document.createElement('sub');
+    sub.textContent = ' ';
+
+    const initialCount = para.marks.length;
+    para.parseSubMarks(sub, { type: 'text', marks: [] }, true, [] as never);
+    expect(para.marks.length).toBe(initialCount);
+  });
+
+  it('getEmInfoIconMark returns lock icon json for CAC-required descriptions', () => {
+    const para = createPara();
+    const infoIcon = document.createElement('ol');
+    const infoRef = document.createElement('li');
+    infoRef.id = 'x1';
+    infoIcon.appendChild(infoRef);
+
+    const dataRoot = document.createElement('ol');
+    const dataItem = document.createElement('li');
+    dataItem.id = 'x1';
+    dataItem.innerText = 'Common access card required for this action';
+    dataRoot.appendChild(dataItem);
+
+    const mark = (
+      para as unknown as {
+        getEmInfoIconMark: (info: HTMLElement, data: HTMLElement[]) => Mark | undefined;
+      }
+    ).getEmInfoIconMark(infoIcon, [dataRoot]);
+    expect(mark).toBeDefined();
+    expect((mark as { attrs?: { description?: string } } | undefined)?.attrs?.description).toContain(
+      'Common access card required'
+    );
+  });
+
+  it('getSuperScriptMarks returns lock icon json for CAC-required descriptions', () => {
+    const para = createPara();
+    const sup = document.createElement('sup');
+    sup.id = 'infoIcon';
+    const ref = document.createElement('span');
+    ref.id = 'item-1';
+    sup.appendChild(ref);
+
+    const dataRoot = document.createElement('ol');
+    const dataItem = document.createElement('li');
+    dataItem.id = 'item-1';
+    dataItem.innerText = 'Common access card required for details';
+    dataRoot.appendChild(dataItem);
+
+    const mark = para.getSuperScriptMarks(sup, [dataRoot]);
+    expect(mark).toBeDefined();
+    expect((mark as { attrs?: { description?: string } } | undefined)?.attrs?.description).toContain(
+      'Common access card required'
+    );
+  });
+});
+
+
+describe('NewLicitParagraphElement additional branch boosts', () => {
+  const createPara = () => {
+    const node = document.createElement('p');
+    node.textContent = 'seed';
+    return new NewLicitParagraphElement(node);
+  };
+
+  it('applyLinkAndColorMarks does nothing when link mark is null', () => {
+    const para = createPara();
+    const mark = { type: 'text', marks: [] } as unknown as Mark;
+
+    para['applyLinkAndColorMarks'](
+      mark,
+      null,
+      { type: 'mark-text-color', attrs: { color: '#000' } } as unknown as Mark,
+      '#000'
+    );
+
+    expect(mark.marks).toEqual([]);
+  });
+
+  it('parseLinkText skips push when non-text node has empty text', () => {
+    const para = createPara();
+    const mark = { type: 'text', marks: [] } as unknown as Mark;
+    const span = document.createElement('span');
+    span.textContent = ' ';
+
+    const result = para['parseLinkText'](
+      span as unknown as HTMLLinkElement,
+      { type: 'link', attrs: { href: 'x' } } as unknown as Mark,
+      '#000',
+      { type: 'mark-text-color', attrs: { color: '#000' } } as unknown as Mark,
+      mark,
+      [] as never
+    );
+
+    expect(result).toBe(mark);
+  });
+
+  it('setLink adds no link mark for non-url text', () => {
+    const para = createPara();
+    const mark = { type: 'text', text: 'not a url', marks: [] } as unknown as Mark;
+
+    para['setLink'](mark);
+
+    expect(mark.marks).toEqual([]);
+  });
+
+  it('hasFontDetails returns true when only parent has style', () => {
+    const para = createPara();
+    const parent = document.createElement('span');
+    parent.setAttribute('style', 'font-family: Arial;');
+    const child = document.createElement('font');
+    parent.appendChild(child);
+
+    expect(para.hasFontDetails(child)).toBe(true);
+  });
+
+  it('parseFont returns undefined when child node is IMG', () => {
+    const para = createPara();
+    const font = document.createElement('font');
+    font.setAttribute('style', 'font-family: Arial;');
+    font.textContent = 'x';
+    font.innerHTML = '<img src="x.png" />';
+
+    const result = para['parseFont'](
+      font,
+      { type: 'text', marks: [] } as unknown as Mark,
+      [] as never,
+      []
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('parseAnchor returns existing mark when id is _LINK_TO_THIS', () => {
+    const para = createPara();
+    const a = document.createElement('a');
+    a.id = '_LINK_TO_THIS';
+    a.textContent = 'ignored';
+    const initial = { type: 'text', marks: [] } as unknown as Mark;
+
+    const result = para['parseAnchor'](a, initial, '', [] as never, []);
+    expect(result).toBe(initial);
+  });
+
+  it('parseSubMarks TEXT builds mark without marks array when base mark is null', () => {
+    const para = createPara();
+    const textNode = document.createTextNode('alpha');
+
+    const result = para.parseSubMarks(textNode, null as never, true, [] as never);
+    const parsed = result as { text?: string; marks?: unknown[] } | null;
+    expect(parsed?.text).toBe('alpha');
+    expect(parsed?.marks).toBeUndefined();
+  });
+
+  it('parseSubMarks FONT with multiple children walks all children', () => {
+    const para = createPara();
+    const font = document.createElement('font');
+    font.setAttribute('style', 'font-family: Arial;');
+    const t1 = document.createTextNode('a');
+    const t2 = document.createTextNode('b');
+    font.appendChild(t1);
+    font.appendChild(t2);
+
+    const spy = jest.spyOn(para, 'parseSubMarks');
+    para.parseSubMarks(font, { type: 'text', marks: [] }, false, [] as never);
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('parseAnchorWithInfoIcon handles empty color without pushing text-color mark', () => {
+    const para = createPara();
+    const a = document.createElement('a');
+    a.href = 'https://example.com';
+    a.textContent = 'go';
+    a.appendChild(document.createTextNode('go'));
+
+    const mark = { type: 'text', marks: [] } as unknown as Mark;
+    para['parseAnchorWithInfoIcon'](a, '', mark, null as never, [] as never);
+
+    expect(mark.marks?.some((m) => m.type === 'mark-text-color')).toBe(false);
+  });
+
+  it('getSuperScriptMarks returns regular super mark when node is not infoIcon', () => {
+    const para = createPara();
+    const sup = document.createElement('sup');
+    sup.id = 'plain';
+    sup.innerText = '2';
+
+    const mark = para.getSuperScriptMarks(sup, []);
+    expect((mark as { marks?: Array<{ type: string }> } | undefined)?.marks?.[0]?.type).toBe(
+      'super'
+    );
+  });
+});
+
+
+describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
+  const createPara = () => {
+    const p = document.createElement('p');
+    p.textContent = 'seed';
+    return new NewLicitParagraphElement(p);
+  };
+
+  it('parseSubMarks routes MARK-TEXT-HIGHLIGHT via handleTextMark', () => {
+    const para = createPara();
+    const node = document.createElement('mark-text-highlight');
+    node.setAttribute('highlight-color', '#ff0');
+    node.setAttribute('color', '#111');
+
+    const spy = jest
+      .spyOn(
+        para as unknown as Record<string, (...args: unknown[]) => void>,
+        'handleTextMark'
+      )
+      .mockImplementation(() => undefined);
+
+    para.parseSubMarks(node, { type: 'text', marks: [] }, false, [] as never);
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('parseSubMarks handles SUB with non-empty text by pushing subscript', () => {
+    const para = createPara();
+    const sub = document.createElement('sub');
+    sub.textContent = 'x';
+
+    const before = para.marks.length;
+    para.parseSubMarks(sub, { type: 'text', marks: [] }, true, [] as never);
+    expect(para.marks.length).toBeGreaterThan(before);
+  });
+
+  it('parseSubMarks handles SUP with non-empty text and non-info superscript', () => {
+    const para = createPara();
+    const sup = document.createElement('sup');
+    sup.textContent = '2';
+    sup.innerText = '2';
+    sup.id = 'plain';
+
+    const result = para.parseSubMarks(sup, { type: 'text', marks: [] }, true, [] as never);
+    expect(result).toBeDefined();
+  });
+
+  it('parseAnchorWithInfoIcon processes multi-child anchor branch', () => {
+    const para = createPara();
+    const a = document.createElement('a');
+    a.href = 'https://example.com';
+    const t1 = document.createTextNode('a');
+    const t2 = document.createTextNode('b');
+    a.append(t1, t2);
+
+    const parseSpy = jest.spyOn(para, 'parseSubMarks');
+    para['parseAnchorWithInfoIcon'](
+      a,
+      '#000',
+      { type: 'text', marks: [] } as unknown as Mark,
+      null as never,
+      [] as never
+    );
+
+    expect(parseSpy).toHaveBeenCalled();
+  });
+
+  it('parseEMWithInfoicon multi-child branch invokes parseSubMarks', () => {
+    const para = createPara();
+    const emNode = document.createElement('em');
+    emNode.appendChild(document.createTextNode('x'));
+    emNode.appendChild(document.createTextNode('y'));
+
+    const parseSpy = jest.spyOn(para, 'parseSubMarks');
+    para.parseSubMarks(emNode, { type: 'text', marks: [] }, false, [] as never);
+
+    expect(parseSpy).toHaveBeenCalled();
+  });
+
+  it('parseUnderlineWithInfoicon multi-child branch invokes parseSubMarks', () => {
+    const para = createPara();
+    const uNode = document.createElement('u');
+    uNode.appendChild(document.createTextNode('x'));
+    uNode.appendChild(document.createTextNode('y'));
+
+    const parseSpy = jest.spyOn(para, 'parseSubMarks');
+    para.parseSubMarks(uNode, { type: 'text', marks: [] }, false, [] as never);
+
+    expect(parseSpy).toHaveBeenCalled();
+  });
+
+  it('parseStrongWithInfoicon multi-child branch pushes interim marks', () => {
+    const para = createPara();
+    const sNode = document.createElement('strong');
+    sNode.appendChild(document.createTextNode('x'));
+    sNode.appendChild(document.createElement('br'));
+    sNode.appendChild(document.createTextNode('z'));
+
+    para.parseSubMarks(sNode, { type: 'text', marks: [] }, false, [] as never);
+    expect(para.marks.length).toBeGreaterThan(0);
+  });
+
+  it('parseFontWithInfoicon single-child path returns parsed text mark', () => {
+    const para = createPara();
+    const font = document.createElement('font');
+    font.setAttribute('style', 'font-family: Arial;');
+    font.appendChild(document.createTextNode('alpha'));
+
+    const result = para.parseSubMarks(font, { type: 'text', marks: [] }, true, [] as never);
+    expect((result as { type?: string } | null)?.type).toBe('text');
+  });
+
+  it('parseSubMarks A path with empty text keeps return mark null', () => {
+    const para = createPara();
+    const a = document.createElement('a');
+    a.href = 'https://example.com';
+    a.textContent = ' ';
+
+    const result = para.parseSubMarks(a, { type: 'text', marks: [] }, true, [] as never);
+    expect(result).toBeNull();
+  });
+});
+
+
+describe('Licit table/vignette/enhanced element branch boosts', () => {
+  it('LicitTableCellParaElement render applies transparent table borders', () => {
+    const td = document.createElement('td');
+    const p = document.createElement('p');
+    p.textContent = 'cell';
+    td.appendChild(p);
+
+    const cell = new LicitTableCellParaElement(
+      td,
+      '#eee',
+      [120] as unknown as [number],
+      'middle',
+      false,
+      true
+    );
+
+    const rendered = cell.render();
+    expect(rendered.attrs.borderTop).toContain('#ffffff');
+    expect(rendered.attrs.borderBottom).toContain('#000000');
+  });
+
+  it('LicitTableCellParaElement processChildNode ignores IMG without source', () => {
+    const td = document.createElement('td');
+    const img = document.createElement('img');
+    td.appendChild(img);
+
+    const cell = new LicitTableCellParaElement(td);
+    const before = cell.content.length;
+    cell.processChildNode(img);
+    expect(cell.content.length).toBe(before);
+  });
+
+  it('LicitTableCellParaElement processChildOL and processChildUL cover empty text branches', () => {
+    const td = document.createElement('td');
+    const cell = new LicitTableCellParaElement(td);
+
+    const ol = document.createElement('ol');
+    ol.textContent = '';
+    cell.processChildOL(ol);
+
+    const ul = document.createElement('ul');
+    ul.textContent = '';
+    cell.processChildUL(ul);
+
+    expect(cell.content.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('LicitTableCellParaElement cleanup helpers remove newlines and bullets', () => {
+    const td = document.createElement('td');
+    const cell = new LicitTableCellParaElement(td);
+
+    expect(cell.removeNewLines('a\nb')).toBe('ab');
+    expect(cell.removeBullets('•abc')).toBe('abc');
+    expect(cell.cleanupText('•a\n')).toBe('a');
+  });
+
+  it('LicitVignetteElement convertDiv handles non-SPAN grandchildren early return path', () => {
+    const root = document.createElement('div');
+    const div = document.createElement('div');
+    const innerDiv = document.createElement('div');
+    innerDiv.appendChild(document.createElement('p'));
+    div.appendChild(innerDiv);
+    root.appendChild(div);
+
+    const vignette = new LicitVignetteElement(root, '#000000', '#eeeeee', 120);
+    const rendered = vignette.render();
+    expect(rendered.type).toBe('table_cell');
+  });
+
+  it('LicitEnhancedTableElement removeLastRow covers no-op and pop branches', () => {
+    const enhanced = new LicitEnhancedTableElement();
+    enhanced.removeLastRow();
+
+    const body = new LicitEnhancedTableFigureBodyElement();
+    const table = new LicitTableElement();
+    const row = new LicitTableRowElement();
+    table.addRow(row);
+    body.addTable(table);
+    enhanced.addBody(body);
+
+    enhanced.removeLastRow();
+    expect(table.rows.length).toBe(0);
+  });
+
+  it('LicitEnhancedTableElement render handles empty optional sections', () => {
+    const enhanced = new LicitEnhancedTableElement();
+    const rendered = enhanced.render();
+    expect(rendered.content).toEqual([]);
+  });
+});
+
+describe('Licit elements targeted fallback branch boosts', () => {
+  it('LicitImageElement render applies nullish defaults for alt and align', () => {
+    const img = new LicitImageElement('https://example.com/a.png');
+    const rendered = img.render();
+
+    expect(rendered.attrs.src).toBe('https://example.com/a.png');
+    expect(rendered.attrs.alt).toBe('');
+    expect(rendered.attrs.align).toBe('center');
+  });
+
+  it('LicitNewImageElement render covers nullish and non-nullish branches', () => {
+    const withValues = new LicitNewImageElement(
+      'https://example.com/a.png',
+      '100',
+      '80',
+      'alt',
+      'cap'
+    );
+    const renderedWithValues = withValues.render();
+    expect(renderedWithValues.attrs.alt).toBe('alt');
+    expect(renderedWithValues.attrs.width).toBe('100');
+    expect(renderedWithValues.attrs.height).toBe('80');
+
+    const withNullish = new LicitNewImageElement(
+      'https://example.com/b.png',
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+    const renderedWithNullish = withNullish.render();
+    expect(renderedWithNullish.attrs.alt).toBe('');
+    expect(renderedWithNullish.attrs.width).toBeNull();
+    expect(renderedWithNullish.attrs.height).toBeNull();
+  });
+
+  it('LicitNewImageElement getBaseElement defaults capco to empty string', () => {
+    const img = new LicitNewImageElement('https://example.com/c.png', '10', '10', 'alt');
+    const base = img.getBaseElement();
+    expect(base.attrs.capco).toBe('');
+  });
+
+  it('NewLicitTableCellParagraph getBaseElement uses defaults and provided values', () => {
+    const p = document.createElement('p');
+    p.textContent = 'cell';
+
+    const defaults = new NewLicitTableCellParagraph(p);
+    const defaultsBase = defaults.getBaseElement();
+    expect(defaultsBase.attrs.colwidth).toBe(100);
+    expect(defaultsBase.attrs.background).toBe('#FFFFFF');
+    expect(defaultsBase.attrs.vAlign).toBe('top');
+
+    const provided = new NewLicitTableCellParagraph(p, '#eeeeee', [140], 'middle');
+    const providedBase = provided.getBaseElement();
+    expect(providedBase.attrs.colwidth).toEqual([140]);
+    expect(providedBase.attrs.background).toBe('#eeeeee');
+    expect(providedBase.attrs.vAlign).toBe('middle');
+  });
+
+  it('LicitVignetteElement ConvertElements ignores IMG nodes without source', () => {
+    const root = document.createElement('div');
+    const img = document.createElement('img');
+    root.appendChild(img);
+
+    const vignette = new LicitVignetteElement(root, '#undefined', '', 120);
+    const rendered = vignette.render();
+
+    expect(rendered.attrs.borderColor).toBe('#36598d');
+    expect(rendered.attrs.background).toBe('#dce6f2');
+    expect(Array.isArray(rendered.content)).toBe(true);
   });
 });

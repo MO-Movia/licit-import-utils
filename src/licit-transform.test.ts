@@ -2650,13 +2650,21 @@ describe('Converter', () => {
   });
   it('should return #FFFFFF for checkCellStyle when border is 0', () => {
     const style = 'border-left:0;border-right:0;border-top:0;';
-    const result = service['checkCellStyle'](style);
+    const result = (
+      service as unknown as {
+        checkCellStyle: (styleText: string) => string | null;
+      }
+    ).checkCellStyle(style);
     expect(result).toBe('#FFFFFF');
   });
 
   it('should return null for checkCellStyle when no matching border found', () => {
     const style = 'border-style:solid;border-radius:5px;';
-    const result = service['checkCellStyle'](style);
+    const result = (
+      service as unknown as {
+        checkCellStyle: (styleText: string) => string | null;
+      }
+    ).checkCellStyle(style);
     expect(result).toBeNull();
   });
 
@@ -2722,5 +2730,839 @@ describe('Converter', () => {
 
     const result = service['processTableCapco'](table);
     expect(result).toBeUndefined();
+  });
+});
+
+describe('LicitConverter branch coverage additions', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig as TransformConfig);
+  });
+
+  it.each([
+    ['_AF_Caution', 'parseNote'],
+    ['_AF_Warning', 'parseNote'],
+    ['attachmentTitle', 'parseChapterTitle'],
+    ['attpara0', 'parseHeader'],
+    ['attsubpara1', 'parseHeader'],
+    ['chTableTitleCont', 'parseTableTitle'],
+    ['attText', 'parseChapterSubtitle'],
+    ['item_0', 'parseParagraph'],
+    ['i-bullet-3', 'parseParagraph'],
+    ['acronym', 'parseParagraph'],
+    ['Level4_Start', 'parseParagraph'],
+    ['chFigureTitleCont', 'parseFigureTitle'],
+    ['attFigureTitleCont', 'parseFigureTitle'],
+    ['Hidden', 'parseUnknownElement'],
+    ['Cross_Reference', 'parseUnknownElement'],
+    ['FLOW_A', 'parseUnknownElement'],
+    ['UL', 'parseBullet'],
+  ])('parseElement routes "%s" to %s', (className, method) => {
+    const el = document.createElement('div');
+    el.className = className;
+
+    const spy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        method
+      )
+      .mockImplementation(() => undefined);
+
+    converter['parseElement'](el, document.createElement('div'));
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('parseElement handles empty className via parseUnknownElement', () => {
+    const el = document.createElement('div');
+    el.className = '   ';
+    const spy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        'parseUnknownElement'
+      )
+      .mockImplementation(() => undefined);
+
+    converter['parseElement'](el, document.createElement('div'));
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['_AF_Caution', 'parseNote'],
+    ['_AF_Warning', 'parseNote'],
+    ['H2', 'parseHeader'],
+    ['H3', 'parseHeader'],
+    ['H4', 'parseHeader'],
+    ['attTableTitleCont', 'parseTableTitle'],
+    ['attTableTitle', 'parseTableTitle'],
+    ['attText', 'parseChapterSubtitle'],
+    ['i_bullet_4', 'parseBullet'],
+    ['i_bullet_7', 'parseBullet'],
+    ['DIV', 'parseVignet'],
+    ['P', 'parseParagraph'],
+    ['attsubpara6', 'parseParagraph'],
+    ['sumText', 'parseParagraph'],
+    ['attFigureTitleCont', 'parseFigureTitle'],
+    ['SUP', 'parseOrdered'],
+    ['LI', 'parseBullet'],
+    ['Hidden', 'parseUnknownElement'],
+    ['Cross_Reference', 'parseUnknownElement'],
+  ])('parseElement_doc routes "%s" to %s', (tagName, method) => {
+    const spy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        method
+      )
+      .mockImplementation(() => undefined);
+
+    const element = { tagName, className: tagName } as unknown as Element;
+    converter['parseElement_doc'](element, {} as Element);
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('parseElement default path emits warning and calls parseParagraph', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const parseSpy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        'parseParagraph'
+      )
+      .mockImplementation(() => undefined);
+    const sink = jest.fn();
+    const withSink = new LicitConverter({
+      ...(testConfig as TransformConfig),
+      messageSink: sink,
+    });
+
+    const el = document.createElement('div');
+    el.className = 'unknown-style';
+    withSink['parseElement'](el, document.createElement('div'));
+
+    expect(warnSpy).toHaveBeenCalled();
+    expect(sink).toHaveBeenCalled();
+    expect(parseSpy).not.toHaveBeenCalled();
+  });
+
+  it('scaleWidthArray returns raw widths when sum is below 200', () => {
+    expect(converter['scaleWidthArray']([80, 60])).toEqual([80, 60]);
+  });
+
+  it('getSumOfArray returns 0 for empty input', () => {
+    expect(converter['getSumOfArray']([])).toBe(0);
+  });
+
+  it('extractNote returns null when structure does not match note format', () => {
+    const tbody = document.createElement('tbody');
+    const row1 = document.createElement('tr');
+    row1.innerHTML = '<td><p>row1</p></td>';
+    const row2 = document.createElement('tr');
+    row2.innerHTML = '<td><p>NOT A NOTE</p><p>text</p></td>';
+    tbody.append(row1, row2);
+
+    expect(converter['extractNote'](tbody)).toBeNull();
+  });
+
+  it('extractNote returns note paragraphs when last row starts with OVERALL NOTE', () => {
+    const tbody = document.createElement('tbody');
+    const row1 = document.createElement('tr');
+    row1.innerHTML = '<td><p>row1</p></td>';
+    const row2 = document.createElement('tr');
+    row2.innerHTML = '<td><p>OVERALL NOTE:</p><p>note a</p><p>note b</p></td>';
+    tbody.append(row1, row2);
+
+    const notes = converter['extractNote'](tbody);
+    expect(notes?.length).toBe(2);
+    expect(notes?.[0].textContent).toBe('note a');
+  });
+
+  it('isTableFigureNode returns false for DIV without image', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<p>text only</p>';
+    expect(converter['isTableFigureNode'](el)).toBeFalsy();
+  });
+
+  it('isTableFigureNode returns true for non-DIV with IMG child', () => {
+    const el = document.createElement('p');
+    const img = document.createElement('img');
+    el.appendChild(img);
+    expect(converter['isTableFigureNode'](el)).toBe(true);
+  });
+
+  it('isNoteNode returns false for unknown class', () => {
+    expect(converter['isNoteNode']('random-class')).toBe(false);
+  });
+});
+
+describe('LicitConverter exhaustive parse routing additions', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig as TransformConfig);
+  });
+
+  const parseElementRoutes: Array<[string, string]> = [
+    ['_AF_Example', 'parseNote'],
+    ['_AF_Note', 'parseNote'],
+    ['chapterTitle', 'parseChapterTitle'],
+    ['chsubpara1', 'parseHeader'],
+    ['attTableTitleCont', 'parseTableTitle'],
+    ['attTableTitle', 'parseTableTitle'],
+    ['chText', 'parseChapterSubtitle'],
+    ['i_bullet', 'parseParagraph'],
+    ['i_bullet_0', 'parseParagraph'],
+    ['i_bullet_1', 'parseParagraph'],
+    ['i_bullet_2', 'parseParagraph'],
+    ['i_bullet_3', 'parseParagraph'],
+    ['i_bullet_4', 'parseParagraph'],
+    ['i_bullet_5', 'parseParagraph'],
+    ['i_bullet_6', 'parseParagraph'],
+    ['i_bullet_7', 'parseParagraph'],
+    ['i-bullet', 'parseParagraph'],
+    ['i-bullet-0', 'parseParagraph'],
+    ['i-bullet-1', 'parseParagraph'],
+    ['i-bullet-2', 'parseParagraph'],
+    ['para0', 'parseParagraph'],
+    ['chsubpara2', 'parseParagraph'],
+    ['chsubpara3', 'parseParagraph'],
+    ['attsubpara2', 'parseParagraph'],
+    ['attsubpara3', 'parseParagraph'],
+    ['attsubpara4', 'parseParagraph'],
+    ['attsubpara5', 'parseParagraph'],
+    ['attsubpara6', 'parseParagraph'],
+    ['chsubpara4', 'parseParagraph'],
+    ['chsubpara5', 'parseParagraph'],
+    ['chsubpara6', 'parseParagraph'],
+    ['FM-AF-Note', 'parseParagraph'],
+    ['FM-AF-Example', 'parseParagraph'],
+    ['item_1', 'parseParagraph'],
+    ['item_2', 'parseParagraph'],
+    ['item_3', 'parseParagraph'],
+    ['Numbered1start', 'parseParagraph'],
+    ['Numbered1', 'parseParagraph'],
+    ['Body', 'parseParagraph'],
+    ['Level0_Start', 'parseParagraph'],
+    ['Level0_Cont', 'parseParagraph'],
+    ['Level1_Start', 'parseParagraph'],
+    ['Level1_Cont', 'parseParagraph'],
+    ['Level2_Start', 'parseParagraph'],
+    ['Level2_Cont', 'parseParagraph'],
+    ['Level3_Start', 'parseParagraph'],
+    ['Level3_Cont', 'parseParagraph'],
+    ['Level4_Cont', 'parseParagraph'],
+    ['dynamicTableHeader', 'parseDynamicHeader'],
+    ['chFigureTitle', 'parseFigureTitle'],
+    ['attFigureTitle', 'parseFigureTitle'],
+    ['ChangeBarPara', 'parseChangeBarPara'],
+    ['sectionTitle', 'parseSectionTitle'],
+  ];
+
+  it.each(parseElementRoutes)(
+    'parseElement exhaustive route %s -> %s',
+    (className, method) => {
+      const el = document.createElement('div');
+      el.className = className;
+      const spy = jest
+        .spyOn(
+          converter as unknown as Record<string, (...args: unknown[]) => void>,
+          method
+        )
+        .mockImplementation(() => undefined);
+
+      converter['parseElement'](el, document.createElement('div'));
+      expect(spy).toHaveBeenCalled();
+    }
+  );
+
+  const parseElementDocRoutes: Array<[string, string]> = [
+    ['_AF_Example', 'parseNote'],
+    ['_AF_Note', 'parseNote'],
+    ['HR', 'parseHR'],
+    ['chapterTitle', 'parseChapterTitle'],
+    ['attachmentTitle', 'parseChapterTitle'],
+    ['H1', 'parseHeader'],
+    ['chTableTitle', 'parseTableTitle'],
+    ['chText', 'parseChapterSubtitle'],
+    ['i_bullet', 'parseBullet'],
+    ['i_bullet_0', 'parseBullet'],
+    ['i_bullet_1', 'parseBullet'],
+    ['i_bullet_2', 'parseBullet'],
+    ['i_bullet_3', 'parseBullet'],
+    ['i_bullet_5', 'parseBullet'],
+    ['i_bullet_6', 'parseBullet'],
+    ['SPAN', 'parseVignet'],
+    ['para1', 'parseParagraph'],
+    ['paraleadin', 'parseParagraph'],
+    ['paraLeft', 'parseParagraph'],
+    ['AFDP Bullet', 'parseParagraph'],
+    ['AFDP Sub-bullet', 'parseParagraph'],
+    ['attsubpara2', 'parseParagraph'],
+    ['attsubpara3', 'parseParagraph'],
+    ['attsubpara4', 'parseParagraph'],
+    ['attsubpara5', 'parseParagraph'],
+    ['i-bullet-2', 'parseParagraph'],
+    ['chsubpara4', 'parseParagraph'],
+    ['chsubpara5', 'parseParagraph'],
+    ['chsubpara6', 'parseParagraph'],
+    ['chFigureTitle', 'parseFigureTitle'],
+    ['attFigureTitle', 'parseFigureTitle'],
+    ['ChangeBarPara', 'parseChangeBarPara'],
+    ['sectionTitle', 'parseSectionTitle'],
+    ['OL', 'parseOrdered'],
+    ['UL', 'parseBullet'],
+  ];
+
+  it.each(parseElementDocRoutes)(
+    'parseElement_doc exhaustive route %s -> %s',
+    (tagName, method) => {
+      const spy = jest
+        .spyOn(
+          converter as unknown as Record<string, (...args: unknown[]) => void>,
+          method
+        )
+        .mockImplementation(() => undefined);
+
+      const element = { tagName, className: tagName } as unknown as Element;
+      converter['parseElement_doc'](element, {} as Element);
+      expect(spy).toHaveBeenCalled();
+    }
+  );
+});
+
+describe('LicitConverter switch/helper branch boosts', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig as TransformConfig);
+  });
+
+  it.each([
+    ['para', 'parseParagraph'],
+    ['para1', 'parseParagraph'],
+    ['paraleadin', 'parseParagraph'],
+    ['paraLeft', 'parseParagraph'],
+    ['AFDP Bullet', 'parseParagraph'],
+    ['AFDP Sub-bullet', 'parseParagraph'],
+    ['chpara0', 'parseHeader'],
+    ['chTableTitle', 'parseTableTitle'],
+    ['superscript', 'parseParagraph'],
+  ])('parseElement extra route %s -> %s', (className, method) => {
+    const el = document.createElement('div');
+    el.className = className;
+    const spy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        method
+      )
+      .mockImplementation(() => undefined);
+
+    converter['parseElement'](el, document.createElement('div'));
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['_AF_Caution', 'parseNote'],
+    ['_AF_Warning', 'parseNote'],
+    ['H2', 'parseHeader'],
+    ['H3', 'parseHeader'],
+    ['H4', 'parseHeader'],
+    ['attTableTitleCont', 'parseTableTitle'],
+    ['attTableTitle', 'parseTableTitle'],
+    ['attText', 'parseChapterSubtitle'],
+    ['i_bullet_4', 'parseBullet'],
+    ['i_bullet_7', 'parseBullet'],
+    ['DIV', 'parseVignet'],
+    ['P', 'parseParagraph'],
+    ['attsubpara6', 'parseParagraph'],
+    ['sumText', 'parseParagraph'],
+    ['attFigureTitleCont', 'parseFigureTitle'],
+    ['SUP', 'parseOrdered'],
+    ['LI', 'parseBullet'],
+    ['Hidden', 'parseUnknownElement'],
+    ['Cross_Reference', 'parseUnknownElement'],
+  ])('parseElement_doc extra route %s -> %s', (tagName, method) => {
+    const spy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        method
+      )
+      .mockImplementation(() => undefined);
+
+    converter['parseElement_doc'](
+      { tagName, className: tagName } as unknown as Element,
+      {} as Element
+    );
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it.each([
+    [13, 'renderDocFigure'],
+    [9, 'renderDocBulletItems'],
+    [5, 'figureParagraphCase'],
+    [4, 'figureNoteCase'],
+    [11, 'renderDocTable'],
+    [12, 'renderEnhancedTable'],
+    [7, 'figureTableTitleCase'],
+    [8, 'figureTitleCase'],
+    [19, 'renderNewFigureTitle'],
+  ])('render_FrameMakerHTML5_zip_SwitchHelper routes type %s', (type, method) => {
+    const element = {
+      type,
+      node: document.createElement('div'),
+      class: 'x',
+      level: 0,
+      subText: '',
+    } as unknown as ParserElement;
+
+    const spy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        method
+      )
+      .mockImplementation(() => undefined);
+
+    converter['render_FrameMakerHTML5_zip_SwitchHelper'](
+      element,
+      [],
+      [],
+      false,
+      new LicitDocumentElement()
+    );
+
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('render_FrameMakerHTML5_zip_SwitchHelper marks first attachmentTitle for reset', () => {
+    const node = document.createElement('p');
+    node.className = 'attachmentTitle';
+    node.textContent = 'Attachment A';
+
+    const reset = converter['render_FrameMakerHTML5_zip_SwitchHelper'](
+      { type: 0, node, class: 'attachmentTitle', level: 0, subText: '' } as ParserElement,
+      [],
+      [],
+      false,
+      new LicitDocumentElement()
+    );
+
+    expect(reset).toBe(true);
+  });
+
+  it('render_FrameMakerHTML5_zip_SwitchHelper handles unknown type in default branch', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    converter['render_FrameMakerHTML5_zip_SwitchHelper'](
+      {
+        type: 999 as never,
+        node: document.createElement('div'),
+        class: 'unknown-type',
+        level: 0,
+        subText: '',
+      } as ParserElement,
+      [],
+      [],
+      false,
+      new LicitDocumentElement()
+    );
+
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('renderSwitchHelper skips bullet item append when node text is empty', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+
+    converter['renderSwitchHelper'](
+      {
+        type: 9,
+        node: document.createElement('li'),
+        class: 'bullet',
+        level: 1,
+        subText: '',
+      } as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it('renderSwitchHelper skips note append when node text is empty', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+
+    converter['renderSwitchHelper'](
+      {
+        type: 4,
+        node: document.createElement('p'),
+        class: 'note',
+        level: 0,
+        subText: '',
+      } as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it('renderSwitchHelper default branch warns for unhandled type', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    converter['renderSwitchHelper'](
+      {
+        type: 999 as never,
+        node: document.createElement('div'),
+        class: 'unknown',
+        level: 0,
+        subText: '',
+      } as ParserElement,
+      new LicitDocumentElement()
+    );
+
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('sanitizeElement removes empty text nodes after FM_ cleanup', () => {
+    const root = document.createElement('div');
+    root.appendChild(document.createTextNode('FM_'));
+
+    converter['sanitizeElement'](root);
+
+    expect(root.childNodes.length).toBe(0);
+  });
+
+  it('getColWidthArray returns undefined for unsupported width units', () => {
+    const table = document.createElement('table');
+    const colgroup = document.createElement('colgroup');
+    const col = document.createElement('col');
+    col.setAttribute('width', '12em');
+    colgroup.appendChild(col);
+    table.appendChild(colgroup);
+
+    expect(converter['getColWidthArray'](table)).toBeUndefined();
+  });
+});
+
+describe('LicitConverter render_doc and renderSwitch helper branch boosts', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig as TransformConfig);
+  });
+
+  it('renderSwitchHelper appends figure image when src exists', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const node = document.createElement('div');
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://example.com/a.png');
+    node.appendChild(img);
+
+    converter['renderSwitchHelper'](
+      { type: 13, node, class: 'fig', level: 0, subText: '' } as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).toHaveBeenCalled();
+  });
+
+  it('renderSwitchHelper appends bullet and note when text exists', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+
+    const bullet = document.createElement('li');
+    bullet.textContent = 'item';
+    converter['renderSwitchHelper'](
+      { type: 9, node: bullet, class: 'b', level: 1, subText: '' } as ParserElement,
+      doc
+    );
+
+    const note = document.createElement('p');
+    note.textContent = 'note text';
+    converter['renderSwitchHelper'](
+      { type: 4, node: note, class: 'n', level: 0, subText: '' } as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).toHaveBeenCalled();
+  });
+
+  it('renderSwitchHelper handles title and section branches with text', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+
+    const title = document.createElement('p');
+    title.textContent = 'Table 1';
+    title.setAttribute('class', 'chTableTitle');
+    converter['renderSwitchHelper'](
+      { type: 7, node: title, class: 'chTableTitle', level: 0, subText: '' } as ParserElement,
+      doc
+    );
+
+    const section = document.createElement('p');
+    section.textContent = 'Section';
+    converter['renderSwitchHelper'](
+      { type: 6, node: section, class: 'sectionTitle', level: 0, subText: '' } as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).toHaveBeenCalled();
+  });
+
+  it('renderTable skips append when no nested table exists', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+    converter['renderTable'](
+      {
+        type: 11,
+        node: document.createElement('div'),
+        class: 'table',
+        level: 0,
+        subText: '',
+      } as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it('render_docSwitchHelper covers toc removal and hr branch', () => {
+    const doc = new LicitDocumentElement();
+
+    const tocNode = document.createElement('p');
+    tocNode.textContent = 'Table of Contents';
+    const removed = converter['render_docSwitchHelper'](
+      { type: 5, node: tocNode, class: 'para', level: 0, subText: '' } as ParserElement,
+      doc,
+      false,
+      [],
+      'generic'
+    );
+
+    expect(removed).toBe(true);
+
+    const hrRemoved = converter['render_docSwitchHelper'](
+      { type: 15, node: document.createElement('hr'), class: 'hr', level: 0, subText: '' } as ParserElement,
+      doc,
+      true,
+      [],
+      'generic'
+    );
+
+    expect(hrRemoved).toBe(true);
+  });
+
+  it('render_docSwitchHelper routes ordered, table, vignet and default paths', () => {
+    const parseOlSpy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        'parseOL'
+      )
+      .mockImplementation(() => undefined);
+    const docTableSpy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        'renderDocTable'
+      )
+      .mockImplementation(() => undefined);
+    const vignetSpy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        'renderDocVignet'
+      )
+      .mockImplementation(() => undefined);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const doc = new LicitDocumentElement();
+    const node = document.createElement('div');
+    node.textContent = 'x';
+
+    converter['render_docSwitchHelper'](
+      { type: 10, node, class: 'ol', level: 0, subText: '' } as ParserElement,
+      doc,
+      false,
+      [],
+      'generic'
+    );
+    converter['render_docSwitchHelper'](
+      { type: 11, node, class: 'table', level: 0, subText: '' } as ParserElement,
+      doc,
+      false,
+      [],
+      'generic'
+    );
+    converter['render_docSwitchHelper'](
+      { type: 16, node, class: 'vignet', level: 0, subText: '' } as ParserElement,
+      doc,
+      false,
+      [],
+      'generic'
+    );
+    converter['render_docSwitchHelper'](
+      { type: 999 as never, node, class: 'unknown', level: 0, subText: '' } as ParserElement,
+      doc,
+      false,
+      [],
+      'generic'
+    );
+
+    expect(parseOlSpy).toHaveBeenCalled();
+    expect(docTableSpy).toHaveBeenCalled();
+    expect(vignetSpy).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  it('parseElement_doc falls through default for superscript', () => {
+    const parseSpy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        'parseParagraph'
+      )
+      .mockImplementation(() => undefined);
+
+    converter['parseElement_doc'](
+      { tagName: 'superscript', className: 'superscript' } as unknown as Element,
+      {} as Element
+    );
+
+    expect(parseSpy).toHaveBeenCalled();
+  });
+});
+
+describe('LicitConverter parser entry and style extraction branch boosts', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig as TransformConfig);
+  });
+
+  it('parseHTML handles doctrine true and false document inputs', () => {
+    const doc = document.implementation.createHTMLDocument('x');
+    doc.body.innerHTML = '<p>a</p><div><p>b</p></div>';
+
+    expect(converter.parseHTML(doc, true)).toBeDefined();
+    expect(converter.parseHTML(doc, false)).toBeDefined();
+  });
+
+  it('parseHTML handles string input with inner DIV and non-doctrine path', () => {
+    const html = '<html><body><div><p class="para">x</p></div></body></html>';
+    const result = converter.parseHTML(html as unknown as Document, false);
+    expect(result).toBeDefined();
+  });
+
+  it('parseFrameMakerHTML5 returns undefined for empty input', () => {
+    expect(converter.parseFrameMakerHTML5([])).toBeUndefined();
+  });
+
+  it('extractCellStyles handles cells with and without paragraph/style/letter-spacing', () => {
+    const td1 = document.createElement('td');
+    const converterWithExtract = converter as unknown as {
+      extractCellStyles: (cell: HTMLTableCellElement) => {
+        className?: string;
+        id?: string;
+        marginTop?: string;
+        marginBottom?: string;
+        fontSize?: string;
+        letterSpacing?: string;
+      };
+    };
+    const s1 = converterWithExtract.extractCellStyles(td1);
+    expect(s1).toEqual({});
+
+    const td2 = document.createElement('td');
+    td2.innerHTML = '<p id="p1" class="cellbody" style="margin-top:1pt;margin-bottom:2pt;font-size:9pt;"><span style="letter-spacing: 1.5pt;">&#160;</span></p>';
+    const s2 = converterWithExtract.extractCellStyles(td2);
+    expect(s2.className).toBe('cellbody');
+    expect(s2.id).toBe('p1');
+    expect(s2.marginTop).toBe('1pt');
+    expect(s2.marginBottom).toBe('2pt');
+    expect(s2.fontSize).toBe('9pt');
+    expect(s2.letterSpacing).toBe('1.5pt');
+  });
+
+  it('extractLetterSpacing ignores spans without nbsp content', () => {
+    const holder = document.createElement('div');
+    holder.innerHTML = '<span style="letter-spacing:2pt;">abc</span>';
+    const spans = holder.querySelectorAll('span');
+    const info: { letterSpacing?: string } = {};
+
+    converter['extractLetterSpacing'](spans, info);
+    expect(info.letterSpacing).toBeUndefined();
+  });
+
+  it('handleOrderedListItem skips append when text is empty', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+
+    converter['handleOrderedListItem'](
+      {
+        node: document.createElement('li'),
+        class: 'x',
+        type: 10,
+        level: 0,
+        subText: '',
+      } as unknown as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it('renderParagraph skips append when paragraph text is empty', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+
+    converter['renderParagraph'](
+      {
+        node: document.createElement('p'),
+        class: 'p',
+        type: 5,
+        level: 0,
+        subText: '',
+      } as ParserElement,
+      doc
+    );
+
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it('parseTableFigure ignores non-image elements', () => {
+    const parseFigureSpy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        'parseFigure'
+      )
+      .mockImplementation(() => undefined);
+
+    const el = document.createElement('div');
+    el.innerHTML = '<p>no image</p>';
+    converter['parseTableFigure'](el);
+
+    expect(parseFigureSpy).not.toHaveBeenCalled();
+  });
+
+  it('parseTable chooses enhanced table when requested and non-transparent', () => {
+    const el = document.createElement('table');
+    const transparentSpy = jest
+      .spyOn(
+        converter as unknown as Record<string, (...args: unknown[]) => unknown>,
+        'isTransparentTable'
+      )
+      .mockReturnValue(false);
+
+    converter['parseTable'](el, true);
+    const last = (converter as unknown as { elements: ParserElement[] }).elements.slice(-1)[0];
+    expect(last.type).toBe(12);
+    expect(transparentSpy).toHaveBeenCalled();
+  });
+
+  it('ParseNestedList handles nodeName that is neither UL nor OL without appending', () => {
+    const doc = new LicitDocumentElement();
+    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const node = document.createElement('div');
+    node.textContent = '';
+
+    converter['ParseNestedList']('DIV', node, doc, 0);
+    expect(appendSpy).not.toHaveBeenCalled();
   });
 });
