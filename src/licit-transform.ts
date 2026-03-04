@@ -2738,7 +2738,7 @@ export class LicitConverter {
 
         node.textContent = node.textContent.replace(/^FM_/, '');
 
-        if (node.textContent === '') {
+        if (node.textContent.trim() === '') {
           node.remove();
         }
       } else if (node.nodeType === Node.ELEMENT_NODE) {
