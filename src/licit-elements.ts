@@ -562,13 +562,17 @@ export class LicitHeaderElement extends LicitElement {
 
     for (const n of Array.from(node.childNodes)) {
       if (n.nodeName !== 'A') {
-        return;
+        continue;
       }
 
-      const link = (n as HTMLAnchorElement).getAttribute('id');
-      if (!(n as HTMLAnchorElement).href && link) {
-        this.name = link;
-        this.selectionId = '#' + link;
+      const anchorElement = n as HTMLAnchorElement;
+      const anchorId = anchorElement.getAttribute('id') || anchorElement.getAttribute('name');
+
+      if (!anchorElement.href && anchorId) {
+
+        this.name = anchorId;
+        this.id = anchorId;
+        this.selectionId = '#' + anchorId;
       }
     }
   }
@@ -831,13 +835,17 @@ export class NewLicitParagraphElement extends LicitElement {
   setInnerlinks(node: HTMLElement) {
     for (const n of Array.from(node?.childNodes ?? [])) {
       if (n.nodeName !== 'A') {
-        return;
+        continue;  
       }
 
-      const link = (n as HTMLAnchorElement).getAttribute('id');
-      if (!(n as HTMLAnchorElement).href && link) {
-        this.name = link;
-        this.selectionId = '#' + link;
+      const anchorElement = n as HTMLAnchorElement;
+      const anchorId = anchorElement.getAttribute('id') || anchorElement.getAttribute('name');
+
+      if (!anchorElement.href && anchorId) {
+
+        this.name = anchorId;
+        this.id = anchorId;
+        this.selectionId = '#' + anchorId;
       }
     }
   }
