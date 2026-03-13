@@ -49,8 +49,8 @@ export class DocxTransformer {
       transformDocument: this.transformElement.bind(this),
       ignoreEmptyParagraphs: true,
     };
-    // Mamoth is big, so we load it only when needed
-    const mammoth = await import('@modusoperandi/mammoth/mammoth.browser');
+    // Mammoth is big, so we load it only when needed
+    const mammoth = await import('@modusoperandi/mammoth');
     const result = (await mammoth.default.convertToHtml(
       { arrayBuffer },
       options
