@@ -2738,9 +2738,12 @@ export class LicitConverter {
 
         node.textContent = node.textContent.replace(/^FM_/, '');
 
-        // remove empty nodes, but double spaces are better then no spaces.
+        // remove empty nodes
         if (node.textContent === '') {
           node.remove();
+        } else if (node.textContent.trim() === '') {
+          // but double spaces are better then no spaces.
+          node.textContent = ' ';
         }
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         for (const childNode of Array.from(node.childNodes)) {
