@@ -2718,8 +2718,8 @@ export class LicitConverter {
     const classList = ['cellbody', 'cellheading', 'bolditalic'];
     return !classList.includes(trimmedClassName);
   }
-  private sanitizeElement(element: Element) {
-    const stripTextContent = (node) => {
+  private sanitizeElement(element: Element | ChildNode) {
+    const stripTextContent = (node: Element | ChildNode) => {
       if (node.nodeType === Node.TEXT_NODE) {
         const parentClass =
           (node.parentNode as Element)?.className?.toLowerCase?.() || '';
@@ -2738,7 +2738,8 @@ export class LicitConverter {
 
         node.textContent = node.textContent.replace(/^FM_/, '');
 
-        if (node.textContent.trim() === '') {
+        // remove empty nodes, but double spaces are better then no spaces.
+        if (node.textContent === '') {
           node.remove();
         }
       } else if (node.nodeType === Node.ELEMENT_NODE) {
