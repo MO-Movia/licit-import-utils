@@ -1,6 +1,6 @@
 {
   "name": "@modusoperandi/licit-import-utils",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "license": "MIT",
   "type": "module",
   "subversion": "1",
@@ -37,7 +37,7 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@modusoperandi/mammoth": "^1.7.0-9",
+    "@modusoperandi/mammoth": "^1.7.0-10",
     "@modusoperandi/eslint-config": "^3.0.4",
     "@types/jest": "^30.0.0",
     "jszip": "^3.10.1",
