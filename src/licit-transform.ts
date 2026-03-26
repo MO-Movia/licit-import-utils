@@ -2719,7 +2719,7 @@ export class LicitConverter {
     return !classList.includes(trimmedClassName);
   }
   private sanitizeElement(element: Element | ChildNode) {
-    const stripTextContent = (node: Element | ChildNode) => {
+    const stripTextContent = (node) => {
       if (node.nodeType === Node.TEXT_NODE) {
         const parentClass =
           (node.parentNode as Element)?.className?.toLowerCase?.() || '';
@@ -2741,11 +2741,22 @@ export class LicitConverter {
         // remove empty nodes
         if (node.textContent === '') {
           node.remove();
-        } else if (node.textContent.trim() === '') {
-          // but double spaces are better then no spaces.
-          node.textContent = ' ';
         }
       } else if (node.nodeType === Node.ELEMENT_NODE) {
+        // Remove spacing spans containing only &nbsp; (FrameMaker spacing artifacts)
+        if (
+          node.tagName === 'SPAN' &&
+          node.getAttribute('style')?.includes('letter-spacing') &&
+          node.textContent === '\u00A0'
+        ) {
+          const prev = node.previousSibling;
+          if (prev?.nodeType === Node.TEXT_NODE && !prev.textContent.endsWith(' ')) {
+            prev.textContent += ' ';
+          }
+          node.remove();
+          return;
+        }
+
         for (const childNode of Array.from(node.childNodes)) {
           stripTextContent(childNode);
         }
