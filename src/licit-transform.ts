@@ -36,9 +36,7 @@ import {
 import type { UpdatedCapco } from './capco.util';
 import {
   getCapcoFromNode,
-  getCapcoObject,
   safeCapcoParse,
-  getShortCapcoString,
   updateCapcoFromContent,
   removeCapcoTextFromNode,
 } from './capco.util';
@@ -1102,26 +1100,43 @@ export class LicitConverter {
   private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
     const rows = table?.rows;
-    if (!rows || rows.length === 0) {
-      const capcoObj = getCapcoObject('U');
-      table?.setAttribute('capco', JSON.stringify(capcoObj));
+   if (!rows || rows.length === 0) {
+      table?.setAttribute(
+        'capco',
+        JSON.stringify({ ism: undefined, portionMarking: 'U' }),
+      );
       return;
     }
 
     const lastRowIndex = rows.length - 1;
     const lastRow: HTMLTableRowElement = rows[lastRowIndex];
+
     if (lastRow?.cells?.length !== 1) {
-      const capcoObj = getCapcoObject('U');
-      table?.setAttribute('capco', JSON.stringify(capcoObj));
+      table?.setAttribute(
+        'capco',
+        JSON.stringify({ ism: undefined, portionMarking: 'U' }),
+      );
       return;
     }
 
     const cell: HTMLTableCellElement = lastRow.cells[0];
-    const capcoString = getShortCapcoString(cell.textContent);
-    const capcoObj = getCapcoObject(capcoString);
-    table?.setAttribute('capco', JSON.stringify(capcoObj));
-    // Remove the last row from the table
-    table.deleteRow(lastRowIndex);
+
+       // Use the SAME CAPCO parser as paragraphs
+    const res = updateCapcoFromContent(cell);
+     // If CAPCO was found, attach it; otherwise default to U
+    table?.setAttribute(
+      'capco',
+      JSON.stringify(
+        res?.containsCapco
+          ? res.capco
+          : { ism: undefined, portionMarking: 'U' },
+      ),
+    );
+    // Remove the footer CAPCO row from the table unless it contains the word 'note'
+    const footerText = (lastRow?.textContent ?? '').toLowerCase();
+    if (!footerText.includes('note')) {
+      table.deleteRow(lastRowIndex);
+    }
   }
 
   private figureTitleCase(
