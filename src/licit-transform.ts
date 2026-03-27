@@ -200,7 +200,7 @@ export class LicitConverter {
       parentDiv.appendChild(html[0].cloneNode(true));
     }
     // skip first. First element is parent.
-    for (const e of html.slice(1)) {
+    for (const e of html?.slice(1)) {
       parentDiv.appendChild(e.cloneNode(true));
     }
     const dom: HTMLElement = parentDiv;
@@ -261,7 +261,7 @@ export class LicitConverter {
             infoIconData,
             renderedContentList
           );
-          if (e.subText.length > 0) {
+          if (e.subText?.length > 0) {
             const subMark = {
               type: 'text',
               text: e.subText,
@@ -347,7 +347,7 @@ export class LicitConverter {
   private handleNodes(nodes: NodeList) {
     let skipCount = 0;
 
-    for (let i = 0; i < nodes.length; i++) {
+    for (let i = 0; i < nodes?.length; i++) {
       if (skipCount > 0) {
         skipCount--;
         continue;
@@ -376,7 +376,7 @@ export class LicitConverter {
     // Process ordered list nodes with specific anchor tag conditions
     const processOrderedListNodes = (node: HTMLElement): void => {
       const anchorTags = Array.from(node.getElementsByTagName('a'));
-      for (let i = 0; i < anchorTags.length - 1; i++) {
+      for (let i = 0; i < anchorTags?.length - 1; i++) {
         const currentAnchor = anchorTags[i];
         const nextAnchor = anchorTags[i + 2];
 
@@ -625,7 +625,7 @@ export class LicitConverter {
 
   private buildElements(nodes: NodeListOf<Element>) {
     let skipNext = false;
-    for (let i = 0; i < nodes.length; i++) {
+    for (let i = 0; i < nodes?.length; i++) {
       if (skipNext) {
         skipNext = false;
         continue;
@@ -672,7 +672,7 @@ export class LicitConverter {
     let skipCount = 0;
 
     if (children) {
-      for (let j = 0; j < children.length; j++) {
+      for (let j = 0; j < children?.length; j++) {
         if (skipCount > 0) {
           skipCount--;
           continue;
@@ -1019,7 +1019,7 @@ export class LicitConverter {
       this.processTableCapco(e.node as HTMLTableElement);
       return;
     }
-    if (e.node.childNodes.length > 1) {
+    if (e.node.childNodes?.length > 1) {
       const childrens = e.node.childNodes;
       this.processChildNodesCapco(childrens);
     } else {
@@ -1076,7 +1076,7 @@ export class LicitConverter {
       //Recursively looping through nodes
       else if (
         child.nodeType === Node.ELEMENT_NODE &&
-        child.childNodes.length > 0
+        child.childNodes?.length > 0
       ) {
         this.processChildNodesCapco(child.childNodes);
       }
@@ -1102,13 +1102,13 @@ export class LicitConverter {
   private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
     const rows = table?.rows;
-    if (!rows || rows.length === 0) {
+    if (!rows || rows?.length === 0) {
       const capcoObj = getCapcoObject('U');
       table?.setAttribute('capco', JSON.stringify(capcoObj));
       return;
     }
 
-    const lastRowIndex = rows.length - 1;
+    const lastRowIndex = rows?.length - 1;
     const lastRow: HTMLTableRowElement = rows[lastRowIndex];
     if (lastRow?.cells?.length !== 1) {
       const capcoObj = getCapcoObject('U');
@@ -1148,7 +1148,7 @@ export class LicitConverter {
       licitDocument.appendElement(header);
     }
     // Added for handling image inside chFigureTitle class
-    if (e.node.children.length > 0) {
+    if (e.node.children?.length > 0) {
       const children = e.node.children;
       const childrenArray = Array.from(children);
       for (const child of childrenArray) {
@@ -1205,7 +1205,7 @@ export class LicitConverter {
       );
       licitDocument.appendElement(header);
     }
-    if (e.node.children.length === 0) return;
+    if (e.node.children?.length === 0) return;
     const children = Array.from(e.node.children);
     for (const child of children) {
       if (child.tagName !== 'IMG') continue;
@@ -1435,7 +1435,7 @@ export class LicitConverter {
     const widthArray = this.getColWidthArray(e.node as HTMLTableElement);
     const table = e.node.querySelector('tbody');
     let totalWidth = 619;
-    if (widthArray) {
+    if (widthArray?.length > 0) {
       totalWidth = this.getSumOfArray(widthArray);
     }
     const orientation = this.findOrientation(totalWidth);
@@ -1446,7 +1446,7 @@ export class LicitConverter {
       safeCapcoParse(capco).portionMarking
     );
     const licitTable = this.getLicitTable(e, widthArray, capco);
-    if (licitTable.rows.length > 0) {
+    if (licitTable.rows?.length > 0) {
       newBody.addTable(licitTable);
       licitNewTable.addBody(newBody);
       licitNewTable.addCapco(tableCapco);
@@ -1523,7 +1523,7 @@ export class LicitConverter {
     const indent = 0;
     const bulletList = new LicitBulletListElement(indent);
     const text = e.node.textContent;
-    if (!text || (!e.node.childNodes && e.node.childNodes.length === 0)) {
+    if (!text || (!e.node.childNodes || e.node.childNodes?.length === 0)) {
       return;
     }
     this.removeEmptyATags(e.node);
@@ -1553,10 +1553,10 @@ export class LicitConverter {
     e
   ) {
     for (const node of childNodes) {
-      const ulNode = Array.from(node.childNodes).find(
+      const ulNode = Array.from(node.childNodes ?? []).find(
         (childNode) => childNode.nodeName === 'UL'
       );
-      const olNode = Array.from(node.childNodes).find(
+      const olNode = Array.from(node.childNodes ?? []).find(
         (childNode) => childNode.nodeName === 'OL'
       );
       if (!(ulNode && olNode) && node.nextSibling && node.nodeName !== 'LI') {
@@ -1580,7 +1580,7 @@ export class LicitConverter {
   }
 
   private addElementLicit(licitDocument, bulletList: LicitBulletListElement) {
-    if (bulletList.listItems.length > 0) {
+    if (bulletList.listItems?.length > 0) {
       licitDocument?.appendElement(bulletList);
     }
   }
@@ -1642,7 +1642,7 @@ export class LicitConverter {
         licitDocument.appendElement(errText);
       }
       licitDocument.appendElement(imageElement);
-      if (imgElement.childNodes.length > 1) {
+      if (imgElement.childNodes?.length > 1) {
         imgElement.remove();
         const textInline = new NewLicitParagraphElement(
           imgElement as HTMLElement
@@ -1658,10 +1658,10 @@ export class LicitConverter {
     let indent = 0;
     let orderedList = new LicitOrderedListElement(indent);
     const text = e.node.textContent;
-    if (text && e.node.childNodes && e.node.childNodes.length > 0) {
+    if (text && e.node.childNodes && e.node.childNodes?.length > 0) {
       const childNodes = Array.from(e.node.childNodes);
       for (const n of childNodes) {
-        const ulNode = Array.from(n.childNodes).find(
+        const ulNode = Array.from(n.childNodes ?? []).find(
           (node) => node.nodeName === 'OL'
         );
         const bulletItem = new LicitBulletListItemElement(n as HTMLElement);
@@ -1673,7 +1673,7 @@ export class LicitConverter {
           orderedList = new LicitOrderedListElement(0);
         }
       }
-      if (orderedList.listItems.length > 0) {
+      if (orderedList.listItems?.length > 0) {
         licitDocument.appendElement(orderedList);
       }
     }
@@ -1701,13 +1701,14 @@ export class LicitConverter {
     isTransparent: boolean
   ) {
     const rows = tableTag.querySelectorAll('tr');
+    if (!rows?.length) return;
     let totalTableHeight = 0; 
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 0; i < rows?.length; i++) {
       if (
         !isTransparent &&
         i == 0 &&
         !isChapterHeader &&
-        rows[i].cells.length > 1
+        rows[i].cells?.length > 1
       ) {
         isChapterHeader = true;
       }
@@ -1746,7 +1747,7 @@ export class LicitConverter {
     widthArray: number[],
     isTransparent: boolean
   ) {
-    for (let j = 0; j < cells.length; j++) {
+    for (let j = 0; j < cells?.length; j++) {
       //Start RK-Dynamic Cell(2-2 of Chapter Header) BgColor
       const style = cells[j].getAttribute('style');
       let bgColor: string;
@@ -1943,7 +1944,7 @@ export class LicitConverter {
       const styleVals = style.split(';');
       for (const val of styleVals) {
         if (
-          val.length > 0 &&
+          val?.length > 0 &&
           val.includes('border') &&
           !val.includes('style') &&
           !val.includes('radius')
@@ -2022,13 +2023,13 @@ export class LicitConverter {
       list = new LicitOrderedListElement(indent);
     }
     const text = node.textContent;
-    if (text && node.childNodes && node.childNodes.length > 0) {
+    if (text && node.childNodes && node.childNodes?.length > 0) {
       const childNodes = Array.from(node.childNodes);
       for (const n of childNodes) {
-        const ulNode = Array.from(n.childNodes).find(
+        const ulNode = Array.from(n.childNodes ?? []).find(
           (node) => node.nodeName === ulType
         );
-        const olNode = Array.from(n.childNodes).find(
+        const olNode = Array.from(n.childNodes ?? []).find(
           (node) => node.nodeName === olType
         );
         const bulletItem = new LicitBulletListItemElement(n as HTMLElement);
@@ -2046,7 +2047,7 @@ export class LicitConverter {
           list = new LicitOrderedListElement(indent);
         }
       }
-      if (list.listItems.length > 0) {
+      if (list.listItems?.length > 0) {
         licitDocument.appendElement(list);
       }
     }
@@ -2294,7 +2295,7 @@ export class LicitConverter {
       subText: '',
     };
 
-    const lastIndex = this.elements.length - 1;
+    const lastIndex = this.elements?.length - 1;
     // Append element as child to the existing TableTitle node
     if (
       lastIndex >= 0 &&
@@ -2821,7 +2822,7 @@ export class LicitConverter {
     const colElements: HTMLTableColElement[] = Array.from(
       table.querySelectorAll('colgroup > col')
     );
-    if (colElements.length == 0) {
+    if (colElements?.length == 0) {
       return;
     }
     let widthArray: number[] = [];
@@ -2846,11 +2847,11 @@ export class LicitConverter {
       }
     }
     //Finding scaled widths for individual widths mentioned in px
-    if (rawWidthArray.length === colElements.length) {
+    if (rawWidthArray?.length === colElements?.length) {
       widthArray = this.scaleWidthArray(rawWidthArray);
     }
     //Return undefined for any invalid case
-    if (widthArray.length !== colElements.length) {
+    if (widthArray?.length !== colElements?.length) {
       return;
     }
     const sum = this.getSumOfArray(widthArray);
@@ -2860,6 +2861,9 @@ export class LicitConverter {
       totalPixelWidth = 861;
     }
     // cut/add excess to meet the size requirement
+    if (widthArray?.length === 0) {
+      return undefined;
+      }
     widthArray[0] += totalPixelWidth - sum;
     return widthArray;
   }
@@ -2868,7 +2872,8 @@ export class LicitConverter {
     cellIndex: number,
     colWidthArray: number[]
   ): number[] {
-    return colWidthArray.slice(cellIndex, cellIndex + colSpan);
+    if (!colWidthArray || colWidthArray?.length === 0) return [];
+    return colWidthArray?.slice(cellIndex, cellIndex + colSpan) ?? [];
   }
   private scaleWidthArray(rawWidthArray: number[]) {
     const sum = this.getSumOfArray(rawWidthArray);
@@ -2883,7 +2888,7 @@ export class LicitConverter {
     }
   }
   private getSumOfArray(array: number[]): number {
-    if (array.length == 0) {
+    if (array?.length == 0) {
       return 0;
     }
     return array.reduce((sum, n) => sum + n, 0);
@@ -2935,14 +2940,14 @@ export class LicitConverter {
 
   private extractNote(table: HTMLTableSectionElement): HTMLElement[] | null {
     const rows = Array.from(table.querySelectorAll('tr'));
-    if (rows.length < 2) return null;
+    if (rows?.length < 2) return null;
 
     const lastRow = rows.at(-1);
     const td = lastRow.querySelector('td');
     if (!td) return null;
 
     const paragraphs = Array.from(td.querySelectorAll('p'));
-    if (paragraphs.length < 2) return null;
+    if (paragraphs?.length < 2) return null;
 
     const firstParaText = (paragraphs[0].textContent || '')
       .replaceAll(/\s{1,100}/g, ' ')
@@ -2986,8 +2991,8 @@ export class LicitConverter {
     const isShortVignette =
       node.tagName === 'DIV' &&
       node.querySelector('img') &&
-      node.querySelectorAll('p').length === 1 &&
-      node.querySelector('p').textContent.trim().length < 100;
+      node.querySelectorAll('p')?.length === 1 &&
+      node.querySelector('p').textContent.trim()?.length < 100;
 
     return isImage || isShortVignette;
   }
