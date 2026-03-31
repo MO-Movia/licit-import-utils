@@ -11,7 +11,7 @@ export function normalize(
   let out = input.trim();
 
   if (out !== out.toUpperCase()) {
-    fixes.push("Normalized to uppercase");
+    fixes?.push("Normalized to uppercase");
     out = out.toUpperCase();
   }
 
@@ -19,11 +19,10 @@ export function normalize(
     fixes.push("Removed parentheses");
     out = out.replace(/[()]/g, "");
   }
-
   out = out
-    .replace(/\s*\/\/\s*/g, "//")
-    .replace(/\s*\/\s*/g, "/")
-    .replace(/\s*,\s*/g, ", ");
+    .replace(/\s{0,10}\/\/\s{0,10}/g, "//")
+    .replace(/\s{0,10}\/\s{0,10}/g, "/")
+    .replace(/\s{0,10},\s{0,10}/g, ", ");
 
   return out;
 }

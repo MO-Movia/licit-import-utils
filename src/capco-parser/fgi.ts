@@ -15,7 +15,7 @@ export function parseFGIPortion(
 
   if (!clean.startsWith("//")) return null;
 
-  const parts = clean.replace("//", "").split(/\s+/);
+  const parts = clean.replace("//", "").split(/\s{1,10}/);
   const cls = parts.pop();
 
   if (!isAllowed(cls)) return null;
