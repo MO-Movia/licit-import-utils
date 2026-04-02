@@ -4,29 +4,12 @@
  */
 
 import { parsePortionMarking } from "./capco-parser";
-
-export interface Capco {
-  portionMarking?: string;
-  ism?: ISM;
-}
-interface ISM {
-  version: string;
-  classification: string[];
-  ownerProducer: string;
-  sciControls: string[];
-  sarIdentifiers: string[];
-  atomicEnergyMarkings: string[];
-  fgiSourceOpen: string[];
-  releasableTo: string[];
-  disseminationControls: string[];
-  nonICmarkings: string[];
-}
+import { ISM, ParseResult } from "./capco-parser/types";
 
 const DEFAULT_PORTION = 'U';
 
 export interface UpdatedCapco {
-  containsCapco: boolean;
-  capco: Capco;
+  capco: ParseResult;
   updatedTextContent: string;
 }
 // System Capcos list.
@@ -47,9 +30,9 @@ export function updateCapcoFromContent(
   let text = element.textContent?.trimStart() ?? '';
   if (element.parentElement?.tagName === 'SPAN' && !extractLeadingPortionMarking(text)) {
     text = element.parentElement?.parentElement?.textContent?.trimStart() ?? '';
-  } 
+  }
 
-  const defIsm = {
+  const defIsm: ISM = {
     version: "1",
     classification: ['U'],
     ownerProducer: "USA",
@@ -62,23 +45,16 @@ export function updateCapcoFromContent(
     nonICmarkings: []
   };
 
-  const defaultCapco: Capco = {
+  const defaultCapco: ParseResult = {
     ism: defIsm,
-    portionMarking: DEFAULT_PORTION
+    portionMarking: DEFAULT_PORTION,
+    finalMarking: `(${DEFAULT_PORTION})`,
+    rawTextPreserved: false,
   };
-
-  if (!text) {
-    return {
-      containsCapco: true,
-      capco: defaultCapco,
-      updatedTextContent: text
-    };
-  }
 
   const extracted = extractLeadingPortionMarking(text);
   if (!extracted) {
     return {
-      containsCapco: true,
       capco: defaultCapco,
       updatedTextContent: text
     };
@@ -90,10 +66,11 @@ export function updateCapcoFromContent(
   // ✅ recognized CAPCO
   if (!parsed.rawTextPreserved) {
     return {
-      containsCapco: true,
       capco: {
         ism: parsed.ism,
-        portionMarking: parsed.portionMarking
+        portionMarking: parsed.portionMarking,
+        finalMarking: `(${parsed.portionMarking})`,
+        rawTextPreserved: false
       },
       updatedTextContent: rest
     };
@@ -101,10 +78,11 @@ export function updateCapcoFromContent(
 
   // ❌ unrecognized CAPCO
   return {
-    containsCapco: true,
     capco: {
-      ism: parsed.ism,
-      portionMarking: 'TBD'
+      ism: undefined,
+      portionMarking: 'TBD',
+      finalMarking: '(TBD)',
+      rawTextPreserved: false
     },
     updatedTextContent: text
   };
@@ -121,7 +99,7 @@ export function updateCapcoFromContent(
 function extractLeadingPortionMarking(
   text: string
 ): { inner: string; rest: string } | null {
-  const trimmed = text.trimStart();
+  const trimmed = text?.trimStart();
 
   // Must start with '('
   if (!trimmed.startsWith('(')) {
@@ -129,18 +107,12 @@ function extractLeadingPortionMarking(
   }
 
   const closeIdx = trimmed.indexOf(')');
-  if (closeIdx === -1) {
-    return null; // malformed, ignore
+  if (closeIdx <= 1) {
+    return null;
   }
 
   const inner = trimmed.substring(1, closeIdx).trim();
   const rest = trimmed.substring(closeIdx + 1).trimStart();
-
-  // Empty () is not a CAPCO
-  if (!inner) {
-    return null;
-  }
-
   return { inner, rest };
 }
 
@@ -152,7 +124,7 @@ export function getShortCapcoString(capcoName: string): string {
 export function getCapcoNames(): string[] {
   return Object.keys(capcoMap);
 }
- 
+
 export function getCapcoFromNode(node: HTMLElement): string | null | undefined {
   return (
     node?.getAttribute('capco') ??
@@ -160,23 +132,25 @@ export function getCapcoFromNode(node: HTMLElement): string | null | undefined {
   );
 }
 
-export function safeCapcoParse(capco: unknown, fallback?: Capco): Capco {
-  const defaultFallBack: Capco = {
+export function safeCapcoParse(capco: unknown, fallback?: ParseResult): ParseResult {
+  const defaultFallBack: ParseResult = {
     ism: undefined,
     portionMarking: 'error',
+    finalMarking: '(error)',
+    rawTextPreserved: false
   };
   fallback = fallback ?? defaultFallBack;
 
   if (capco && typeof capco === 'string') {
     try {
-      return JSON.parse(capco) as Capco;
+      return JSON.parse(capco) as ParseResult;
     } catch (e) {
       console.warn('could not parse capco text: ' + capco, e);
     }
   }
 
   if (capco && typeof capco === 'object') {
-    return capco as Capco;
+    return capco as ParseResult;
   }
 
   return fallback;

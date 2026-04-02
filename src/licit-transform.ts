@@ -154,7 +154,7 @@ interface CellStyleInfo {
 export class LicitConverter {
   private readonly elementsParsedMap = new Map<string, boolean>();
   private elements: ParserElement[] = [];
-  constructor(private readonly config: TransformConfig) {}
+  constructor(private readonly config: TransformConfig) { }
   public parseHTML(
     html: Document,
     isDoctorine: boolean,
@@ -1022,18 +1022,17 @@ export class LicitConverter {
       this.processChildNodesCapco(childrens);
     } else {
       const res = updateCapcoFromContent(e.node);
-      if (res?.containsCapco) {
-        if (e.node.nodeType === Node.ELEMENT_NODE) {
-          const element = e.node;
-          this.updateChildCapcoContentLoopHelper(
-            Array.from(element.childNodes),
-            res
-          );
-          element.setAttribute('capco', JSON.stringify(res.capco));
-        } else if (e.node.nodeType === Node.TEXT_NODE) {
-          e.node.textContent = res.updatedTextContent;
-        }
+      if (e.node.nodeType === Node.ELEMENT_NODE) {
+        const element = e.node;
+        this.updateChildCapcoContentLoopHelper(
+          Array.from(element.childNodes),
+          res
+        );
+        element.setAttribute('capco', JSON.stringify(res.capco));
+      } else if (e.node.nodeType === Node.TEXT_NODE) {
+        e.node.textContent = res.updatedTextContent;
       }
+
     }
 
     if (this.isNoteNode(e.node.className)) {
@@ -1067,9 +1066,7 @@ export class LicitConverter {
         child.textContent.trim() !== ''
       ) {
         const res = updateCapcoFromContent(child as Element);
-        if (res?.containsCapco) {
-          this.updateCapcoToParagraph(child, res);
-        }
+        this.updateCapcoToParagraph(child, res);
       }
       //Recursively looping through nodes
       else if (
@@ -1100,7 +1097,7 @@ export class LicitConverter {
   private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
     const rows = table?.rows;
-   if (!rows || rows.length === 0) {
+    if (!rows) {
       table?.setAttribute(
         'capco',
         JSON.stringify({ ism: undefined, portionMarking: 'U' }),
@@ -1121,15 +1118,13 @@ export class LicitConverter {
 
     const cell: HTMLTableCellElement = lastRow.cells[0];
 
-       // Use the SAME CAPCO parser as paragraphs
+    // Use the SAME CAPCO parser as paragraphs
     const res = updateCapcoFromContent(cell);
-     // If CAPCO was found, attach it; otherwise default to U
+    // If CAPCO was found, attach it; otherwise default to U
     table?.setAttribute(
       'capco',
       JSON.stringify(
-        res?.containsCapco
-          ? res.capco
-          : { ism: undefined, portionMarking: 'U' },
+        res.capco
       ),
     );
     // Remove the footer CAPCO row from the table unless it contains the word 'note'
@@ -1716,7 +1711,7 @@ export class LicitConverter {
     isTransparent: boolean
   ) {
     const rows = tableTag.querySelectorAll('tr');
-    let totalTableHeight = 0; 
+    let totalTableHeight = 0;
     for (let i = 0; i < rows.length; i++) {
       if (
         !isTransparent &&
@@ -1731,7 +1726,7 @@ export class LicitConverter {
       const rowHeight = rows[i].getAttribute('height');
       if (rowHeight) {
         licitRow.height = rowHeight;
-        licitRow.rowHeight = rowHeight;     
+        licitRow.rowHeight = rowHeight;
         totalTableHeight += parseFloat(rowHeight);
       }
       const cells = rows[i].querySelectorAll(querySel);
@@ -1863,13 +1858,13 @@ export class LicitConverter {
     }
     licitRow.addCell(licitCell);
   }
-/**
- * Extracts style information from a table cell element per the ingest requirements.
- * Captures: margins (top/bottom), font-size overrides, and letter-spacing for non-breaking spaces.
- * 
- * @param cell - The HTMLTableCellElement to extract styles from
- * @returns Object containing extracted style information
- */
+  /**
+   * Extracts style information from a table cell element per the ingest requirements.
+   * Captures: margins (top/bottom), font-size overrides, and letter-spacing for non-breaking spaces.
+   * 
+   * @param cell - The HTMLTableCellElement to extract styles from
+   * @returns Object containing extracted style information
+   */
   private extractCellStyles(cell: HTMLTableCellElement): CellStyleInfo {
     const styleInfo: CellStyleInfo = {};
 
@@ -1979,7 +1974,7 @@ export class LicitConverter {
     isChapterHeader: boolean,
     licitCell: LicitElement,
     verAlign: string,
-    cellStyleInfo?: CellStyleInfo, 
+    cellStyleInfo?: CellStyleInfo,
   ) {
     const image = (cell.childNodes[0] as Element).querySelector('img');
     let altText = null;
@@ -2593,7 +2588,7 @@ export class LicitConverter {
     this.elementsParsedMap.set(element.tagName, true);
 
     switch (
-      element.tagName // SL-6
+    element.tagName // SL-6
     ) {
       case '_AF_Example':
       case '_AF_Note':

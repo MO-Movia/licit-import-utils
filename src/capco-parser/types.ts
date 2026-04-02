@@ -7,13 +7,13 @@ export interface ISM {
   version: "1";
   classification: string[];
   ownerProducer: string;
-  sciControls: string[];
-  sarIdentifiers: string[];
-  atomicEnergyMarkings: string[];
-  fgiSourceOpen: string[];
-  releasableTo: string[];
-  disseminationControls: string[];
-  nonICmarkings: string[];
+  sciControls?: string[];
+  sarIdentifiers?: string[];
+  atomicEnergyMarkings?: string[];
+  fgiSourceOpen?: string[];
+  releasableTo?: string[];
+  disseminationControls?: string[];
+  nonICmarkings?: string[];
 }
 
 export interface ParseResult {
