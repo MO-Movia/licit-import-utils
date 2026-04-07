@@ -102,7 +102,7 @@ function extractLeadingPortionMarking(
   const trimmed = text?.trimStart();
 
   // Must start with '('
-  if (!trimmed.startsWith('(')) {
+  if (!trimmed?.startsWith('(')) {
     return null;
   }
 
