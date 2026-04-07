@@ -12,9 +12,8 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.capco.portionMarking).toBe('U');
-    expect(result.capco.ism.classification).toBe('U');
+    expect(result.capco.ism.classification).toStrictEqual(["U"]);
     expect(result.updatedTextContent).toBe('This is unclassified content');
   });
 
@@ -24,7 +23,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.capco.portionMarking).toBe('U');
     expect(result.updatedTextContent).toBe('lowercase test');
   });
@@ -35,9 +33,8 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.capco.portionMarking).toBe('CUI');
-    expect(result.capco.ism.classification).toBe('U');
+    expect(result.capco.ism.classification).toStrictEqual(["CUI"]);
     expect(result.updatedTextContent).toBe(
       'Controlled unclassified information'
     );
@@ -49,7 +46,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.capco.portionMarking).toBe('CUI');
     expect(result.updatedTextContent).toBe('test content');
   });
@@ -60,10 +56,9 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
-    expect(result.capco.portionMarking).toBe('TBD');
-    expect(result.capco.ism.classification).toBe('U');
-    expect(result.updatedTextContent).toBe('(S//NF) Secret content');
+    expect(result.capco.portionMarking).toBe('S//NF');
+    expect(result.capco.ism.classification).toStrictEqual(["S"]);
+    expect(result.updatedTextContent).toBe('Secret content');
   });
 
   it('should handle full form capco with // and keep original text', () => {
@@ -72,7 +67,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.capco.portionMarking).toBe('TBD');
     expect(result.updatedTextContent).toBe(
       '(SECRET//NOFORN) classified content'
@@ -85,7 +79,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.capco.portionMarking).toBe('TBD');
     expect(result.updatedTextContent).toBe('(SECRET) classified information');
   });
@@ -95,7 +88,7 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result).toBeUndefined();
+    expect(result.capco.portionMarking).toBe('U');
   });
 
   it('should handle element with empty text content', () => {
@@ -104,7 +97,7 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result).toBeUndefined();
+    expect(result.capco.portionMarking).toBe('U');
   });
 
   it('should handle element with whitespace-only text content', () => {
@@ -113,7 +106,7 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result).toBeUndefined();
+    expect(result.capco.portionMarking).toBe('U');
   });
 
   it('should handle text without CAPCO markings', () => {
@@ -122,7 +115,7 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result).toBeUndefined();
+    expect(result.capco.portionMarking).toBe('U');
   });
 
   it('should handle text with ( but no )', () => {
@@ -131,7 +124,7 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result).toBeUndefined();
+    expect(result.capco.portionMarking).toBe('U');
   });
 
   it('should handle text with ) before (', () => {
@@ -140,7 +133,7 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result).toBeUndefined();
+    expect(result.capco.portionMarking).toBe('U');
   });
 
   it('should trim whitespace after (U) marker removal', () => {
@@ -149,7 +142,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.updatedTextContent).toBe('Multiple spaces after marker');
   });
 
@@ -159,7 +151,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.updatedTextContent).toBe('');
   });
 
@@ -169,7 +160,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.capco.portionMarking).toBe('TBD');
   });
 
@@ -179,7 +169,7 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result).toBeUndefined();
+    expect(result.capco.portionMarking).toBe('U');
   });
 
   it('should handle text starting with whitespace before (U)', () => {
@@ -188,7 +178,6 @@ describe('CapcoService', () => {
 
     const result = updateCapcoFromContent(element);
 
-    expect(result.containsCapco).toBe(true);
     expect(result.updatedTextContent).toBe('text with leading spaces');
   });
 
