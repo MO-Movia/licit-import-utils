@@ -835,7 +835,7 @@ export class NewLicitParagraphElement extends LicitElement {
   setInnerlinks(node: HTMLElement) {
     for (const n of Array.from(node?.childNodes ?? [])) {
       if (n.nodeName !== 'A') {
-        continue;  
+        continue;
       }
 
       const anchorElement = n as HTMLAnchorElement;
@@ -1507,15 +1507,15 @@ export class NewLicitParagraphElement extends LicitElement {
 
     const lnk = isLink
       ? {
-          type: 'link',
-          attrs: {
-            href: href,
-            rel: n.rel,
-            target: 'blank',
-            title: null,
-            selectionId: selectionIdModified,
-          },
-        }
+        type: 'link',
+        attrs: {
+          href: href,
+          rel: n.rel,
+          target: 'blank',
+          title: null,
+          selectionId: selectionIdModified,
+        },
+      }
       : null;
     const clr = {
       type: 'mark-text-color',
@@ -2752,12 +2752,12 @@ export class LicitTableCellParaElement extends LicitElement {
         colwidth: this.colWidth || defaultColWidth,
         background: this.bgColor || defaultBgColor,
         vAlign: this.vAlign || 'middle',
-        cellWidth: this.cellStyleInfo?.cellWidth ?? null,     
-        cellStyle: this.cellStyleInfo?.className ?? null,     
-        fontSize: this.cellStyleInfo?.fontSize ?? null,        
-        letterSpacing: this.cellStyleInfo?.letterSpacing ?? null, 
-        marginTop: this.cellStyleInfo?.marginTop ?? null,       
-        marginBottom: this.cellStyleInfo?.marginBottom ?? null, 
+        cellWidth: this.cellStyleInfo?.cellWidth ?? null,
+        cellStyle: this.cellStyleInfo?.className ?? null,
+        fontSize: this.cellStyleInfo?.fontSize ?? null,
+        letterSpacing: this.cellStyleInfo?.letterSpacing ?? null,
+        marginTop: this.cellStyleInfo?.marginTop ?? null,
+        marginBottom: this.cellStyleInfo?.marginBottom ?? null,
       },
       content: [],
     };
@@ -2829,7 +2829,9 @@ export class LicitTableCellParaElement extends LicitElement {
         null
       );
       if (paragraph) {
-        this.content.push(paragraph.render());
+        const renderedParagraph = paragraph.render();
+        this.applyOverriddenCellTextMarks(renderedParagraph);
+        this.content.push(renderedParagraph);
       }
     } else if (childNode.nodeName === 'IMG') {
       const imgElement = childNode as HTMLImageElement;
@@ -2845,6 +2847,68 @@ export class LicitTableCellParaElement extends LicitElement {
     } else if (childNode.nodeName === 'UL') {
       this.processChildUL(childNode);
     }
+  }
+  private applyOverriddenCellTextMarks(paragraph: LicitElementJSON) {
+    const overriddenMarks = [this.getFontSizeMark(), this.getLetterSpacingMark()]
+      .filter(Boolean) as { type: string; attrs?: LicitAttrs }[];
+
+    if (overriddenMarks.length === 0 || !Array.isArray(paragraph?.content)) {
+      return;
+    }
+
+    const overriddenMarkTypes = new Set(
+      overriddenMarks.map((mark) => mark.type),
+    );
+
+    for (const contentNode of paragraph.content as Mark[]) {
+      if (contentNode?.type !== 'text') {
+        continue;
+      }
+      contentNode.marks ??= [];
+      contentNode.marks = contentNode.marks.filter(
+        (mark) => !overriddenMarkTypes.has(mark?.type),
+      );
+      contentNode.marks.push(...overriddenMarks);
+    }
+  }
+  private getFontSizeMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawFontSize = this.cellStyleInfo?.fontSize;
+    if (!rawFontSize) {
+      return null;
+    }
+
+    const pt = Number.parseFloat(rawFontSize);
+    if (Number.isNaN(pt)) {
+      return null;
+    }
+
+    return {
+      type: 'mark-font-size',
+      attrs: {
+        pt,
+        overridden: true,
+      },
+    };
+  }
+
+  private getLetterSpacingMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawLetterSpacing = this.cellStyleInfo?.letterSpacing;
+    if (!rawLetterSpacing) {
+      return null;
+    }
+
+    const letterSpacing = rawLetterSpacing.trim();
+    if (!letterSpacing) {
+      return null;
+    }
+
+    return {
+      type: 'mark-letter-spacing',
+      attrs: {
+        letterSpacing,
+        overridden: true,
+      },
+    };
   }
   processChildOL(childNode: ChildNode) {
     const orderedList = new LicitOrderedListElement(0);
@@ -2918,7 +2982,7 @@ export class LicitTableCellParaElement extends LicitElement {
 
 export class LicitTableRowElement extends LicitElement {
   height?: string;
-  rowHeight?: string; 
+  rowHeight?: string;
   getBaseElement(): LicitTableRowJSON {
     return {
       type: 'table_row',
@@ -2955,8 +3019,8 @@ export class LicitTableElement extends LicitElement {
         marginLeft: null,
         vignette: this.isVignette,
         capco: this.capco,
-        noOfColumns: this.noOfColumns ?? null,   
-        tableHeight: this.tableHeight ?? null, 
+        noOfColumns: this.noOfColumns ?? null,
+        tableHeight: this.tableHeight ?? null,
       },
       content: [],
     };
@@ -2965,9 +3029,9 @@ export class LicitTableElement extends LicitElement {
   rows: LicitTableRowElement[] = [];
   isVignette = false;
   capco?: string;
-  noOfColumns?: number;    
+  noOfColumns?: number;
   tableHeight?: string;
-  
+
   constructor(isVignette?: boolean, capco?: string) {
     super();
     this.isVignette = isVignette;
