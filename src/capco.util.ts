@@ -28,7 +28,8 @@ export function updateCapcoFromContent(
   element: Element
 ): UpdatedCapco | undefined {
   let text = element.textContent?.trimStart() ?? '';
-  if (element.parentElement?.tagName === 'SPAN' && !extractLeadingPortionMarking(text)) {
+  const isTextNode = element.nodeType === Node.TEXT_NODE;
+  if (!isTextNode && element.parentElement?.tagName === 'SPAN' && !extractLeadingPortionMarking(text)) {
     text = element.parentElement?.parentElement?.textContent?.trimStart() ?? '';
   }
 
