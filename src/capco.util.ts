@@ -28,8 +28,26 @@ export function updateCapcoFromContent(
   element: Element
 ): UpdatedCapco | undefined {
   let text = element.textContent?.trimStart() ?? '';
-  if (element.parentElement?.tagName === 'SPAN' && !extractLeadingPortionMarking(text)) {
+  const isTextNode = element.nodeType === Node.TEXT_NODE;
+
+  if (!isTextNode && element.parentElement?.tagName === 'SPAN' && !extractLeadingPortionMarking(text)) {
     text = element.parentElement?.parentElement?.textContent?.trimStart() ?? '';
+  }
+
+  // When the text node is '(' it means the CAPCO marking is split across
+  // multiple nodes e.g. '(' [text] + 'TS//SI/TK//NF,OC' [span] + ')' [text]
+  // So walk up to the parent <p> to get the full text content
+  if (isTextNode && text.trimStart() === '(') {
+    let parent = (element as Node).parentElement;
+    while (parent && parent.tagName.toLowerCase() !== 'p') {
+      parent = parent.parentElement;
+    }
+    if (parent) {
+      text = parent.textContent?.trimStart() ?? '';
+      while (parent.childNodes.length > 1) {
+        parent.removeChild(parent.lastChild);
+      }
+    }
   }
 
   const defIsm: ISM = {
