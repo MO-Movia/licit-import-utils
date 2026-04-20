@@ -835,7 +835,7 @@ export class NewLicitParagraphElement extends LicitElement {
   setInnerlinks(node: HTMLElement) {
     for (const n of Array.from(node?.childNodes ?? [])) {
       if (n.nodeName !== 'A') {
-        continue;  
+        continue;
       }
 
       const anchorElement = n as HTMLAnchorElement;
@@ -1507,15 +1507,15 @@ export class NewLicitParagraphElement extends LicitElement {
 
     const lnk = isLink
       ? {
-          type: 'link',
-          attrs: {
-            href: href,
-            rel: n.rel,
-            target: 'blank',
-            title: null,
-            selectionId: selectionIdModified,
-          },
-        }
+        type: 'link',
+        attrs: {
+          href: href,
+          rel: n.rel,
+          target: 'blank',
+          title: null,
+          selectionId: selectionIdModified,
+        },
+      }
       : null;
     const clr = {
       type: 'mark-text-color',
@@ -2752,12 +2752,12 @@ export class LicitTableCellParaElement extends LicitElement {
         colwidth: this.colWidth || defaultColWidth,
         background: this.bgColor || defaultBgColor,
         vAlign: this.vAlign || 'middle',
-        cellWidth: this.cellStyleInfo?.cellWidth ?? null,     
-        cellStyle: this.cellStyleInfo?.className ?? null,     
-        fontSize: this.cellStyleInfo?.fontSize ?? null,        
-        letterSpacing: this.cellStyleInfo?.letterSpacing ?? null, 
-        marginTop: this.cellStyleInfo?.marginTop ?? null,       
-        marginBottom: this.cellStyleInfo?.marginBottom ?? null, 
+        cellWidth: this.cellStyleInfo?.cellWidth ?? null,
+        cellStyle: this.cellStyleInfo?.className ?? null,
+        fontSize: this.cellStyleInfo?.fontSize ?? null,
+        letterSpacing: this.cellStyleInfo?.letterSpacing ?? null,
+        marginTop: this.cellStyleInfo?.marginTop ?? null,
+        marginBottom: this.cellStyleInfo?.marginBottom ?? null,
       },
       content: [],
     };
@@ -2982,7 +2982,7 @@ export class LicitTableCellParaElement extends LicitElement {
 
 export class LicitTableRowElement extends LicitElement {
   height?: string;
-  rowHeight?: string; 
+  rowHeight?: string;
   getBaseElement(): LicitTableRowJSON {
     return {
       type: 'table_row',
@@ -3019,8 +3019,8 @@ export class LicitTableElement extends LicitElement {
         marginLeft: null,
         vignette: this.isVignette,
         capco: this.capco,
-        noOfColumns: this.noOfColumns ?? null,   
-        tableHeight: this.tableHeight ?? null, 
+        noOfColumns: this.noOfColumns ?? null,
+        tableHeight: this.tableHeight ?? null,
       },
       content: [],
     };
@@ -3029,9 +3029,9 @@ export class LicitTableElement extends LicitElement {
   rows: LicitTableRowElement[] = [];
   isVignette = false;
   capco?: string;
-  noOfColumns?: number;    
+  noOfColumns?: number;
   tableHeight?: string;
-  
+
   constructor(isVignette?: boolean, capco?: string) {
     super();
     this.isVignette = isVignette;
