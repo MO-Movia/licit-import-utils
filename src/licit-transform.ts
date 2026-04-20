@@ -1018,6 +1018,7 @@ export class LicitConverter {
       return;
     }
     if (e.node.childNodes.length > 1) {
+      this.extractBracketContent(e.node);
       const childrens = e.node.childNodes;
       this.processChildNodesCapco(childrens);
     } else {
@@ -1131,6 +1132,83 @@ export class LicitConverter {
     const footerText = (lastRow?.textContent ?? '').toLowerCase();
     if (!footerText.includes('note')) {
       table.deleteRow(lastRowIndex);
+    }
+  }
+
+  private extractBracketContent(element: Element) {
+    const childNodes = Array.from(element.childNodes);
+
+    let startNodeIndex = -1;
+    let endNodeIndex = -1;
+    let startOffset = -1;
+    let endOffset = -1;
+
+    for (let i = 0; i < childNodes.length; i++) {
+      const node = childNodes[i];
+
+      //  Use nodeValue for text nodes, textContent for elements
+      const text = node.nodeType === Node.TEXT_NODE
+        ? node.nodeValue.trim()
+        : node.textContent.trim();
+
+      if (startNodeIndex === -1 && text.includes('(')) {
+        startNodeIndex = i;
+        startOffset = text.indexOf('(');
+      }
+
+      // Only search for ')' after we found '('
+      if (startNodeIndex !== -1 && text.includes(')')) {
+        endNodeIndex = i;
+        endOffset = text.indexOf(')');
+        break; //  Stop at first closing brace after opening
+      }
+      if (startNodeIndex !== -1 && endNodeIndex !== -1 && i == 0) {
+        break; // If the first node has text and doesn't contain '(' && ')', stop searching further
+      }
+    }
+
+    if (startNodeIndex === -1 || endNodeIndex === -1) return;
+
+    // Collect full bracketed text across nodes
+    let extractedText = '';
+
+    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
+      const node = childNodes[i];
+      const text = node.nodeType === Node.TEXT_NODE
+        ? node.nodeValue.trim()
+        : node.textContent.trim();
+
+      if (i === startNodeIndex && i === endNodeIndex) {
+        extractedText += text.slice(startOffset, endOffset + 1);
+      } else if (i === startNodeIndex) {
+        extractedText += text.slice(startOffset);
+      } else if (i === endNodeIndex) {
+        extractedText += text.slice(0, endOffset + 1);
+      } else {
+        extractedText += text;
+      }
+    }
+
+    const startNode = childNodes[startNodeIndex];
+    const endNode = childNodes[endNodeIndex];
+
+    // Text after ')' in the end node
+    const afterEnd = (endNode.nodeType === Node.TEXT_NODE
+      ? endNode.nodeValue.trim()
+      : endNode.textContent.trim()).slice(endOffset + 1);
+
+    // Insert the new single bracket text node
+    const newTextNode = document.createTextNode(extractedText);
+    element.insertBefore(newTextNode, startNode);
+
+    // Remove all nodes from startIndex to endIndex
+    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
+      element.removeChild(childNodes[i]);
+    }
+
+    // Reinsert remaining text after ')' 
+    if (afterEnd) {
+      newTextNode.after(document.createTextNode(afterEnd));
     }
   }
 

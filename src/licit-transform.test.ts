@@ -3565,4 +3565,14 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
     converter['ParseNestedList']('DIV', node, doc, 0);
     expect(appendSpy).not.toHaveBeenCalled();
   });
+
+  it('should handle SPAN tag in handleNode', () => {
+    const el = document.createElement('span');
+    el.className = 'someClass';
+    el.textContent = 'span content';
+
+    converter['handleNode'](el, null);
+    // Test that it calls mergeSpans, check that elements are added
+    expect((converter as unknown as { elements: ParserElement[] }).elements.length).toBeGreaterThan(0);
+  });
 });

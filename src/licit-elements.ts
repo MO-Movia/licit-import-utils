@@ -2829,7 +2829,9 @@ export class LicitTableCellParaElement extends LicitElement {
         null
       );
       if (paragraph) {
-        this.content.push(paragraph.render());
+        const renderedParagraph = paragraph.render();
+        this.applyOverriddenCellTextMarks(renderedParagraph);
+        this.content.push(renderedParagraph);
       }
     } else if (childNode.nodeName === 'IMG') {
       const imgElement = childNode as HTMLImageElement;
@@ -2845,6 +2847,68 @@ export class LicitTableCellParaElement extends LicitElement {
     } else if (childNode.nodeName === 'UL') {
       this.processChildUL(childNode);
     }
+  }
+  private applyOverriddenCellTextMarks(paragraph: LicitElementJSON) {
+    const overriddenMarks = [this.getFontSizeMark(), this.getLetterSpacingMark()]
+      .filter(Boolean) as { type: string; attrs?: LicitAttrs }[];
+
+    if (overriddenMarks.length === 0 || !Array.isArray(paragraph?.content)) {
+      return;
+    }
+
+    const overriddenMarkTypes = new Set(
+      overriddenMarks.map((mark) => mark.type),
+    );
+
+    for (const contentNode of paragraph.content as Mark[]) {
+      if (contentNode?.type !== 'text') {
+        continue;
+      }
+      contentNode.marks ??= [];
+      contentNode.marks = contentNode.marks.filter(
+        (mark) => !overriddenMarkTypes.has(mark?.type),
+      );
+      contentNode.marks.push(...overriddenMarks);
+    }
+  }
+  private getFontSizeMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawFontSize = this.cellStyleInfo?.fontSize;
+    if (!rawFontSize) {
+      return null;
+    }
+
+    const pt = Number.parseFloat(rawFontSize);
+    if (Number.isNaN(pt)) {
+      return null;
+    }
+
+    return {
+      type: 'mark-font-size',
+      attrs: {
+        pt,
+        overridden: true,
+      },
+    };
+  }
+
+  private getLetterSpacingMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawLetterSpacing = this.cellStyleInfo?.letterSpacing;
+    if (!rawLetterSpacing) {
+      return null;
+    }
+
+    const letterSpacing = rawLetterSpacing.trim();
+    if (!letterSpacing) {
+      return null;
+    }
+
+    return {
+      type: 'mark-letter-spacing',
+      attrs: {
+        letterSpacing,
+        overridden: true,
+      },
+    };
   }
   processChildOL(childNode: ChildNode) {
     const orderedList = new LicitOrderedListElement(0);
