@@ -1068,6 +1068,7 @@ export class LicitConverter {
       ) {
         const res = updateCapcoFromContent(child as Element);
         this.updateCapcoToParagraph(child, res);
+        break;
       }
       //Recursively looping through nodes
       else if (
