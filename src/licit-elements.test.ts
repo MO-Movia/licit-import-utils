@@ -2899,6 +2899,21 @@ describe('Licit table/vignette/enhanced element branch boosts', () => {
     expect(rendered.attrs.borderBottom).toContain('#000000');
   });
 
+  it('LicitTableCellParaElement maps paragraph margin/padding attrs from inline style', () => {
+    const td = document.createElement('td');
+    td.innerHTML =
+      '<p class="CellHeading" id="1050988" style="margin-top : 100pt;margin-bottom : 100pt;padding: 2pt 1pt 4pt 1pt;">Personality Attribute</p>';
+
+    const cell = new LicitTableCellParaElement(td);
+    const rendered = cell.render();
+    const paragraph = rendered.content[0] as { attrs?: Record<string, unknown> };
+
+    expect(paragraph.attrs?.marginTop).toBe('100pt');
+    expect(paragraph.attrs?.marginBottom).toBe('100pt');
+    expect(paragraph.attrs?.paddingTop).toBe('2pt');
+    expect(paragraph.attrs?.paddingBottom).toBe('4pt');
+  });
+
   it('LicitTableCellParaElement processChildNode ignores IMG without source', () => {
     const td = document.createElement('td');
     const img = document.createElement('img');

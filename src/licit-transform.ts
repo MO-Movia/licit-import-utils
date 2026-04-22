@@ -148,8 +148,26 @@ interface CellStyleInfo {
   marginTop?: string;
   marginBottom?: string;
   fontSize?: string;
+  fontName?: string;
   letterSpacing?: string;
   cellWidth?: string;
+  paddingTop?: string;
+  paddingBottom?: string;
+  lineHeight?: string;
+  borderWidth?: string;
+  borderLeftWidth?: string;
+  borderRightWidth?: string;
+  borderTopWidth?: string;
+  borderBottomWidth?: string;
+  borderLeftColor?: string;
+  borderRightColor?: string;
+  borderTopColor?: string;
+  borderBottomColor?: string;
+  borderLeftStyle?: string;
+  borderRightStyle?: string;
+  borderTopStyle?: string;
+  borderBottomStyle?: string;
+  verticalAlign?: string;
 }
 export class LicitConverter {
   private readonly elementsParsedMap = new Map<string, boolean>();
@@ -847,7 +865,7 @@ export class LicitConverter {
     if (e.class && e.class === 'Chapter Header') {
       const spaceAbove = 3;
       const p = document.createElement('p');
-      const p1 = new NewLicitParagraphElement(p as HTMLElement, infoIconData);
+      const p1 = new NewLicitParagraphElement(p, infoIconData);
       p1.id = 'chspace';
 
       for (let i = 0; i < spaceAbove; i++) {
@@ -898,7 +916,7 @@ export class LicitConverter {
     }
 
     const paragraph = new NewLicitParagraphElement(
-      pElement as HTMLElement,
+      pElement,
       infoIconData
     );
     licitDocument.appendElement(paragraph);
@@ -1546,7 +1564,7 @@ export class LicitConverter {
       this.addElementLicit(licitDocument, bulletList);
     } else {
       this.processBulletNodes(
-        childNodes as Node[],
+        childNodes,
         bulletList,
         licitDocument,
         indent,
@@ -1633,7 +1651,7 @@ export class LicitConverter {
       }
       if (e.node.tagName === 'DIV') {
         const caption = e.node.querySelector('p');
-        const paraImages = new NewLicitParagraphElement(caption as HTMLElement);
+        const paraImages = new NewLicitParagraphElement(caption);
         licitDocument.appendElement(paraImages);
       }
     }
@@ -1655,7 +1673,7 @@ export class LicitConverter {
       if (imgElement.childNodes.length > 1) {
         imgElement.remove();
         const textInline = new NewLicitParagraphElement(
-          imgElement as HTMLElement
+          imgElement
         );
         licitDocument.appendElement(textInline);
       }
@@ -1868,6 +1886,11 @@ export class LicitConverter {
   private extractCellStyles(cell: HTMLTableCellElement): CellStyleInfo {
     const styleInfo: CellStyleInfo = {};
 
+    const cellStyle = cell.getAttribute('style');
+    if (cellStyle) {
+      this.extractCellBorderStyles(cellStyle, styleInfo);
+    }
+
     // Capture class and ID from the paragraph inside the cell
     const paragraph = cell.querySelector('p');
     if (paragraph) {
@@ -1891,6 +1914,77 @@ export class LicitConverter {
     return styleInfo;
   }
 
+  private extractCellBorderStyles(
+    style: string,
+    styleInfo: CellStyleInfo,
+  ): void {
+    const styleProps = style.split(';');
+    for (const prop of styleProps) {
+      const trimmedProp = prop.trim();
+      if (!trimmedProp) {
+        continue;
+      }
+
+      const separatorIndex = trimmedProp.indexOf(':');
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const cssProp = trimmedProp.slice(0, separatorIndex).trim().toLowerCase();
+      const cssValue = trimmedProp.slice(separatorIndex + 1).trim();
+
+      switch (cssProp) {
+        case 'border-left-width':
+          styleInfo.borderLeftWidth = cssValue;
+          break;
+        case 'border-right-width':
+          styleInfo.borderRightWidth = cssValue;
+          break;
+        case 'border-top-width':
+          styleInfo.borderTopWidth = cssValue;
+          break;
+        case 'border-bottom-width':
+          styleInfo.borderBottomWidth = cssValue;
+          break;
+        case 'border-left-color':
+          styleInfo.borderLeftColor = cssValue;
+          break;
+        case 'border-right-color':
+          styleInfo.borderRightColor = cssValue;
+          break;
+        case 'border-top-color':
+          styleInfo.borderTopColor = cssValue;
+          break;
+        case 'border-bottom-color':
+          styleInfo.borderBottomColor = cssValue;
+          break;
+        case 'border-left-style':
+          styleInfo.borderLeftStyle = cssValue;
+          break;
+        case 'border-right-style':
+          styleInfo.borderRightStyle = cssValue;
+          break;
+        case 'border-top-style':
+          styleInfo.borderTopStyle = cssValue;
+          break;
+        case 'border-bottom-style':
+          styleInfo.borderBottomStyle = cssValue;
+          break;
+        case 'vertical-align':
+          styleInfo.verticalAlign = cssValue;
+          break;
+        case 'padding-bottom':
+          styleInfo.paddingBottom = cssValue;
+          break;
+        case 'padding-top':
+          styleInfo.paddingTop = cssValue;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
   /**
    * Extracts margin and font-size properties from a style string.
    * 
@@ -1903,20 +1997,90 @@ export class LicitConverter {
       marginTop?: string;
       marginBottom?: string;
       fontSize?: string;
+      fontName?: string;
+      paddingTop?: string;
+      paddingBottom?: string;
+      lineHeight?: string;
+      borderWidth?: string;
     }
   ): void {
-    const styleProps = style.split(';');
-    for (const prop of styleProps) {
-      const trimmedProp = prop.trim();
+    const declarations = this.parseStyleDeclarations(style);
+    const marginBox = this.expandBoxShorthand(declarations.get('margin'));
+    const paddingBox = this.expandBoxShorthand(declarations.get('padding'));
 
-      if (trimmedProp.startsWith('margin-top')) {
-        styleInfo.marginTop = trimmedProp.split(':')[1]?.trim();
-      } else if (trimmedProp.startsWith('margin-bottom')) {
-        styleInfo.marginBottom = trimmedProp.split(':')[1]?.trim();
-      } else if (trimmedProp.startsWith('font-size')) {
-        styleInfo.fontSize = trimmedProp.split(':')[1]?.trim();
+    styleInfo.marginTop =
+      declarations.get('margin-top') ?? marginBox.top ?? styleInfo.marginTop;
+    styleInfo.marginBottom =
+      declarations.get('margin-bottom') ??
+      marginBox.bottom ??
+      styleInfo.marginBottom;
+    styleInfo.paddingTop =
+      declarations.get('padding-top') ?? paddingBox.top ?? styleInfo.paddingTop;
+    styleInfo.paddingBottom =
+      declarations.get('padding-bottom') ??
+      paddingBox.bottom ??
+      styleInfo.paddingBottom;
+    styleInfo.fontSize = declarations.get('font-size') ?? styleInfo.fontSize;
+    styleInfo.fontName = declarations.get('font-family') ?? styleInfo.fontName;
+    styleInfo.lineHeight = declarations.get('line-height') ?? styleInfo.lineHeight;
+    styleInfo.borderWidth = declarations.get('border-width') ?? styleInfo.borderWidth;
+  }
+
+  private parseStyleDeclarations(style: string): Map<string, string> {
+    const declarations = new Map<string, string>();
+
+    for (const prop of style.split(';')) {
+      const trimmedProp = prop.trim();
+      if (!trimmedProp) {
+        continue;
       }
+
+      const separatorIndex = trimmedProp.indexOf(':');
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const cssProp = trimmedProp.slice(0, separatorIndex).trim().toLowerCase();
+      const cssValue = trimmedProp.slice(separatorIndex + 1).trim();
+
+      if (!cssProp || !cssValue) {
+        continue;
+      }
+
+      declarations.set(cssProp, cssValue);
     }
+
+    return declarations;
+  }
+
+  private expandBoxShorthand(
+    value?: string
+  ): {
+    top?: string;
+    bottom?: string;
+  } {
+    if (!value) {
+      return {};
+    }
+
+    const parts = value
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) {
+      return {};
+    }
+
+    if (parts.length === 1) {
+      return { top: parts[0], bottom: parts[0] };
+    }
+
+    if (parts.length === 2) {
+      return { top: parts[0], bottom: parts[0] };
+    }
+
+    return { top: parts[0], bottom: parts[2] };
   }
 
   /**

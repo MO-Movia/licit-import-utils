@@ -213,8 +213,26 @@ interface CellStyleInfo {
   marginTop?: string;
   marginBottom?: string;
   fontSize?: string;
+  fontName?: string;
   letterSpacing?: string;
+  paddingTop?: string;
+  paddingBottom?: string;
+  lineHeight?: string;
+  borderWidth?: string;
   cellWidth?: string;
+  borderLeftWidth?: string;
+  borderRightWidth?: string;
+  borderTopWidth?: string;
+  borderBottomWidth?: string;
+  borderLeftColor?: string;
+  borderRightColor?: string;
+  borderTopColor?: string;
+  borderBottomColor?: string;
+  borderLeftStyle?: string;
+  borderRightStyle?: string;
+  borderTopStyle?: string;
+  borderBottomStyle?: string;
+  verticalAlign?: string;
 }
 
 export interface LicitDocumentJSON extends LicitElementJSON {
@@ -2755,9 +2773,27 @@ export class LicitTableCellParaElement extends LicitElement {
         cellWidth: this.cellStyleInfo?.cellWidth ?? null,
         cellStyle: this.cellStyleInfo?.className ?? null,
         fontSize: this.cellStyleInfo?.fontSize ?? null,
+        fontName: this.cellStyleInfo?.fontName ?? null,
         letterSpacing: this.cellStyleInfo?.letterSpacing ?? null,
         marginTop: this.cellStyleInfo?.marginTop ?? null,
         marginBottom: this.cellStyleInfo?.marginBottom ?? null,
+        paddingTop: this.cellStyleInfo?.paddingTop ?? null,
+        paddingBottom: this.cellStyleInfo?.paddingBottom ?? null,
+        lineHeight: this.cellStyleInfo?.lineHeight ?? null,
+        borderWidth: this.cellStyleInfo?.borderWidth ?? null,
+        borderLeftWidth: this.cellStyleInfo?.borderLeftWidth ?? null,
+        borderRightWidth: this.cellStyleInfo?.borderRightWidth ?? null,
+        borderTopWidth: this.cellStyleInfo?.borderTopWidth ?? null,
+        borderBottomWidth: this.cellStyleInfo?.borderBottomWidth ?? null,
+        borderLeftColor: this.cellStyleInfo?.borderLeftColor ?? null,
+        borderRightColor: this.cellStyleInfo?.borderRightColor ?? null,
+        borderTopColor: this.cellStyleInfo?.borderTopColor ?? null,
+        borderBottomColor: this.cellStyleInfo?.borderBottomColor ?? null,
+        borderLeftStyle: this.cellStyleInfo?.borderLeftStyle ?? null,
+        borderRightStyle: this.cellStyleInfo?.borderRightStyle ?? null,
+        borderTopStyle: this.cellStyleInfo?.borderTopStyle ?? null,
+        borderBottomStyle: this.cellStyleInfo?.borderBottomStyle ?? null,
+        verticalAlign: this.cellStyleInfo?.verticalAlign ?? null,
       },
       content: [],
     };
@@ -2830,6 +2866,7 @@ export class LicitTableCellParaElement extends LicitElement {
       );
       if (paragraph) {
         const renderedParagraph = paragraph.render();
+        this.applyParagraphSpacingAttrs(renderedParagraph, childNode as HTMLElement);
         this.applyOverriddenCellTextMarks(renderedParagraph);
         this.content.push(renderedParagraph);
       }
@@ -2849,7 +2886,7 @@ export class LicitTableCellParaElement extends LicitElement {
     }
   }
   private applyOverriddenCellTextMarks(paragraph: LicitElementJSON) {
-    const overriddenMarks = [this.getFontSizeMark(), this.getLetterSpacingMark()]
+    const overriddenMarks = [this.getFontSizeMark(), this.getFontNameMark(), this.getLetterSpacingMark()]
       .filter(Boolean) as { type: string; attrs?: LicitAttrs }[];
 
     if (overriddenMarks.length === 0 || !Array.isArray(paragraph?.content)) {
@@ -2890,6 +2927,19 @@ export class LicitTableCellParaElement extends LicitElement {
       },
     };
   }
+  private getFontNameMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawFontName = this.cellStyleInfo?.fontName;
+    if (!rawFontName) {
+      return null;
+    }
+    return {
+      type: 'mark-font-type',
+      attrs: {
+        name: rawFontName,
+        overridden: true,
+      },
+    };
+  }
 
   private getLetterSpacingMark(): { type: string; attrs?: LicitAttrs } | null {
     const rawLetterSpacing = this.cellStyleInfo?.letterSpacing;
@@ -2909,6 +2959,107 @@ export class LicitTableCellParaElement extends LicitElement {
         overridden: true,
       },
     };
+  }
+  private applyParagraphSpacingAttrs(
+    paragraph: LicitElementJSON,
+    paragraphNode: HTMLElement
+  ) {
+    if (!paragraphNode) {
+      return;
+    }
+
+    const style = paragraphNode.getAttribute('style') ?? '';
+    const declarations = this.parseStyleDeclarations(style);
+    const marginBox = this.expandBoxShorthand(declarations.get('margin'));
+    const paddingBox = this.expandBoxShorthand(declarations.get('padding'));
+
+    const marginTop =
+      declarations.get('margin-top') ?? marginBox.top ?? this.cellStyleInfo?.marginTop;
+    const marginBottom =
+      declarations.get('margin-bottom') ??
+      marginBox.bottom ??
+      this.cellStyleInfo?.marginBottom;
+    const paddingTop =
+      declarations.get('padding-top') ??
+      paddingBox.top ??
+      this.cellStyleInfo?.paddingTop;
+    const paddingBottom =
+      declarations.get('padding-bottom') ??
+      paddingBox.bottom ??
+      this.cellStyleInfo?.paddingBottom;
+
+    const paragraphWithAttrs = paragraph as { attrs?: LicitAttrs };
+    paragraphWithAttrs.attrs ??= {};
+
+    if (marginTop) {
+      paragraphWithAttrs.attrs.marginTop = marginTop;
+    }
+    if (marginBottom) {
+      paragraphWithAttrs.attrs.marginBottom = marginBottom;
+    }
+    if (paddingTop) {
+      paragraphWithAttrs.attrs.paddingTop = paddingTop;
+    }
+    if (paddingBottom) {
+      paragraphWithAttrs.attrs.paddingBottom = paddingBottom;
+    }
+  }
+
+  private parseStyleDeclarations(style: string): Map<string, string> {
+    const declarations = new Map<string, string>();
+
+    for (const prop of style.split(';')) {
+      const trimmedProp = prop.trim();
+      if (!trimmedProp) {
+        continue;
+      }
+
+      const separatorIndex = trimmedProp.indexOf(':');
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const cssProp = trimmedProp.slice(0, separatorIndex).trim().toLowerCase();
+      const cssValue = trimmedProp.slice(separatorIndex + 1).trim();
+
+      if (!cssProp || !cssValue) {
+        continue;
+      }
+
+      declarations.set(cssProp, cssValue);
+    }
+
+    return declarations;
+  }
+
+  private expandBoxShorthand(
+    value?: string
+  ): {
+    top?: string;
+    bottom?: string;
+  } {
+    if (!value) {
+      return {};
+    }
+
+    const parts = value
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) {
+      return {};
+    }
+
+    if (parts.length === 1) {
+      return { top: parts[0], bottom: parts[0] };
+    }
+
+    if (parts.length === 2) {
+      return { top: parts[0], bottom: parts[0] };
+    }
+
+    return { top: parts[0], bottom: parts[2] };
   }
   processChildOL(childNode: ChildNode) {
     const orderedList = new LicitOrderedListElement(0);
