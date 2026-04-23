@@ -212,11 +212,15 @@ interface CellStyleInfo {
   id?: string;
   marginTop?: string;
   marginBottom?: string;
+  marginRight?: string;
+  marginLeft?: string;
   fontSize?: string;
   fontName?: string;
-  letterSpacing?: string[];
+  letterSpacing?: string;
   paddingTop?: string;
   paddingBottom?: string;
+  paddingRight?: string;
+  paddingLeft?: string;
   lineHeight?: string;
   borderWidth?: string;
   cellWidth?: string;
@@ -1152,19 +1156,7 @@ export class NewLicitParagraphElement extends LicitElement {
     isFirstSentenceBold: boolean,
     styleMarks?: { type: string; attrs?: LicitAttrs }[]
   ) {
-    let textContent = textNode.textContent?.replace(/\u00A0/g, ' ');
-   const lastMark = this.marks.at(-1);
-
-  if (
-    lastMark &&
-    typeof lastMark.text === 'string' &&
-    lastMark.text.length > 0 &&
-    !lastMark.text.endsWith(' ') &&
-    textContent &&
-    !textContent.startsWith(' ')
-  ) {
-    textContent = ' ' + textContent;
-  }
+    const textContent = textNode.textContent;
     const urlRegex = /(https?:\/\/[^\s]{1,2048})/g;
     const matches = this.checkForLinks(textContent, urlRegex);
     if (matches) {
@@ -2788,9 +2780,13 @@ export class LicitTableCellParaElement extends LicitElement {
         fontName: this.cellStyleInfo?.fontName ?? null,
         letterSpacing: this.cellStyleInfo?.letterSpacing ?? null,
         marginTop: this.cellStyleInfo?.marginTop ?? null,
+        marginRight: this.cellStyleInfo?.marginRight ?? null,
         marginBottom: this.cellStyleInfo?.marginBottom ?? null,
+        marginLeft: this.cellStyleInfo?.marginLeft ?? null,
         paddingTop: this.cellStyleInfo?.paddingTop ?? null,
+        paddingRight: this.cellStyleInfo?.paddingRight ?? null,
         paddingBottom: this.cellStyleInfo?.paddingBottom ?? null,
+        paddingLeft: this.cellStyleInfo?.paddingLeft ?? null,
         lineHeight: this.cellStyleInfo?.lineHeight ?? null,
         borderWidth: this.cellStyleInfo?.borderWidth ?? null,
         borderLeftWidth: this.cellStyleInfo?.borderLeftWidth ?? null,
@@ -2959,7 +2955,7 @@ export class LicitTableCellParaElement extends LicitElement {
       return null;
     }
 
-    const letterSpacing = this.normalizeLetterSpacing(rawLetterSpacing);
+    const letterSpacing = rawLetterSpacing.trim();
     if (!letterSpacing) {
       return null;
     }
@@ -2972,19 +2968,6 @@ export class LicitTableCellParaElement extends LicitElement {
       },
     };
   }
-
-  normalizeLetterSpacing(
-    raw?: string | string[]
-  ): string | undefined {
-    if (!raw) return undefined;
-
-    if (Array.isArray(raw)) {
-      return raw[0]?.trim(); // pick first
-    }
-
-    return raw.trim();
-  }
-
   private applyParagraphSpacingAttrs(
     paragraph: LicitElementJSON,
     paragraphNode: HTMLElement
@@ -3000,18 +2983,34 @@ export class LicitTableCellParaElement extends LicitElement {
 
     const marginTop =
       declarations.get('margin-top') ?? marginBox.top ?? this.cellStyleInfo?.marginTop;
+    const marginRight =
+      declarations.get('margin-right') ??
+      marginBox.right ??
+      this.cellStyleInfo?.marginRight;
     const marginBottom =
       declarations.get('margin-bottom') ??
       marginBox.bottom ??
       this.cellStyleInfo?.marginBottom;
+    const marginLeft =
+      declarations.get('margin-left') ??
+      marginBox.left ??
+      this.cellStyleInfo?.marginLeft;
     const paddingTop =
       declarations.get('padding-top') ??
       paddingBox.top ??
       this.cellStyleInfo?.paddingTop;
+    const paddingRight =
+      declarations.get('padding-right') ??
+      paddingBox.right ??
+      this.cellStyleInfo?.paddingRight;
     const paddingBottom =
       declarations.get('padding-bottom') ??
       paddingBox.bottom ??
       this.cellStyleInfo?.paddingBottom;
+    const paddingLeft =
+      declarations.get('padding-left') ??
+      paddingBox.left ??
+      this.cellStyleInfo?.paddingLeft;
 
     const paragraphWithAttrs = paragraph as { attrs?: LicitAttrs };
     paragraphWithAttrs.attrs ??= {};
@@ -3019,14 +3018,26 @@ export class LicitTableCellParaElement extends LicitElement {
     if (marginTop) {
       paragraphWithAttrs.attrs.marginTop = marginTop;
     }
+    if (marginRight) {
+      paragraphWithAttrs.attrs.marginRight = marginRight;
+    }
     if (marginBottom) {
       paragraphWithAttrs.attrs.marginBottom = marginBottom;
+    }
+    if (marginLeft) {
+      paragraphWithAttrs.attrs.marginLeft = marginLeft;
     }
     if (paddingTop) {
       paragraphWithAttrs.attrs.paddingTop = paddingTop;
     }
+    if (paddingRight) {
+      paragraphWithAttrs.attrs.paddingRight = paddingRight;
+    }
     if (paddingBottom) {
       paragraphWithAttrs.attrs.paddingBottom = paddingBottom;
+    }
+    if (paddingLeft) {
+      paragraphWithAttrs.attrs.paddingLeft = paddingLeft;
     }
   }
 
@@ -3061,7 +3072,9 @@ export class LicitTableCellParaElement extends LicitElement {
     value?: string
   ): {
     top?: string;
+    right?: string;
     bottom?: string;
+    left?: string;
   } {
     if (!value) {
       return {};
@@ -3077,14 +3090,38 @@ export class LicitTableCellParaElement extends LicitElement {
     }
 
     if (parts.length === 1) {
-      return { top: parts[0], bottom: parts[0] };
+      return {
+        top: parts[0],
+        right: parts[0],
+        bottom: parts[0],
+        left: parts[0],
+      };
     }
 
     if (parts.length === 2) {
-      return { top: parts[0], bottom: parts[0] };
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[0],
+        left: parts[1],
+      };
     }
 
-    return { top: parts[0], bottom: parts[2] };
+    if (parts.length === 3) {
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[2],
+        left: parts[1],
+      };
+    }
+
+    return {
+      top: parts[0],
+      right: parts[1],
+      bottom: parts[2],
+      left: parts[3],
+    };
   }
   processChildOL(childNode: ChildNode) {
     const orderedList = new LicitOrderedListElement(0);

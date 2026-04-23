@@ -146,13 +146,17 @@ interface CellStyleInfo {
   className?: string;
   id?: string;
   marginTop?: string;
+  marginRight?: string;
   marginBottom?: string;
+  marginLeft?: string;
   fontSize?: string;
   fontName?: string;
-  letterSpacing?: string[];
+  letterSpacing?: string;
   cellWidth?: string;
   paddingTop?: string;
+  paddingRight?: string;
   paddingBottom?: string;
+  paddingLeft?: string;
   lineHeight?: string;
   borderWidth?: string;
   borderLeftWidth?: string;
@@ -1979,6 +1983,12 @@ export class LicitConverter {
         case 'padding-top':
           styleInfo.paddingTop = cssValue;
           break;
+        case 'padding-right':
+          styleInfo.paddingRight = cssValue;
+          break;
+        case 'padding-left':
+          styleInfo.paddingLeft = cssValue;
+          break;
         default:
           break;
       }
@@ -1995,11 +2005,15 @@ export class LicitConverter {
     style: string,
     styleInfo: {
       marginTop?: string;
+      marginRight?: string;
       marginBottom?: string;
+      marginLeft?: string;
       fontSize?: string;
       fontName?: string;
       paddingTop?: string;
+      paddingRight?: string;
       paddingBottom?: string;
+      paddingLeft?: string;
       lineHeight?: string;
       borderWidth?: string;
     }
@@ -2010,16 +2024,32 @@ export class LicitConverter {
 
     styleInfo.marginTop =
       declarations.get('margin-top') ?? marginBox.top ?? styleInfo.marginTop;
+    styleInfo.marginRight =
+      declarations.get('margin-right') ??
+      marginBox.right ??
+      styleInfo.marginRight;
     styleInfo.marginBottom =
       declarations.get('margin-bottom') ??
       marginBox.bottom ??
       styleInfo.marginBottom;
+    styleInfo.marginLeft =
+      declarations.get('margin-left') ??
+      marginBox.left ??
+      styleInfo.marginLeft;
     styleInfo.paddingTop =
       declarations.get('padding-top') ?? paddingBox.top ?? styleInfo.paddingTop;
+    styleInfo.paddingRight =
+      declarations.get('padding-right') ??
+      paddingBox.right ??
+      styleInfo.paddingRight;
     styleInfo.paddingBottom =
       declarations.get('padding-bottom') ??
       paddingBox.bottom ??
       styleInfo.paddingBottom;
+    styleInfo.paddingLeft =
+      declarations.get('padding-left') ??
+      paddingBox.left ??
+      styleInfo.paddingLeft;
     styleInfo.fontSize = declarations.get('font-size') ?? styleInfo.fontSize;
     styleInfo.fontName = declarations.get('font-family') ?? styleInfo.fontName;
     styleInfo.lineHeight = declarations.get('line-height') ?? styleInfo.lineHeight;
@@ -2057,7 +2087,9 @@ export class LicitConverter {
     value?: string
   ): {
     top?: string;
+    right?: string;
     bottom?: string;
+    left?: string;
   } {
     if (!value) {
       return {};
@@ -2073,14 +2105,38 @@ export class LicitConverter {
     }
 
     if (parts.length === 1) {
-      return { top: parts[0], bottom: parts[0] };
+      return {
+        top: parts[0],
+        right: parts[0],
+        bottom: parts[0],
+        left: parts[0],
+      };
     }
 
     if (parts.length === 2) {
-      return { top: parts[0], bottom: parts[0] };
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[0],
+        left: parts[1],
+      };
     }
 
-    return { top: parts[0], bottom: parts[2] };
+    if (parts.length === 3) {
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[2],
+        left: parts[1],
+      };
+    }
+
+    return {
+      top: parts[0],
+      right: parts[1],
+      bottom: parts[2],
+      left: parts[3],
+    };
   }
 
   /**
@@ -2089,33 +2145,28 @@ export class LicitConverter {
    * @param spans - NodeList of span elements with letter-spacing styles
    * @param styleInfo - The style info object to populate
    */
-extractLetterSpacing(
-  spans: NodeListOf<Element>,
-  styleInfo: { letterSpacing?: string[] }
-): void {
-  const values = new Set<string>();
+  private extractLetterSpacing(
+    spans: NodeListOf<Element>,
+    styleInfo: { letterSpacing?: string }
+  ): void {
+    const letterSpacingRegex = /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
 
-  for (const span of spans) {
-    const style = span.getAttribute('style');
-    if (!style) continue;
-
-    // Split style into declarations instead of regex on full string
-    const declarations = style.split(';');
-
-    for (const decl of declarations) {
-      const [prop, val] = decl.split(':').map(s => s?.trim().toLowerCase());
-
-      if (prop === 'letter-spacing' && val) {
-        values.add(val);
+    for (const span of Array.from(spans)) {
+      // Check if this span contains a non-breaking space
+      const content = span.innerHTML;
+      if (content.includes('&#160;') || content.includes('&nbsp;')) {
+        const spanStyle = (span as HTMLElement).getAttribute('style');
+        if (spanStyle) {
+          const match = letterSpacingRegex.exec(spanStyle);
+          if (match) {
+            // Store the first letter-spacing value found
+            styleInfo.letterSpacing = match[1].trim();
+            break;
+          }
+        }
       }
     }
   }
-
-  if (values.size === 0) return;
-
-  // Store unique values as array
-  styleInfo.letterSpacing = Array.from(values);
-}
   checkCellStyle(style: string | null): string | null {
     let borderColor: string = null;
     if (style != null) {

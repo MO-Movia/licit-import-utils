@@ -3461,10 +3461,14 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
         className?: string;
         id?: string;
         marginTop?: string;
+        marginRight?: string;
         marginBottom?: string;
+        marginLeft?: string;
         fontSize?: string;
         paddingTop?: string;
+        paddingRight?: string;
         paddingBottom?: string;
+        paddingLeft?: string;
         letterSpacing?: string;
       };
     };
@@ -3486,9 +3490,13 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
       '<p style="MARGIN: 10pt 5pt 20pt 5pt; PADDING: 3pt 2pt 4pt 2pt; font-size : 10pt;">x</p>';
     const s3 = converterWithExtract.extractCellStyles(td3);
     expect(s3.marginTop).toBe('10pt');
+    expect(s3.marginRight).toBe('5pt');
     expect(s3.marginBottom).toBe('20pt');
+    expect(s3.marginLeft).toBe('5pt');
     expect(s3.paddingTop).toBe('3pt');
+    expect(s3.paddingRight).toBe('2pt');
     expect(s3.paddingBottom).toBe('4pt');
+    expect(s3.paddingLeft).toBe('2pt');
   });
 
   it('extractLetterSpacing ignores spans without nbsp content', () => {
