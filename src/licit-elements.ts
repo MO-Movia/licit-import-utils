@@ -216,7 +216,7 @@ interface CellStyleInfo {
   marginLeft?: string;
   fontSize?: string;
   fontName?: string;
-  letterSpacing?: string;
+  letterSpacing?: string[];
   paddingTop?: string;
   paddingBottom?: string;
   paddingRight?: string;
@@ -1156,7 +1156,19 @@ export class NewLicitParagraphElement extends LicitElement {
     isFirstSentenceBold: boolean,
     styleMarks?: { type: string; attrs?: LicitAttrs }[]
   ) {
-    const textContent = textNode.textContent;
+    let textContent = textNode.textContent?.replace(/\u00A0/g, ' ');
+    const lastMark = this.marks.at(-1);
+
+    if (
+      lastMark &&
+      typeof lastMark.text === 'string' &&
+      lastMark.text.length > 0 &&
+      !lastMark.text.endsWith(' ') &&
+      textContent &&
+      !textContent.startsWith(' ')
+    ) {
+      textContent = ' ' + textContent;
+    }
     const urlRegex = /(https?:\/\/[^\s]{1,2048})/g;
     const matches = this.checkForLinks(textContent, urlRegex);
     if (matches) {
@@ -2955,7 +2967,7 @@ export class LicitTableCellParaElement extends LicitElement {
       return null;
     }
 
-    const letterSpacing = rawLetterSpacing.trim();
+    const letterSpacing = this.normalizeLetterSpacing(rawLetterSpacing);
     if (!letterSpacing) {
       return null;
     }
@@ -2968,6 +2980,19 @@ export class LicitTableCellParaElement extends LicitElement {
       },
     };
   }
+
+  normalizeLetterSpacing(
+    raw?: string | string[]
+  ): string | undefined {
+    if (!raw) return undefined;
+
+    if (Array.isArray(raw)) {
+      return raw[0]?.trim(); // pick first
+    }
+
+    return raw.trim();
+  }
+
   private applyParagraphSpacingAttrs(
     paragraph: LicitElementJSON,
     paragraphNode: HTMLElement

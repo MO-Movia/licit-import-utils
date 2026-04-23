@@ -151,7 +151,7 @@ interface CellStyleInfo {
   marginLeft?: string;
   fontSize?: string;
   fontName?: string;
-  letterSpacing?: string;
+  letterSpacing?: string[];
   cellWidth?: string;
   paddingTop?: string;
   paddingRight?: string;
@@ -2147,26 +2147,32 @@ export class LicitConverter {
    */
   private extractLetterSpacing(
     spans: NodeListOf<Element>,
-    styleInfo: { letterSpacing?: string }
+    styleInfo: { letterSpacing?: string[] }
   ): void {
-    const letterSpacingRegex = /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
+    const values = new Set<string>();
 
-    for (const span of Array.from(spans)) {
-      // Check if this span contains a non-breaking space
-      const content = span.innerHTML;
-      if (content.includes('&#160;') || content.includes('&nbsp;')) {
-        const spanStyle = (span as HTMLElement).getAttribute('style');
-        if (spanStyle) {
-          const match = letterSpacingRegex.exec(spanStyle);
-          if (match) {
-            // Store the first letter-spacing value found
-            styleInfo.letterSpacing = match[1].trim();
-            break;
-          }
+    for (const span of spans) {
+      const style = span.getAttribute('style');
+      if (!style) continue;
+
+      // Split style into declarations instead of regex on full string
+      const declarations = style.split(';');
+
+      for (const decl of declarations) {
+        const [prop, val] = decl.split(':').map(s => s?.trim().toLowerCase());
+
+        if (prop === 'letter-spacing' && val) {
+          values.add(val);
         }
       }
     }
+
+    if (values.size === 0) return;
+
+    // Store unique values as array
+    styleInfo.letterSpacing = Array.from(values);
   }
+
   checkCellStyle(style: string | null): string | null {
     let borderColor: string = null;
     if (style != null) {
