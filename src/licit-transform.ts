@@ -1068,7 +1068,9 @@ export class LicitConverter {
       ) {
         const res = updateCapcoFromContent(child as Element);
         this.updateCapcoToParagraph(child, res);
-        break;
+        if (!this.checkISTableFigure(child)) {
+          break;
+        }
       }
       //Recursively looping through nodes
       else if (
@@ -1077,7 +1079,7 @@ export class LicitConverter {
       ) {
         this.processChildNodesCapco(child.childNodes);
       }
-      if ((child.textContent?.trim()?.length ?? 0) > 0) {
+      if ((child.textContent?.trim()?.length ?? 0) > 0 && !this.checkISTableFigure(child)) {
         break;
       }
     }
@@ -1095,6 +1097,29 @@ export class LicitConverter {
     if (parent) {
       parent.setAttribute('capco', JSON.stringify(res.capco));
     }
+  }
+  checkISTableFigure(child: ChildNode): boolean {
+    // const firstChild = child.children.item(0);
+    let text = child.textContent;
+    if (text) {
+      if (text.startsWith('Figure')) {
+        text = text.replace(
+          /^Figure\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
+          ''
+        );
+        return true;
+      }
+
+
+      if (text.startsWith('Table')) {
+        text = text.replace(
+          /^Table\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
+          ''
+        );
+        return true;
+      }
+    }
+    return false;
   }
   private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
@@ -1162,9 +1187,6 @@ export class LicitConverter {
         endNodeIndex = i;
         endOffset = text.indexOf(')');
         break; //  Stop at first closing brace after opening
-      }
-      if (startNodeIndex !== -1 && endNodeIndex !== -1 && i == 0) {
-        break; // If the first node has text and doesn't contain '(' && ')', stop searching further
       }
     }
 
