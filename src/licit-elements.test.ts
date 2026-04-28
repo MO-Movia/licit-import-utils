@@ -1705,7 +1705,7 @@ describe('LicitElements', () => {
       type: 'text',
     } as unknown as HTMLElement;
     const testNode = document.createElement('div');
-    testNode.append(element as unknown as Node);
+    testNode.append(element);
     const licitParagraph = new NewLicitParagraphElement(testNode);
     expect(licitParagraph.getEmMarks(element)).toBeDefined();
   });
@@ -2390,14 +2390,14 @@ describe('NewLicitParagraphElement branch coverage additions', () => {
 
     const parseSpy = jest
       .spyOn(para, 'parseSubMarks')
-      .mockReturnValueOnce(undefined as never)
-      .mockReturnValueOnce({ type: 'text', marks: [], text: 'ok' } as never);
+      .mockReturnValueOnce(undefined)
+      .mockReturnValueOnce({ type: 'text', marks: [], text: 'ok' });
 
     const mark = { type: 'text', marks: [] } as unknown as Mark;
     const result = para['parseStrongWithInfoicon'](
       strong,
       mark,
-      null as never,
+      null,
       [] as never
     );
 
@@ -2429,7 +2429,7 @@ describe('NewLicitParagraphElement branch coverage additions', () => {
     const current = { type: 'text', marks: [] } as unknown as Mark;
     const result = para['parseEMWithInfoicon'](
       em,
-      null as never,
+      null,
       current,
       current,
       [] as never
@@ -2543,10 +2543,10 @@ describe('NewLicitParagraphElement deep branch additions', () => {
 
     const parseSpy = jest
       .spyOn(para, 'parseSubMarks')
-      .mockReturnValue({ type: 'text', marks: [], text: 'ok' } as never);
+      .mockReturnValue({ type: 'text', marks: [], text: 'ok' });
 
     const mark = { type: 'text', marks: [] } as unknown as Mark;
-    para['parseAnchorWithInfoIcon'](a, '#000000', mark, null as never, [] as never);
+    para['parseAnchorWithInfoIcon'](a, '#000000', mark, null, [] as never);
 
     expect(parseSpy).toHaveBeenCalled();
     expect(mark.marks?.some((m) => m.type === 'mark-text-color')).toBe(true);
@@ -2632,7 +2632,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     para['applyLinkAndColorMarks'](
       mark,
       null,
-      { type: 'mark-text-color', attrs: { color: '#000' } } as unknown as Mark,
+      { type: 'mark-text-color', attrs: { color: '#000' } },
       '#000'
     );
 
@@ -2647,9 +2647,9 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
 
     const result = para['parseLinkText'](
       span as unknown as HTMLLinkElement,
-      { type: 'link', attrs: { href: 'x' } } as unknown as Mark,
+      { type: 'link', attrs: { href: 'x' } },
       '#000',
-      { type: 'mark-text-color', attrs: { color: '#000' } } as unknown as Mark,
+      { type: 'mark-text-color', attrs: { color: '#000' } },
       mark,
       [] as never
     );
@@ -2685,7 +2685,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
 
     const result = para['parseFont'](
       font,
-      { type: 'text', marks: [] } as unknown as Mark,
+      { type: 'text', marks: [] },
       [] as never,
       []
     );
@@ -2708,7 +2708,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     const para = createPara();
     const textNode = document.createTextNode('alpha');
 
-    const result = para.parseSubMarks(textNode, null as never, true, [] as never);
+    const result = para.parseSubMarks(textNode, null, true, [] as never);
     const parsed = result as { text?: string; marks?: unknown[] } | null;
     expect(parsed?.text).toBe('alpha');
     expect(parsed?.marks).toBeUndefined();
@@ -2737,7 +2737,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     a.appendChild(document.createTextNode('go'));
 
     const mark = { type: 'text', marks: [] } as unknown as Mark;
-    para['parseAnchorWithInfoIcon'](a, '', mark, null as never, [] as never);
+    para['parseAnchorWithInfoIcon'](a, '', mark, null, [] as never);
 
     expect(mark.marks?.some((m) => m.type === 'mark-text-color')).toBe(false);
   });
@@ -2813,8 +2813,8 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     para['parseAnchorWithInfoIcon'](
       a,
       '#000',
-      { type: 'text', marks: [] } as unknown as Mark,
-      null as never,
+      { type: 'text', marks: [] },
+      null,
       [] as never
     );
 

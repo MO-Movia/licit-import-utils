@@ -271,7 +271,7 @@ describe('transform.utils coverage additions', () => {
       ],
     };
 
-    transformUtils.processTableWidths(table as never);
+    transformUtils.processTableWidths(table);
 
     // Should not throw, and content remains unchanged
     expect(table.content[0].content).toEqual([]);

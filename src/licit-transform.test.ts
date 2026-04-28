@@ -4,7 +4,6 @@
  */
 
 import type {
-  AddCellOptions,
   TransformConfig,
   ParserElement,
 } from './licit-transform';
@@ -426,7 +425,7 @@ describe('Converter.addTableImageCell', () => {
         cellIndex: 0,
         widthArray: [100, 200, 300],
         isTransparent: false,
-      } as AddCellOptions
+      }
     );
 
     expect(spy).toHaveBeenCalled();
@@ -2737,7 +2736,7 @@ describe('LicitConverter branch coverage additions', () => {
   let converter: LicitConverter;
 
   beforeEach(() => {
-    converter = new LicitConverter(testConfig as TransformConfig);
+    converter = new LicitConverter(testConfig);
   });
 
   it.each([
@@ -2899,7 +2898,7 @@ describe('LicitConverter exhaustive parse routing additions', () => {
   let converter: LicitConverter;
 
   beforeEach(() => {
-    converter = new LicitConverter(testConfig as TransformConfig);
+    converter = new LicitConverter(testConfig);
   });
 
   const parseElementRoutes: Array<[string, string]> = [
@@ -3034,7 +3033,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
   let converter: LicitConverter;
 
   beforeEach(() => {
-    converter = new LicitConverter(testConfig as TransformConfig);
+    converter = new LicitConverter(testConfig);
   });
 
   it.each([
@@ -3139,7 +3138,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
     node.textContent = 'Attachment A';
 
     const reset = converter['render_FrameMakerHTML5_zip_SwitchHelper'](
-      { type: 0, node, class: 'attachmentTitle', level: 0, subText: '' } as ParserElement,
+      { type: 0, node, class: 'attachmentTitle', level: 0, subText: '' },
       [],
       [],
       false,
@@ -3159,7 +3158,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
         class: 'unknown-type',
         level: 0,
         subText: '',
-      } as ParserElement,
+      },
       [],
       [],
       false,
@@ -3180,7 +3179,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
         class: 'bullet',
         level: 1,
         subText: '',
-      } as ParserElement,
+      },
       doc
     );
 
@@ -3198,7 +3197,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
         class: 'note',
         level: 0,
         subText: '',
-      } as ParserElement,
+      },
       doc
     );
 
@@ -3215,7 +3214,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
         class: 'unknown',
         level: 0,
         subText: '',
-      } as ParserElement,
+      },
       new LicitDocumentElement()
     );
 
@@ -3247,7 +3246,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
   let converter: LicitConverter;
 
   beforeEach(() => {
-    converter = new LicitConverter(testConfig as TransformConfig);
+    converter = new LicitConverter(testConfig);
   });
 
   it('renderSwitchHelper appends figure image when src exists', () => {
@@ -3259,7 +3258,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
     node.appendChild(img);
 
     converter['renderSwitchHelper'](
-      { type: 13, node, class: 'fig', level: 0, subText: '' } as ParserElement,
+      { type: 13, node, class: 'fig', level: 0, subText: '' },
       doc
     );
 
@@ -3273,14 +3272,14 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
     const bullet = document.createElement('li');
     bullet.textContent = 'item';
     converter['renderSwitchHelper'](
-      { type: 9, node: bullet, class: 'b', level: 1, subText: '' } as ParserElement,
+      { type: 9, node: bullet, class: 'b', level: 1, subText: '' },
       doc
     );
 
     const note = document.createElement('p');
     note.textContent = 'note text';
     converter['renderSwitchHelper'](
-      { type: 4, node: note, class: 'n', level: 0, subText: '' } as ParserElement,
+      { type: 4, node: note, class: 'n', level: 0, subText: '' },
       doc
     );
 
@@ -3295,14 +3294,14 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
     title.textContent = 'Table 1';
     title.setAttribute('class', 'chTableTitle');
     converter['renderSwitchHelper'](
-      { type: 7, node: title, class: 'chTableTitle', level: 0, subText: '' } as ParserElement,
+      { type: 7, node: title, class: 'chTableTitle', level: 0, subText: '' },
       doc
     );
 
     const section = document.createElement('p');
     section.textContent = 'Section';
     converter['renderSwitchHelper'](
-      { type: 6, node: section, class: 'sectionTitle', level: 0, subText: '' } as ParserElement,
+      { type: 6, node: section, class: 'sectionTitle', level: 0, subText: '' },
       doc
     );
 
@@ -3319,7 +3318,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
         class: 'table',
         level: 0,
         subText: '',
-      } as ParserElement,
+      },
       doc
     );
 
@@ -3332,7 +3331,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
     const tocNode = document.createElement('p');
     tocNode.textContent = 'Table of Contents';
     const removed = converter['render_docSwitchHelper'](
-      { type: 5, node: tocNode, class: 'para', level: 0, subText: '' } as ParserElement,
+      { type: 5, node: tocNode, class: 'para', level: 0, subText: '' },
       doc,
       false,
       [],
@@ -3342,7 +3341,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
     expect(removed).toBe(true);
 
     const hrRemoved = converter['render_docSwitchHelper'](
-      { type: 15, node: document.createElement('hr'), class: 'hr', level: 0, subText: '' } as ParserElement,
+      { type: 15, node: document.createElement('hr'), class: 'hr', level: 0, subText: '' },
       doc,
       true,
       [],
@@ -3378,28 +3377,28 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
     node.textContent = 'x';
 
     converter['render_docSwitchHelper'](
-      { type: 10, node, class: 'ol', level: 0, subText: '' } as ParserElement,
+      { type: 10, node, class: 'ol', level: 0, subText: '' },
       doc,
       false,
       [],
       'generic'
     );
     converter['render_docSwitchHelper'](
-      { type: 11, node, class: 'table', level: 0, subText: '' } as ParserElement,
+      { type: 11, node, class: 'table', level: 0, subText: '' },
       doc,
       false,
       [],
       'generic'
     );
     converter['render_docSwitchHelper'](
-      { type: 16, node, class: 'vignet', level: 0, subText: '' } as ParserElement,
+      { type: 16, node, class: 'vignet', level: 0, subText: '' },
       doc,
       false,
       [],
       'generic'
     );
     converter['render_docSwitchHelper'](
-      { type: 999 as never, node, class: 'unknown', level: 0, subText: '' } as ParserElement,
+      { type: 999 as never, node, class: 'unknown', level: 0, subText: '' },
       doc,
       false,
       [],
@@ -3433,7 +3432,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
   let converter: LicitConverter;
 
   beforeEach(() => {
-    converter = new LicitConverter(testConfig as TransformConfig);
+    converter = new LicitConverter(testConfig);
   });
 
   it('parseHTML handles doctrine true and false document inputs', () => {
@@ -3521,7 +3520,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
         type: 10,
         level: 0,
         subText: '',
-      } as unknown as ParserElement,
+      },
       doc
     );
 
@@ -3539,7 +3538,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
         type: 5,
         level: 0,
         subText: '',
-      } as ParserElement,
+      },
       doc
     );
 
@@ -3601,7 +3600,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
   let converter: LicitConverter;
 
   beforeEach(() => {
-    converter = new LicitConverter(testConfig as TransformConfig);
+    converter = new LicitConverter(testConfig);
   });
 
   it('asTransformConfig returns defaults when called without arguments', () => {
@@ -3619,7 +3618,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     node.textContent = 'Centered section';
 
     converter['render_FrameMakerHTML5_zip_SwitchHelper'](
-      { type: 6, node, class: 'sectionTitle', level: 0, subText: '' } as ParserElement,
+      { type: 6, node, class: 'sectionTitle', level: 0, subText: '' },
       [],
       [],
       false,
@@ -3636,7 +3635,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     li.textContent = 'ordered item';
 
     converter['renderSwitchHelper'](
-      { type: 10, node: li, class: 'ordered', level: 2, subText: '' } as ParserElement,
+      { type: 10, node: li, class: 'ordered', level: 2, subText: '' },
       doc
     );
 
@@ -3651,7 +3650,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     titleNode.removeAttribute('class');
 
     converter['renderSwitchHelper'](
-      { type: 8, node: titleNode, class: '', level: 0, subText: '' } as ParserElement,
+      { type: 8, node: titleNode, class: '', level: 0, subText: '' },
       doc
     );
 
@@ -3659,7 +3658,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     headerNode.textContent = 'Header text';
     headerNode.className = '';
     converter['renderHeader'](
-      { type: 0, node: headerNode, class: '', level: 1, subText: '' } as ParserElement,
+      { type: 0, node: headerNode, class: '', level: 1, subText: '' },
       doc
     );
 
@@ -3683,7 +3682,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
         class: 'bullet',
         level: 0,
         subText: '',
-      } as ParserElement,
+      },
       doc,
       false,
       [],
@@ -3693,7 +3692,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     const titleNode = document.createElement('p');
     titleNode.textContent = 'Doc title';
     converter['render_docSwitchHelper'](
-      { type: 7, node: titleNode, class: '', level: 0, subText: '' } as ParserElement,
+      { type: 7, node: titleNode, class: '', level: 0, subText: '' },
       doc,
       false,
       [],
@@ -3883,7 +3882,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     node.textContent = 'Attachment';
 
     converter['render_FrameMakerHTML5_zip_SwitchHelper'](
-      { type: 0, node, class: 'attachmentTitle', level: 0, subText: '(U)' } as ParserElement,
+      { type: 0, node, class: 'attachmentTitle', level: 0, subText: '(U)' },
       [],
       [],
       false,
@@ -3901,7 +3900,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     node.textContent = 'Header text';
 
     converter['renderHeader'](
-      { type: 3, node, class: 'header', level: 0, subText: '' } as ParserElement,
+      { type: 3, node, class: 'header', level: 0, subText: '' },
       doc
     );
 
@@ -3938,7 +3937,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     node.dataset.indent = '2';
 
     converter['renderTypeParagraph'](
-      { type: 5, node, class: 'para', level: 0, subText: '' } as ParserElement,
+      { type: 5, node, class: 'para', level: 0, subText: '' },
       doc,
       []
     );
@@ -3982,7 +3981,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
     wrapper.appendChild(para);
 
     converter['parseUntypedDocVignet'](
-      { type: 16, node: wrapper, class: 'vignet', level: 0, subText: '' } as ParserElement,
+      { type: 16, node: wrapper, class: 'vignet', level: 0, subText: '' },
       doc
     );
 
@@ -4010,7 +4009,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
       .mockReturnValue([document.createElement('p')]);
 
     converter['renderEnhancedTable'](
-      { type: 12, node: table, class: 'table', level: 0, subText: '' } as ParserElement,
+      { type: 12, node: table, class: 'table', level: 0, subText: '' },
       doc
     );
 
