@@ -3483,7 +3483,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
     expect(s2.marginTop).toBe('1pt');
     expect(s2.marginBottom).toBe('2pt');
     expect(s2.fontSize).toBe('9pt');
-    expect(s2.letterSpacing).toBe('1.5pt');
+    expect(s2.letterSpacing).toEqual(['1.5pt']);
 
     const td3 = document.createElement('td');
     td3.innerHTML =
@@ -3503,10 +3503,11 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
     const holder = document.createElement('div');
     holder.innerHTML = '<span style="letter-spacing:2pt;">abc</span>';
     const spans = holder.querySelectorAll('span');
-    const info: { letterSpacing?: string } = {};
+    const info: { letterSpacing?: string[] } = {};
 
-    converter['extractLetterSpacing'](spans, info);
     expect(info.letterSpacing).toBeUndefined();
+    converter['extractLetterSpacing'](spans, info);
+    expect(info.letterSpacing).toEqual(['2pt']);
   });
 
   it('handleOrderedListItem skips append when text is empty', () => {
@@ -3570,7 +3571,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
       .mockReturnValue(false);
 
     converter['parseTable'](el, true);
-    const last = (converter as unknown as { elements: ParserElement[] }).elements.slice(-1)[0];
+    const last = (converter as unknown as { elements: ParserElement[] }).elements.at(-1);
     expect(last.type).toBe(12);
     expect(transparentSpy).toHaveBeenCalled();
   });
