@@ -146,10 +146,32 @@ interface CellStyleInfo {
   className?: string;
   id?: string;
   marginTop?: string;
+  marginRight?: string;
   marginBottom?: string;
+  marginLeft?: string;
   fontSize?: string;
-  letterSpacing?: string;
+  fontName?: string;
+  letterSpacing?: string[];
   cellWidth?: string;
+  paddingTop?: string;
+  paddingRight?: string;
+  paddingBottom?: string;
+  paddingLeft?: string;
+  lineHeight?: string;
+  borderWidth?: string;
+  borderLeftWidth?: string;
+  borderRightWidth?: string;
+  borderTopWidth?: string;
+  borderBottomWidth?: string;
+  borderLeftColor?: string;
+  borderRightColor?: string;
+  borderTopColor?: string;
+  borderBottomColor?: string;
+  borderLeftStyle?: string;
+  borderRightStyle?: string;
+  borderTopStyle?: string;
+  borderBottomStyle?: string;
+  verticalAlign?: string;
 }
 export class LicitConverter {
   private readonly elementsParsedMap = new Map<string, boolean>();
@@ -847,7 +869,7 @@ export class LicitConverter {
     if (e.class && e.class === 'Chapter Header') {
       const spaceAbove = 3;
       const p = document.createElement('p');
-      const p1 = new NewLicitParagraphElement(p as HTMLElement, infoIconData);
+      const p1 = new NewLicitParagraphElement(p, infoIconData);
       p1.id = 'chspace';
 
       for (let i = 0; i < spaceAbove; i++) {
@@ -898,7 +920,7 @@ export class LicitConverter {
     }
 
     const paragraph = new NewLicitParagraphElement(
-      pElement as HTMLElement,
+      pElement,
       infoIconData
     );
     licitDocument.appendElement(paragraph);
@@ -1018,6 +1040,7 @@ export class LicitConverter {
       return;
     }
     if (e.node.childNodes.length > 1) {
+      this.extractBracketContent(e.node);
       const childrens = e.node.childNodes;
       this.processChildNodesCapco(childrens);
     } else {
@@ -1067,6 +1090,9 @@ export class LicitConverter {
       ) {
         const res = updateCapcoFromContent(child as Element);
         this.updateCapcoToParagraph(child, res);
+        if (!this.checkISTableFigure(child)) {
+          break;
+        }
       }
       //Recursively looping through nodes
       else if (
@@ -1075,7 +1101,7 @@ export class LicitConverter {
       ) {
         this.processChildNodesCapco(child.childNodes);
       }
-      if ((child.textContent?.trim()?.length ?? 0) > 0) {
+      if ((child.textContent?.trim()?.length ?? 0) > 0 && !this.checkISTableFigure(child)) {
         break;
       }
     }
@@ -1093,6 +1119,29 @@ export class LicitConverter {
     if (parent) {
       parent.setAttribute('capco', JSON.stringify(res.capco));
     }
+  }
+  checkISTableFigure(child: ChildNode): boolean {
+    // const firstChild = child.children.item(0);
+    let text = child.textContent;
+    if (text) {
+      if (text.startsWith('Figure')) {
+        text = text.replace(
+          /^Figure\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
+          ''
+        );
+        return true;
+      }
+
+
+      if (text.startsWith('Table')) {
+        text = text.replace(
+          /^Table\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
+          ''
+        );
+        return true;
+      }
+    }
+    return false;
   }
   private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
@@ -1131,6 +1180,80 @@ export class LicitConverter {
     const footerText = (lastRow?.textContent ?? '').toLowerCase();
     if (!footerText.includes('note')) {
       table.deleteRow(lastRowIndex);
+    }
+  }
+
+  private extractBracketContent(element: Element) {
+    const childNodes = Array.from(element.childNodes);
+
+    let startNodeIndex = -1;
+    let endNodeIndex = -1;
+    let startOffset = -1;
+    let endOffset = -1;
+
+    for (let i = 0; i < childNodes.length; i++) {
+      const node = childNodes[i];
+
+      //  Use nodeValue for text nodes, textContent for elements
+      const text = node.nodeType === Node.TEXT_NODE
+        ? node.nodeValue.trim()
+        : node.textContent.trim();
+
+      if (startNodeIndex === -1 && text.includes('(')) {
+        startNodeIndex = i;
+        startOffset = text.indexOf('(');
+      }
+
+      // Only search for ')' after we found '('
+      if (startNodeIndex !== -1 && text.includes(')')) {
+        endNodeIndex = i;
+        endOffset = text.indexOf(')');
+        break; //  Stop at first closing brace after opening
+      }
+    }
+
+    if (startNodeIndex === -1 || endNodeIndex === -1) return;
+
+    // Collect full bracketed text across nodes
+    let extractedText = '';
+
+    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
+      const node = childNodes[i];
+      const text = node.nodeType === Node.TEXT_NODE
+        ? node.nodeValue.trim()
+        : node.textContent.trim();
+
+      if (i === startNodeIndex && i === endNodeIndex) {
+        extractedText += text.slice(startOffset, endOffset + 1);
+      } else if (i === startNodeIndex) {
+        extractedText += text.slice(startOffset);
+      } else if (i === endNodeIndex) {
+        extractedText += text.slice(0, endOffset + 1);
+      } else {
+        extractedText += text;
+      }
+    }
+
+    const startNode = childNodes[startNodeIndex];
+    const endNode = childNodes[endNodeIndex];
+
+    // Text after ')' in the end node
+    const afterEnd = (endNode.nodeType === Node.TEXT_NODE
+      ? endNode.nodeValue.trim()
+      : endNode.textContent.trim()).slice(endOffset + 1);
+
+    // Insert the new single bracket text node
+    const newTextNode = document.createTextNode(extractedText);
+    element.insertBefore(newTextNode, startNode);
+
+    // Remove all nodes from startIndex to endIndex
+    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
+      element.removeChild(childNodes[i]);
+    }
+
+    // Reinsert remaining text after ')' 
+    if (afterEnd) {
+      newTextNode.after(document.createTextNode(afterEnd));
     }
   }
 
@@ -1546,7 +1669,7 @@ export class LicitConverter {
       this.addElementLicit(licitDocument, bulletList);
     } else {
       this.processBulletNodes(
-        childNodes as Node[],
+        childNodes,
         bulletList,
         licitDocument,
         indent,
@@ -1633,7 +1756,7 @@ export class LicitConverter {
       }
       if (e.node.tagName === 'DIV') {
         const caption = e.node.querySelector('p');
-        const paraImages = new NewLicitParagraphElement(caption as HTMLElement);
+        const paraImages = new NewLicitParagraphElement(caption);
         licitDocument.appendElement(paraImages);
       }
     }
@@ -1655,7 +1778,7 @@ export class LicitConverter {
       if (imgElement.childNodes.length > 1) {
         imgElement.remove();
         const textInline = new NewLicitParagraphElement(
-          imgElement as HTMLElement
+          imgElement
         );
         licitDocument.appendElement(textInline);
       }
@@ -1868,6 +1991,11 @@ export class LicitConverter {
   private extractCellStyles(cell: HTMLTableCellElement): CellStyleInfo {
     const styleInfo: CellStyleInfo = {};
 
+    const cellStyle = cell.getAttribute('style');
+    if (cellStyle) {
+      this.extractCellBorderStyles(cellStyle, styleInfo);
+    }
+
     // Capture class and ID from the paragraph inside the cell
     const paragraph = cell.querySelector('p');
     if (paragraph) {
@@ -1891,6 +2019,83 @@ export class LicitConverter {
     return styleInfo;
   }
 
+  private extractCellBorderStyles(
+    style: string,
+    styleInfo: CellStyleInfo,
+  ): void {
+    const styleProps = style.split(';');
+    for (const prop of styleProps) {
+      const trimmedProp = prop.trim();
+      if (!trimmedProp) {
+        continue;
+      }
+
+      const separatorIndex = trimmedProp.indexOf(':');
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const cssProp = trimmedProp.slice(0, separatorIndex).trim().toLowerCase();
+      const cssValue = trimmedProp.slice(separatorIndex + 1).trim();
+
+      switch (cssProp) {
+        case 'border-left-width':
+          styleInfo.borderLeftWidth = cssValue;
+          break;
+        case 'border-right-width':
+          styleInfo.borderRightWidth = cssValue;
+          break;
+        case 'border-top-width':
+          styleInfo.borderTopWidth = cssValue;
+          break;
+        case 'border-bottom-width':
+          styleInfo.borderBottomWidth = cssValue;
+          break;
+        case 'border-left-color':
+          styleInfo.borderLeftColor = cssValue;
+          break;
+        case 'border-right-color':
+          styleInfo.borderRightColor = cssValue;
+          break;
+        case 'border-top-color':
+          styleInfo.borderTopColor = cssValue;
+          break;
+        case 'border-bottom-color':
+          styleInfo.borderBottomColor = cssValue;
+          break;
+        case 'border-left-style':
+          styleInfo.borderLeftStyle = cssValue;
+          break;
+        case 'border-right-style':
+          styleInfo.borderRightStyle = cssValue;
+          break;
+        case 'border-top-style':
+          styleInfo.borderTopStyle = cssValue;
+          break;
+        case 'border-bottom-style':
+          styleInfo.borderBottomStyle = cssValue;
+          break;
+        case 'vertical-align':
+          styleInfo.verticalAlign = cssValue;
+          break;
+        case 'padding-bottom':
+          styleInfo.paddingBottom = cssValue;
+          break;
+        case 'padding-top':
+          styleInfo.paddingTop = cssValue;
+          break;
+        case 'padding-right':
+          styleInfo.paddingRight = cssValue;
+          break;
+        case 'padding-left':
+          styleInfo.paddingLeft = cssValue;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
   /**
    * Extracts margin and font-size properties from a style string.
    * 
@@ -1901,22 +2106,138 @@ export class LicitConverter {
     style: string,
     styleInfo: {
       marginTop?: string;
+      marginRight?: string;
       marginBottom?: string;
+      marginLeft?: string;
       fontSize?: string;
+      fontName?: string;
+      paddingTop?: string;
+      paddingRight?: string;
+      paddingBottom?: string;
+      paddingLeft?: string;
+      lineHeight?: string;
+      borderWidth?: string;
     }
   ): void {
-    const styleProps = style.split(';');
-    for (const prop of styleProps) {
-      const trimmedProp = prop.trim();
+    const declarations = this.parseStyleDeclarations(style);
+    const marginBox = this.expandBoxShorthand(declarations.get('margin'));
+    const paddingBox = this.expandBoxShorthand(declarations.get('padding'));
 
-      if (trimmedProp.startsWith('margin-top')) {
-        styleInfo.marginTop = trimmedProp.split(':')[1]?.trim();
-      } else if (trimmedProp.startsWith('margin-bottom')) {
-        styleInfo.marginBottom = trimmedProp.split(':')[1]?.trim();
-      } else if (trimmedProp.startsWith('font-size')) {
-        styleInfo.fontSize = trimmedProp.split(':')[1]?.trim();
+    styleInfo.marginTop =
+      declarations.get('margin-top') ?? marginBox.top ?? styleInfo.marginTop;
+    styleInfo.marginRight =
+      declarations.get('margin-right') ??
+      marginBox.right ??
+      styleInfo.marginRight;
+    styleInfo.marginBottom =
+      declarations.get('margin-bottom') ??
+      marginBox.bottom ??
+      styleInfo.marginBottom;
+    styleInfo.marginLeft =
+      declarations.get('margin-left') ??
+      marginBox.left ??
+      styleInfo.marginLeft;
+    styleInfo.paddingTop =
+      declarations.get('padding-top') ?? paddingBox.top ?? styleInfo.paddingTop;
+    styleInfo.paddingRight =
+      declarations.get('padding-right') ??
+      paddingBox.right ??
+      styleInfo.paddingRight;
+    styleInfo.paddingBottom =
+      declarations.get('padding-bottom') ??
+      paddingBox.bottom ??
+      styleInfo.paddingBottom;
+    styleInfo.paddingLeft =
+      declarations.get('padding-left') ??
+      paddingBox.left ??
+      styleInfo.paddingLeft;
+    styleInfo.fontSize = declarations.get('font-size') ?? styleInfo.fontSize;
+    styleInfo.fontName = declarations.get('font-family') ?? styleInfo.fontName;
+    styleInfo.lineHeight = declarations.get('line-height') ?? styleInfo.lineHeight;
+    styleInfo.borderWidth = declarations.get('border-width') ?? styleInfo.borderWidth;
+  }
+
+  private parseStyleDeclarations(style: string): Map<string, string> {
+    const declarations = new Map<string, string>();
+
+    for (const prop of style.split(';')) {
+      const trimmedProp = prop.trim();
+      if (!trimmedProp) {
+        continue;
       }
+
+      const separatorIndex = trimmedProp.indexOf(':');
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const cssProp = trimmedProp.slice(0, separatorIndex).trim().toLowerCase();
+      const cssValue = trimmedProp.slice(separatorIndex + 1).trim();
+
+      if (!cssProp || !cssValue) {
+        continue;
+      }
+
+      declarations.set(cssProp, cssValue);
     }
+
+    return declarations;
+  }
+
+  private expandBoxShorthand(
+    value?: string
+  ): {
+    top?: string;
+    right?: string;
+    bottom?: string;
+    left?: string;
+  } {
+    if (!value) {
+      return {};
+    }
+
+    const parts = value
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) {
+      return {};
+    }
+
+    if (parts.length === 1) {
+      return {
+        top: parts[0],
+        right: parts[0],
+        bottom: parts[0],
+        left: parts[0],
+      };
+    }
+
+    if (parts.length === 2) {
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[0],
+        left: parts[1],
+      };
+    }
+
+    if (parts.length === 3) {
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[2],
+        left: parts[1],
+      };
+    }
+
+    return {
+      top: parts[0],
+      right: parts[1],
+      bottom: parts[2],
+      left: parts[3],
+    };
   }
 
   /**
@@ -1927,26 +2248,32 @@ export class LicitConverter {
    */
   private extractLetterSpacing(
     spans: NodeListOf<Element>,
-    styleInfo: { letterSpacing?: string }
+    styleInfo: { letterSpacing?: string[] }
   ): void {
-    const letterSpacingRegex = /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
+    const values = new Set<string>();
 
-    for (const span of Array.from(spans)) {
-      // Check if this span contains a non-breaking space
-      const content = span.innerHTML;
-      if (content.includes('&#160;') || content.includes('&nbsp;')) {
-        const spanStyle = (span as HTMLElement).getAttribute('style');
-        if (spanStyle) {
-          const match = letterSpacingRegex.exec(spanStyle);
-          if (match) {
-            // Store the first letter-spacing value found
-            styleInfo.letterSpacing = match[1].trim();
-            break;
-          }
+    for (const span of spans) {
+      const style = span.getAttribute('style');
+      if (!style) continue;
+
+      // Split style into declarations instead of regex on full string
+      const declarations = style.split(';');
+
+      for (const decl of declarations) {
+        const [prop, val] = decl.split(':').map(s => s?.trim().toLowerCase());
+
+        if (prop === 'letter-spacing' && val) {
+          values.add(val);
         }
       }
     }
+
+    if (values.size === 0) return;
+
+    // Store unique values as array
+    styleInfo.letterSpacing = Array.from(values);
   }
+
   checkCellStyle(style: string | null): string | null {
     let borderColor: string = null;
     if (style != null) {

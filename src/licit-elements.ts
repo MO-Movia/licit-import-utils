@@ -212,9 +212,31 @@ interface CellStyleInfo {
   id?: string;
   marginTop?: string;
   marginBottom?: string;
+  marginRight?: string;
+  marginLeft?: string;
   fontSize?: string;
-  letterSpacing?: string;
+  fontName?: string;
+  letterSpacing?: string[];
+  paddingTop?: string;
+  paddingBottom?: string;
+  paddingRight?: string;
+  paddingLeft?: string;
+  lineHeight?: string;
+  borderWidth?: string;
   cellWidth?: string;
+  borderLeftWidth?: string;
+  borderRightWidth?: string;
+  borderTopWidth?: string;
+  borderBottomWidth?: string;
+  borderLeftColor?: string;
+  borderRightColor?: string;
+  borderTopColor?: string;
+  borderBottomColor?: string;
+  borderLeftStyle?: string;
+  borderRightStyle?: string;
+  borderTopStyle?: string;
+  borderBottomStyle?: string;
+  verticalAlign?: string;
 }
 
 export interface LicitDocumentJSON extends LicitElementJSON {
@@ -835,7 +857,7 @@ export class NewLicitParagraphElement extends LicitElement {
   setInnerlinks(node: HTMLElement) {
     for (const n of Array.from(node?.childNodes ?? [])) {
       if (n.nodeName !== 'A') {
-        continue;  
+        continue;
       }
 
       const anchorElement = n as HTMLAnchorElement;
@@ -1134,7 +1156,19 @@ export class NewLicitParagraphElement extends LicitElement {
     isFirstSentenceBold: boolean,
     styleMarks?: { type: string; attrs?: LicitAttrs }[]
   ) {
-    const textContent = textNode.textContent;
+    let textContent = textNode.textContent?.replace(/\u00A0/g, ' ');
+    const lastMark = this.marks.at(-1);
+
+    if (
+      lastMark &&
+      typeof lastMark.text === 'string' &&
+      lastMark.text.length > 0 &&
+      !lastMark.text.endsWith(' ') &&
+      textContent &&
+      !textContent.startsWith(' ')
+    ) {
+      textContent = ' ' + textContent;
+    }
     const urlRegex = /(https?:\/\/[^\s]{1,2048})/g;
     const matches = this.checkForLinks(textContent, urlRegex);
     if (matches) {
@@ -1507,15 +1541,15 @@ export class NewLicitParagraphElement extends LicitElement {
 
     const lnk = isLink
       ? {
-          type: 'link',
-          attrs: {
-            href: href,
-            rel: n.rel,
-            target: 'blank',
-            title: null,
-            selectionId: selectionIdModified,
-          },
-        }
+        type: 'link',
+        attrs: {
+          href: href,
+          rel: n.rel,
+          target: 'blank',
+          title: null,
+          selectionId: selectionIdModified,
+        },
+      }
       : null;
     const clr = {
       type: 'mark-text-color',
@@ -2752,12 +2786,34 @@ export class LicitTableCellParaElement extends LicitElement {
         colwidth: this.colWidth || defaultColWidth,
         background: this.bgColor || defaultBgColor,
         vAlign: this.vAlign || 'middle',
-        cellWidth: this.cellStyleInfo?.cellWidth ?? null,     
-        cellStyle: this.cellStyleInfo?.className ?? null,     
-        fontSize: this.cellStyleInfo?.fontSize ?? null,        
-        letterSpacing: this.cellStyleInfo?.letterSpacing ?? null, 
-        marginTop: this.cellStyleInfo?.marginTop ?? null,       
-        marginBottom: this.cellStyleInfo?.marginBottom ?? null, 
+        cellWidth: this.cellStyleInfo?.cellWidth ?? null,
+        cellStyle: this.cellStyleInfo?.className ?? null,
+        fontSize: this.cellStyleInfo?.fontSize ?? null,
+        fontName: this.cellStyleInfo?.fontName ?? null,
+        letterSpacing: this.cellStyleInfo?.letterSpacing ?? null,
+        marginTop: this.cellStyleInfo?.marginTop ?? null,
+        marginRight: this.cellStyleInfo?.marginRight ?? null,
+        marginBottom: this.cellStyleInfo?.marginBottom ?? null,
+        marginLeft: this.cellStyleInfo?.marginLeft ?? null,
+        paddingTop: this.cellStyleInfo?.paddingTop ?? null,
+        paddingRight: this.cellStyleInfo?.paddingRight ?? null,
+        paddingBottom: this.cellStyleInfo?.paddingBottom ?? null,
+        paddingLeft: this.cellStyleInfo?.paddingLeft ?? null,
+        lineHeight: this.cellStyleInfo?.lineHeight ?? null,
+        borderWidth: this.cellStyleInfo?.borderWidth ?? null,
+        borderLeftWidth: this.cellStyleInfo?.borderLeftWidth ?? null,
+        borderRightWidth: this.cellStyleInfo?.borderRightWidth ?? null,
+        borderTopWidth: this.cellStyleInfo?.borderTopWidth ?? null,
+        borderBottomWidth: this.cellStyleInfo?.borderBottomWidth ?? null,
+        borderLeftColor: this.cellStyleInfo?.borderLeftColor ?? null,
+        borderRightColor: this.cellStyleInfo?.borderRightColor ?? null,
+        borderTopColor: this.cellStyleInfo?.borderTopColor ?? null,
+        borderBottomColor: this.cellStyleInfo?.borderBottomColor ?? null,
+        borderLeftStyle: this.cellStyleInfo?.borderLeftStyle ?? null,
+        borderRightStyle: this.cellStyleInfo?.borderRightStyle ?? null,
+        borderTopStyle: this.cellStyleInfo?.borderTopStyle ?? null,
+        borderBottomStyle: this.cellStyleInfo?.borderBottomStyle ?? null,
+        verticalAlign: this.cellStyleInfo?.verticalAlign ?? null,
       },
       content: [],
     };
@@ -2829,7 +2885,10 @@ export class LicitTableCellParaElement extends LicitElement {
         null
       );
       if (paragraph) {
-        this.content.push(paragraph.render());
+        const renderedParagraph = paragraph.render();
+        this.applyParagraphSpacingAttrs(renderedParagraph, childNode as HTMLElement);
+        this.applyOverriddenCellTextMarks(renderedParagraph);
+        this.content.push(renderedParagraph);
       }
     } else if (childNode.nodeName === 'IMG') {
       const imgElement = childNode as HTMLImageElement;
@@ -2845,6 +2904,249 @@ export class LicitTableCellParaElement extends LicitElement {
     } else if (childNode.nodeName === 'UL') {
       this.processChildUL(childNode);
     }
+  }
+  private applyOverriddenCellTextMarks(paragraph: LicitElementJSON) {
+    const overriddenMarks = [this.getFontSizeMark(), this.getFontNameMark(), this.getLetterSpacingMark()]
+      .filter(Boolean) as { type: string; attrs?: LicitAttrs }[];
+
+    if (overriddenMarks.length === 0 || !Array.isArray(paragraph?.content)) {
+      return;
+    }
+
+    const overriddenMarkTypes = new Set(
+      overriddenMarks.map((mark) => mark.type),
+    );
+
+    for (const contentNode of paragraph.content as Mark[]) {
+      if (contentNode?.type !== 'text') {
+        continue;
+      }
+      contentNode.marks ??= [];
+      contentNode.marks = contentNode.marks.filter(
+        (mark) => !overriddenMarkTypes.has(mark?.type),
+      );
+      contentNode.marks.push(...overriddenMarks);
+    }
+  }
+  private getFontSizeMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawFontSize = this.cellStyleInfo?.fontSize;
+    if (!rawFontSize) {
+      return null;
+    }
+
+    const pt = Number.parseFloat(rawFontSize);
+    if (Number.isNaN(pt)) {
+      return null;
+    }
+
+    return {
+      type: 'mark-font-size',
+      attrs: {
+        pt,
+        overridden: true,
+      },
+    };
+  }
+  private getFontNameMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawFontName = this.cellStyleInfo?.fontName;
+    if (!rawFontName) {
+      return null;
+    }
+    return {
+      type: 'mark-font-type',
+      attrs: {
+        name: rawFontName,
+        overridden: true,
+      },
+    };
+  }
+
+  private getLetterSpacingMark(): { type: string; attrs?: LicitAttrs } | null {
+    const rawLetterSpacing = this.cellStyleInfo?.letterSpacing;
+    if (!rawLetterSpacing) {
+      return null;
+    }
+
+    const letterSpacing = this.normalizeLetterSpacing(rawLetterSpacing);
+    if (!letterSpacing) {
+      return null;
+    }
+
+    return {
+      type: 'mark-letter-spacing',
+      attrs: {
+        letterSpacing,
+        overridden: true,
+      },
+    };
+  }
+
+  normalizeLetterSpacing(
+    raw?: string | string[]
+  ): string | undefined {
+    if (!raw) return undefined;
+
+    if (Array.isArray(raw)) {
+      return raw[0]?.trim(); // pick first
+    }
+
+    return raw.trim();
+  }
+
+  private applyParagraphSpacingAttrs(
+    paragraph: LicitElementJSON,
+    paragraphNode: HTMLElement
+  ) {
+    if (!paragraphNode) {
+      return;
+    }
+
+    const style = paragraphNode.getAttribute('style') ?? '';
+    const declarations = this.parseStyleDeclarations(style);
+    const marginBox = this.expandBoxShorthand(declarations.get('margin'));
+    const paddingBox = this.expandBoxShorthand(declarations.get('padding'));
+
+    const marginTop =
+      declarations.get('margin-top') ?? marginBox.top ?? this.cellStyleInfo?.marginTop;
+    const marginRight =
+      declarations.get('margin-right') ??
+      marginBox.right ??
+      this.cellStyleInfo?.marginRight;
+    const marginBottom =
+      declarations.get('margin-bottom') ??
+      marginBox.bottom ??
+      this.cellStyleInfo?.marginBottom;
+    const marginLeft =
+      declarations.get('margin-left') ??
+      marginBox.left ??
+      this.cellStyleInfo?.marginLeft;
+    const paddingTop =
+      declarations.get('padding-top') ??
+      paddingBox.top ??
+      this.cellStyleInfo?.paddingTop;
+    const paddingRight =
+      declarations.get('padding-right') ??
+      paddingBox.right ??
+      this.cellStyleInfo?.paddingRight;
+    const paddingBottom =
+      declarations.get('padding-bottom') ??
+      paddingBox.bottom ??
+      this.cellStyleInfo?.paddingBottom;
+    const paddingLeft =
+      declarations.get('padding-left') ??
+      paddingBox.left ??
+      this.cellStyleInfo?.paddingLeft;
+
+    const paragraphWithAttrs = paragraph as { attrs?: LicitAttrs };
+    paragraphWithAttrs.attrs ??= {};
+
+    if (marginTop) {
+      paragraphWithAttrs.attrs.marginTop = marginTop;
+    }
+    if (marginRight) {
+      paragraphWithAttrs.attrs.marginRight = marginRight;
+    }
+    if (marginBottom) {
+      paragraphWithAttrs.attrs.marginBottom = marginBottom;
+    }
+    if (marginLeft) {
+      paragraphWithAttrs.attrs.marginLeft = marginLeft;
+    }
+    if (paddingTop) {
+      paragraphWithAttrs.attrs.paddingTop = paddingTop;
+    }
+    if (paddingRight) {
+      paragraphWithAttrs.attrs.paddingRight = paddingRight;
+    }
+    if (paddingBottom) {
+      paragraphWithAttrs.attrs.paddingBottom = paddingBottom;
+    }
+    if (paddingLeft) {
+      paragraphWithAttrs.attrs.paddingLeft = paddingLeft;
+    }
+  }
+
+  private parseStyleDeclarations(style: string): Map<string, string> {
+    const declarations = new Map<string, string>();
+
+    for (const prop of style.split(';')) {
+      const trimmedProp = prop.trim();
+      if (!trimmedProp) {
+        continue;
+      }
+
+      const separatorIndex = trimmedProp.indexOf(':');
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const cssProp = trimmedProp.slice(0, separatorIndex).trim().toLowerCase();
+      const cssValue = trimmedProp.slice(separatorIndex + 1).trim();
+
+      if (!cssProp || !cssValue) {
+        continue;
+      }
+
+      declarations.set(cssProp, cssValue);
+    }
+
+    return declarations;
+  }
+
+  private expandBoxShorthand(
+    value?: string
+  ): {
+    top?: string;
+    right?: string;
+    bottom?: string;
+    left?: string;
+  } {
+    if (!value) {
+      return {};
+    }
+
+    const parts = value
+      .split(/\s+/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) {
+      return {};
+    }
+
+    if (parts.length === 1) {
+      return {
+        top: parts[0],
+        right: parts[0],
+        bottom: parts[0],
+        left: parts[0],
+      };
+    }
+
+    if (parts.length === 2) {
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[0],
+        left: parts[1],
+      };
+    }
+
+    if (parts.length === 3) {
+      return {
+        top: parts[0],
+        right: parts[1],
+        bottom: parts[2],
+        left: parts[1],
+      };
+    }
+
+    return {
+      top: parts[0],
+      right: parts[1],
+      bottom: parts[2],
+      left: parts[3],
+    };
   }
   processChildOL(childNode: ChildNode) {
     const orderedList = new LicitOrderedListElement(0);
@@ -2918,7 +3220,7 @@ export class LicitTableCellParaElement extends LicitElement {
 
 export class LicitTableRowElement extends LicitElement {
   height?: string;
-  rowHeight?: string; 
+  rowHeight?: string;
   getBaseElement(): LicitTableRowJSON {
     return {
       type: 'table_row',
@@ -2955,8 +3257,8 @@ export class LicitTableElement extends LicitElement {
         marginLeft: null,
         vignette: this.isVignette,
         capco: this.capco,
-        noOfColumns: this.noOfColumns ?? null,   
-        tableHeight: this.tableHeight ?? null, 
+        noOfColumns: this.noOfColumns ?? null,
+        tableHeight: this.tableHeight ?? null,
       },
       content: [],
     };
@@ -2965,9 +3267,9 @@ export class LicitTableElement extends LicitElement {
   rows: LicitTableRowElement[] = [];
   isVignette = false;
   capco?: string;
-  noOfColumns?: number;    
+  noOfColumns?: number;
   tableHeight?: string;
-  
+
   constructor(isVignette?: boolean, capco?: string) {
     super();
     this.isVignette = isVignette;
