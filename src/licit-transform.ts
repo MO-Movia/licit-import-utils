@@ -1238,9 +1238,10 @@ export class LicitConverter {
     const endNode = childNodes[endNodeIndex];
 
     // Text after ')' in the end node
-    const afterEnd = (endNode.nodeType === Node.TEXT_NODE
-      ? endNode.nodeValue.trim()
-      : endNode.textContent.trim()).slice(endOffset + 1);
+    const endNodeRawText = endNode.nodeType === Node.TEXT_NODE
+      ? endNode.nodeValue
+      : endNode.textContent;
+    const afterEnd = endNodeRawText.slice(endNodeRawText.indexOf(')') + 1);
 
     // Insert the new single bracket text node
     const newTextNode = document.createTextNode(extractedText);
