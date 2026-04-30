@@ -143,7 +143,7 @@ describe('transform.utils coverage additions', () => {
       ],
     };
 
-    transformUtils.processTableWidths(table);
+    transformUtils.processTableWidths(table as never);
 
     const first = table.content[0].content.map((cell) => cell.attrs.colwidth[0]);
     const second = table.content[1].content.map((cell) => cell.attrs.colwidth[0]);
@@ -170,7 +170,7 @@ describe('transform.utils coverage additions', () => {
       content: [{ type: 'section', content: [nestedTable] }],
     };
 
-    transformUtils.processAllTableWidths(json);
+    transformUtils.processAllTableWidths(json as never);
     expect(nestedTable.content[0].content[0].attrs.colwidth[0]).toBeGreaterThan(0);
     expect(nestedTable.content[0].content[1].attrs.colwidth[0]).toBeGreaterThan(0);
   });
