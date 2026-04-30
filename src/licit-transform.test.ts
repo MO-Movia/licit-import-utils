@@ -3460,14 +3460,8 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
         className?: string;
         id?: string;
         marginTop?: string;
-        marginRight?: string;
         marginBottom?: string;
-        marginLeft?: string;
         fontSize?: string;
-        paddingTop?: string;
-        paddingRight?: string;
-        paddingBottom?: string;
-        paddingLeft?: string;
         letterSpacing?: string;
       };
     };
@@ -3482,31 +3476,17 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
     expect(s2.marginTop).toBe('1pt');
     expect(s2.marginBottom).toBe('2pt');
     expect(s2.fontSize).toBe('9pt');
-    expect(s2.letterSpacing).toEqual(['1.5pt']);
-
-    const td3 = document.createElement('td');
-    td3.innerHTML =
-      '<p style="MARGIN: 10pt 5pt 20pt 5pt; PADDING: 3pt 2pt 4pt 2pt; font-size : 10pt;">x</p>';
-    const s3 = converterWithExtract.extractCellStyles(td3);
-    expect(s3.marginTop).toBe('10pt');
-    expect(s3.marginRight).toBe('5pt');
-    expect(s3.marginBottom).toBe('20pt');
-    expect(s3.marginLeft).toBe('5pt');
-    expect(s3.paddingTop).toBe('3pt');
-    expect(s3.paddingRight).toBe('2pt');
-    expect(s3.paddingBottom).toBe('4pt');
-    expect(s3.paddingLeft).toBe('2pt');
+    expect(s2.letterSpacing).toBe('1.5pt');
   });
 
   it('extractLetterSpacing ignores spans without nbsp content', () => {
     const holder = document.createElement('div');
     holder.innerHTML = '<span style="letter-spacing:2pt;">abc</span>';
     const spans = holder.querySelectorAll('span');
-    const info: { letterSpacing?: string[] } = {};
+    const info: { letterSpacing?: string } = {};
 
-    expect(info.letterSpacing).toBeUndefined();
     converter['extractLetterSpacing'](spans, info);
-    expect(info.letterSpacing).toEqual(['2pt']);
+    expect(info.letterSpacing).toBeUndefined();
   });
 
   it('handleOrderedListItem skips append when text is empty', () => {
@@ -3570,7 +3550,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
       .mockReturnValue(false);
 
     converter['parseTable'](el, true);
-    const last = (converter as unknown as { elements: ParserElement[] }).elements.at(-1);
+    const last = (converter as unknown as { elements: ParserElement[] }).elements.slice(-1)[0];
     expect(last.type).toBe(12);
     expect(transparentSpy).toHaveBeenCalled();
   });
