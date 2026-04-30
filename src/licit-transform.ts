@@ -847,7 +847,7 @@ export class LicitConverter {
     if (e.class && e.class === 'Chapter Header') {
       const spaceAbove = 3;
       const p = document.createElement('p');
-      const p1 = new NewLicitParagraphElement(p as HTMLElement, infoIconData);
+      const p1 = new NewLicitParagraphElement(p, infoIconData);
       p1.id = 'chspace';
 
       for (let i = 0; i < spaceAbove; i++) {
@@ -898,7 +898,7 @@ export class LicitConverter {
     }
 
     const paragraph = new NewLicitParagraphElement(
-      pElement as HTMLElement,
+      pElement,
       infoIconData
     );
     licitDocument.appendElement(paragraph);
@@ -1648,7 +1648,7 @@ export class LicitConverter {
       this.addElementLicit(licitDocument, bulletList);
     } else {
       this.processBulletNodes(
-        childNodes as Node[],
+        childNodes,
         bulletList,
         licitDocument,
         indent,
@@ -1735,7 +1735,7 @@ export class LicitConverter {
       }
       if (e.node.tagName === 'DIV') {
         const caption = e.node.querySelector('p');
-        const paraImages = new NewLicitParagraphElement(caption as HTMLElement);
+        const paraImages = new NewLicitParagraphElement(caption);
         licitDocument.appendElement(paraImages);
       }
     }
@@ -1757,7 +1757,7 @@ export class LicitConverter {
       if (imgElement.childNodes.length > 1) {
         imgElement.remove();
         const textInline = new NewLicitParagraphElement(
-          imgElement as HTMLElement
+          imgElement
         );
         licitDocument.appendElement(textInline);
       }
