@@ -1098,29 +1098,20 @@ export class LicitConverter {
       parent.setAttribute('capco', JSON.stringify(res.capco));
     }
   }
+
   checkISTableFigure(child: ChildNode): boolean {
-    // const firstChild = child.children.item(0);
-    let text = child.textContent;
-    if (text) {
-      if (text.startsWith('Figure')) {
-        text = text.replace(
-          /^Figure\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
-          ''
-        );
-        return true;
-      }
+    const text = child.textContent;
+    if (!text) return false;
 
+    const figurePattern =
+      /^Figure\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/;
 
-      if (text.startsWith('Table')) {
-        text = text.replace(
-          /^Table\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
-          ''
-        );
-        return true;
-      }
-    }
-    return false;
+    const tablePattern =
+      /^Table\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/;
+
+    return figurePattern.test(text) || tablePattern.test(text);
   }
+
   private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
     const rows = table?.rows;
@@ -1164,78 +1155,93 @@ export class LicitConverter {
   private extractBracketContent(element: Element) {
     const childNodes = Array.from(element.childNodes);
 
-    let startNodeIndex = -1;
-    let endNodeIndex = -1;
-    let startOffset = -1;
-    let endOffset = -1;
+    const start = this.findBracketStart(childNodes);
+    if (!start) return;
 
-    for (let i = 0; i < childNodes.length; i++) {
-      const node = childNodes[i];
+    const end = this.findBracketEnd(childNodes, start.index);
+    if (!end) return;
 
-      //  Use nodeValue for text nodes, textContent for elements
-      const text = node.nodeType === Node.TEXT_NODE
-        ? node.nodeValue.trim()
-        : node.textContent.trim();
+    const extractedText = this.buildBracketText(childNodes, start, end);
+    this.replaceNodesWithText(childNodes, start, end, extractedText);
+  }
 
-      if (startNodeIndex === -1 && text.includes('(')) {
-        startNodeIndex = i;
-        startOffset = text.indexOf('(');
-      }
+  private getNodeText(node: ChildNode): string {
+    return (node.nodeType === Node.TEXT_NODE
+      ? node.nodeValue
+      : node.textContent)?.trim() || '';
+  }
 
-      // Only search for ')' after we found '('
-      if (startNodeIndex !== -1 && text.includes(')')) {
-        endNodeIndex = i;
-        endOffset = text.indexOf(')');
-        break; //  Stop at first closing brace after opening
-      }
+  private findBracketStart(nodes: ChildNode[]) {
+    for (let i = 0; i < nodes.length; i++) {
+      const text = this.getNodeText(nodes[i]);
+      const offset = text.indexOf('(');
+      if (offset !== -1) return { index: i, offset };
     }
+    return null;
+  }
 
-    if (startNodeIndex === -1 || endNodeIndex === -1) return;
+  private findBracketEnd(nodes: ChildNode[], startIndex: number) {
+    for (let i = startIndex; i < nodes.length; i++) {
+      const text = this.getNodeText(nodes[i]);
+      const offset = text.indexOf(')');
+      if (offset !== -1) return { index: i, offset };
+    }
+    return null;
+  }
 
-    // Collect full bracketed text across nodes
-    let extractedText = '';
+  private buildBracketText(
+    nodes: ChildNode[],
+    start: { index: number; offset: number },
+    end: { index: number; offset: number }
+  ): string {
+    let result = '';
 
-    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
-      const node = childNodes[i];
-      const text = node.nodeType === Node.TEXT_NODE
-        ? node.nodeValue.trim()
-        : node.textContent.trim();
+    for (let i = start.index; i <= end.index; i++) {
+      const text = this.getNodeText(nodes[i]);
 
-      if (i === startNodeIndex && i === endNodeIndex) {
-        extractedText += text.slice(startOffset, endOffset + 1);
-      } else if (i === startNodeIndex) {
-        extractedText += text.slice(startOffset);
-      } else if (i === endNodeIndex) {
-        extractedText += text.slice(0, endOffset + 1);
+      if (i === start.index && i === end.index) {
+        result += text.slice(start.offset, end.offset + 1);
+      } else if (i === start.index) {
+        result += text.slice(start.offset);
+      } else if (i === end.index) {
+        result += text.slice(0, end.offset + 1);
       } else {
-        extractedText += text;
+        result += text;
       }
     }
 
-    const startNode = childNodes[startNodeIndex];
-    const endNode = childNodes[endNodeIndex];
+    return result;
+  }
 
-    // Text after ')' in the end node
-    const endNodeRawText = endNode.nodeType === Node.TEXT_NODE
-      ? endNode.nodeValue
-      : endNode.textContent;
+  private replaceNodesWithText(
+    nodes: ChildNode[],
+    start: { index: number },
+    end: { index: number; offset: number },
+    extractedText: string
+  ) {
+    const startNode = nodes[start.index];
+    const endNode = nodes[end.index];
+
+    const endNodeRawText =
+      endNode.nodeType === Node.TEXT_NODE
+        ? endNode.nodeValue
+        : endNode.textContent || '';
+
     const afterEnd = endNodeRawText.slice(endNodeRawText.indexOf(')') + 1);
 
-    // Insert the new single bracket text node
     const newTextNode = document.createTextNode(extractedText);
-    element.insertBefore(newTextNode, startNode);
 
-    // Remove all nodes from startIndex to endIndex
-    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
-      element.removeChild(childNodes[i]);
+    startNode.before(newTextNode);
+
+    for (let i = start.index; i <= end.index; i++) {
+      nodes[i].remove();
     }
 
-    // Reinsert remaining text after ')' 
     if (afterEnd) {
       newTextNode.after(document.createTextNode(afterEnd));
     }
   }
-
+  
   private figureTitleCase(
     e: ParserElement,
     licitDocument: LicitDocumentElement
@@ -1829,7 +1835,7 @@ export class LicitConverter {
       if (rowHeight) {
         licitRow.height = rowHeight;
         licitRow.rowHeight = rowHeight;
-        totalTableHeight += parseFloat(rowHeight);
+        totalTableHeight += Number.parseFloat(rowHeight);
       }
       const cells = rows[i].querySelectorAll(querySel);
 
@@ -2085,9 +2091,9 @@ export class LicitConverter {
     let fillImg = 0;
     let fitoParent = 0;
     if (['LC-Image-1', 'LC-Image-2'].includes(image.id)) {
-      bgColor = '#d8d8d8';
       fillImg = 1;
       fitoParent = 1;
+      bgColor = '#d8d8d8';
       colWidth = image.id === 'LC-Image-1' ? [100, 625] : [100];
       imgHeight = image?.id === 'LC-Image-2' ? '70' : imgHeight;
       isChapterHeader = true;
@@ -2096,12 +2102,10 @@ export class LicitConverter {
     }
     const source = image?.getAttribute('srcRelative') ?? image?.src;
     if (source) {
-      // seybi excluded image
       licitCell = new LicitTableCellImageElement(
         source,
         fillImg,
         fitoParent,
-        bgColor,
         imgHeight,
         colWidth,
         altText,
@@ -2831,51 +2835,69 @@ export class LicitConverter {
     return !classList.includes(trimmedClassName);
   }
   private sanitizeElement(element: Element | ChildNode) {
-    const stripTextContent = (node) => {
+    const stripTextContent = (node: ChildNode): void => {
       if (node.nodeType === Node.TEXT_NODE) {
-        const parentClass =
-          (node.parentNode as Element)?.className?.toLowerCase?.() || '';
+        this.handleTextNode(node);
+        return;
+      }
 
-        if (
-          this.config?.stripSectionNumbers &&
-          this.matchClassToExcludeNumber(parentClass) &&
-          parentClass !== 'acronym' // skip if parent is acronym
-        ) {
-          //Fix for paras having double sets of numbering
-          node.textContent = node.textContent
-            .replaceAll(/^[A-Z]?\d{1,5}(?:\.\d{1,5}){0,10}\.?(?=\s)/gm, '')
-            .replaceAll('\n', '');
-        }
-        node.textContent = node.textContent.replace(/•\s{0,10000}/, '');
-
-        node.textContent = node.textContent.replace(/^FM_/, '');
-
-        // remove empty nodes
-        if (node.textContent === '') {
-          node.remove();
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        // Remove spacing spans containing only &nbsp; (FrameMaker spacing artifacts)
-        if (
-          node.tagName === 'SPAN' &&
-          node.getAttribute('style')?.includes('letter-spacing') &&
-          node.textContent === '\u00A0'
-        ) {
-          const prev = node.previousSibling;
-          if (prev?.nodeType === Node.TEXT_NODE && !prev.textContent.endsWith(' ')) {
-            prev.textContent += ' ';
-          }
-          node.remove();
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (this.removeSpacingSpan(node as Element)) {
           return;
         }
 
-        for (const childNode of Array.from(node.childNodes)) {
-          stripTextContent(childNode);
+        for (const child of Array.from(node.childNodes)) {
+          stripTextContent(child);
         }
       }
     };
 
     stripTextContent(element);
+  }
+
+  private handleTextNode(node: ChildNode): void {
+    const parentClass =
+      (node.parentNode as Element)?.className?.toLowerCase?.() || '';
+
+    if (
+      this.config?.stripSectionNumbers &&
+      this.matchClassToExcludeNumber(parentClass) &&
+      parentClass !== 'acronym'
+    ) {
+      node.textContent = node.textContent
+        .replaceAll(/^[A-Z]?\d{1,5}(?:\.\d{1,5}){0,10}\.?(?=\s)/gm, '')
+        .replaceAll('\n', '');
+    }
+
+    node.textContent = node.textContent
+      .replace(/•\s{0,10000}/, '')
+      .replace(/^FM_/, '');
+
+    if (node.textContent === '') {
+      node.remove();
+    }
+  }
+
+  private removeSpacingSpan(node: Element): boolean {
+    if (
+      node.tagName === 'SPAN' &&
+      node.getAttribute('style')?.includes('letter-spacing') &&
+      node.textContent === '\u00A0'
+    ) {
+      const prev = node.previousSibling;
+
+      if (
+        prev?.nodeType === Node.TEXT_NODE &&
+        !prev.textContent?.endsWith(' ')
+      ) {
+        prev.textContent += ' ';
+      }
+
+      node.remove();
+      return true;
+    }
+
+    return false;
   }
 
   private getScaledWidth(width: number): string {

@@ -58,9 +58,13 @@ export class DocxTransformer {
       value: string;
       messages?: Message[];
     };
-    result.messages?.forEach((m) => {
-      this.messagesSink?.(m.type, m.message);
-    });
+
+    if (result.messages) {
+      for (const m of result.messages) {
+        this.messagesSink?.(m.type, m.message);
+      }
+    }
+
     return new DOMParser().parseFromString(result.value, 'text/html');
   }
 

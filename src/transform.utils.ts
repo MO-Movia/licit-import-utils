@@ -138,7 +138,9 @@ export function processAllTableWidths(
   }
 
   if (Array.isArray(node?.content)) {
-    node.content.forEach(processAllTableWidths);
+    for (const child of node.content) {
+      processAllTableWidths(child);
+    }
   }
 }
 

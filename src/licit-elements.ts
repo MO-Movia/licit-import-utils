@@ -2541,16 +2541,14 @@ export class LicitTableCellImageElement extends LicitElement {
     src: string,
     fillImg: number,
     fitToParent: number,
-    bgColor?: string,
     imgHeight?: string,
     colWidth?: [number],
     alt?: string,
     cellStyleInfo?: CellStyleInfo,
   ) {
     super();
-
     this.src = src;
-    this.bgColor = bgColor;
+    this.bgColor = '#d8d8d8';
     this.height = imgHeight;
     this.colWidth = colWidth;
     this.alt = alt;
