@@ -695,7 +695,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     expect(
       licitParagraph['handleTextMark'](testNode, () => {
-        return {} as unknown as Mark;
+        return {};
       })
     ).toBeUndefined();
   });
@@ -1097,7 +1097,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1120,7 +1120,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1141,7 +1141,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1164,7 +1164,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1189,7 +1189,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest
       .spyOn(licitParagraph, 'parseSubMarks')
-      .mockReturnValue(false as unknown as Mark);
+      .mockReturnValue(false);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1210,7 +1210,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1274,7 +1274,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1295,7 +1295,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1318,7 +1318,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
       text: 'demo',
-    } as Mark);
+    });
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1401,7 +1401,7 @@ describe('LicitElements', () => {
     const testNode = document.createElement('div');
     testNode.append(n);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const test = licitParagraph.parseSubMarks(n, {} as Mark, true, []);
+    const test = licitParagraph.parseSubMarks(n, {}, true, []);
     expect(test).toBeUndefined();
   });
 
@@ -1414,7 +1414,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1432,7 +1432,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1456,7 +1456,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1473,7 +1473,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1488,7 +1488,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1505,7 +1505,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1520,7 +1520,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1537,7 +1537,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1552,7 +1552,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1569,7 +1569,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1585,7 +1585,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -1600,7 +1600,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] },
       true,
       []
     );
@@ -2201,7 +2201,7 @@ describe('NewLicitParagraphElement 2', () => {
           textContent: 'test this doc',
           parentElement: { className: 'chsubpara1' },
         } as unknown as HTMLAnchorElement,
-        { marks: [] } as unknown as Mark,
+        { marks: [] },
         'red',
         [],
         [{ innerText: '' } as unknown as Node]
@@ -2233,7 +2233,7 @@ describe('NewLicitParagraphElement 2', () => {
           textContent: 'test this doc',
           parentElement: { className: 'chsubpara1' },
         } as unknown as HTMLAnchorElement,
-        { marks: [] } as unknown as Mark,
+        { marks: [] },
         'red',
         [],
         [{ innerText: '' } as unknown as Node]
@@ -2264,7 +2264,7 @@ describe('NewLicitParagraphElement 2', () => {
           textContent: 'test this doc',
           parentElement: { className: 'chsubpara1' },
         } as unknown as HTMLAnchorElement,
-        { marks: [] } as unknown as Mark,
+        { marks: [] },
         'red',
         [],
         [{ innerText: 'This is a test' } as unknown as Node]

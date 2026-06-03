@@ -5,6 +5,7 @@
 
 import { getCapcoFromNode } from './capco.util';
 import { v4 as uuid } from 'uuid';
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return */
 
 /*
  * Copyright 2022 Modus Operandi Inc.
@@ -25,14 +26,10 @@ const infoIconLockData: InfoIconData = {
 };
 
 type LicitAttrs = Record<string, unknown>;
-interface Mark {
-  type: string;
-  attrs?: LicitAttrs;
-  marks?: { type: string; attrs?: LicitAttrs }[];
-  text?: string;
-}
+type Mark = any;
+type InfoIconList = HTMLOListElement[] | null | undefined;
 
-export type LicitElementJSON = Record<string, unknown>;
+export type LicitElementJSON = Record<string, any>;
 
 interface LicitElementAttrsJSON extends LicitAttrs {
   parser?: LicitAttrs;
@@ -58,7 +55,7 @@ export interface LicitImageAttrsJSON extends LicitElementAttrsJSON {
   src: string | null;
   title: string | null;
   width: string | null;
-  fitToParent: number;
+  fitToParent: number | null;
 }
 
 interface LicitImageJSON extends LicitElementJSON {
@@ -101,7 +98,7 @@ interface LicitHeaderJSON extends LicitElementJSON {
 
 interface LicitParagraphAttrsJSON extends LicitElementAttrsJSON {
   styleName?: string;
-  align?: string;
+  align?: string | null;
   indent?: number;
 }
 
@@ -128,9 +125,9 @@ interface LicitBulletListItemJSON extends LicitElementJSON {
 }
 
 interface LicitBulletListAttrsJSON extends LicitElementAttrsJSON {
-  id: string;
+  id: string | null;
   indent: number;
-  listStyleType: string;
+  listStyleType: string | null;
 }
 
 interface LicitBulletListJSON extends LicitElementJSON {
@@ -144,21 +141,21 @@ interface LicitTableAttrsJSON extends LicitElementAttrsJSON {
   vignette: boolean;
 }
 interface LicitTableRowAttrsJSON extends LicitElementAttrsJSON {
-  rowHeight: string;
+  rowHeight?: string;
 }
 interface LicitTableCellAttrsJSON extends LicitElementAttrsJSON {
   colspan: number;
   rowspan: number;
   colwidth: number[] | number;
-  borderColor?: string;
-  borderTop?: string;
-  borderBottom?: string;
-  borderLeft?: string;
-  borderRight?: string;
+  borderColor?: string | null;
+  borderTop?: string | null;
+  borderBottom?: string | null;
+  borderLeft?: string | null;
+  borderRight?: string | null;
   background: string;
   vignette?: boolean;
   fullSize?: number;
-  vAlign?: string;
+  vAlign?: string | null;
 }
 
 interface LicitTableCellJSON extends LicitElementJSON {
@@ -208,13 +205,13 @@ interface LicitOrderedListJSON extends LicitElementJSON {
 }
 
 interface CellStyleInfo {
-  className?: string;
-  id?: string;
-  marginTop?: string;
-  marginBottom?: string;
-  fontSize?: string;
-  letterSpacing?: string;
-  cellWidth?: string;
+  className?: string | null;
+  id?: string | null;
+  marginTop?: string | null;
+  marginBottom?: string | null;
+  fontSize?: string | null;
+  letterSpacing?: string | null;
+  cellWidth?: string | null;
 }
 
 export interface LicitDocumentJSON extends LicitElementJSON {
@@ -256,15 +253,15 @@ export class LicitDocumentElement extends LicitElement {
 export class LicitImageElement extends LicitElement {
   source: string;
   alt: string;
-  width?: string;
-  height?: string;
-  align?: string;
+  width?: string | null;
+  height?: string | null;
+  align?: string | null;
   constructor(
     src: string,
     altText?: string,
-    width?: string,
-    height?: string,
-    align?: string
+    width?: string | null,
+    height?: string | null,
+    align?: string | null
   ) {
     super();
     this.source = src;
@@ -304,7 +301,7 @@ export class LicitImageElement extends LicitElement {
   }
 }
 export class LicitNewImageElement extends LicitElement {
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'image',
       attrs: {
@@ -334,7 +331,7 @@ export class LicitNewImageElement extends LicitElement {
   ) {
     super();
     this.source = src;
-    this.alt = altText;
+    this.alt = altText ?? '';
     this.height = height;
     this.width = width;
     this.capco = capco ?? '';
@@ -379,21 +376,21 @@ export class LicitParagraphImageElement extends LicitElement {
 
   source: string;
   alt: string;
-  width?: string;
-  height?: string;
+  width?: string | null;
+  height?: string | null;
   capco?: string;
-  align?: string;
+  align?: string | null;
 
   constructor(
     src: string,
     alt?: string,
-    width?: string,
-    height?: string,
-    align?: string
+    width?: string | null,
+    height?: string | null,
+    align?: string | null
   ) {
     super();
     this.source = src;
-    this.alt = alt;
+    this.alt = alt ?? '';
     this.width = width;
     this.height = height;
     this.align = align;
@@ -408,7 +405,7 @@ export class LicitParagraphImageElement extends LicitElement {
   }
 }
 export class LicitEnhancedImageElement extends LicitElement {
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'enhanced_table_figure',
       attrs: {
@@ -421,8 +418,8 @@ export class LicitEnhancedImageElement extends LicitElement {
       content: [],
     };
   }
-  body: LicitEnhancedImageBodyElement;
-  capco: LicitEnhancedTableFigureCapcoElement;
+  body!: LicitEnhancedImageBodyElement;
+  capco!: LicitEnhancedTableFigureCapcoElement;
   orientation: string;
   constructor(orientation: string) {
     super();
@@ -446,7 +443,7 @@ export class LicitEnhancedImageElement extends LicitElement {
 }
 export class LicitEnhancedImageBodyElement extends LicitElement {
   image: LicitNewImageElement;
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'enhanced_table_figure_body',
       content: [],
@@ -576,13 +573,13 @@ export class LicitHeaderElement extends LicitElement {
       }
     }
   }
-  handleInlineStyles(node: HTMLElement): Mark[] {
+  handleInlineStyles(node?: HTMLElement): Mark[] {
     const marks: Mark[] = [];
-    if (node?.style?.length > 0) {
-      const nodeStyles: string[] = node.getAttribute('style')?.split(';');
+    if ((node?.style?.length ?? 0) > 0) {
+      const nodeStyles: string[] = node?.getAttribute('style')?.split(';') ?? [];
       if (nodeStyles?.length > 0) {
         const inlineStyles: string[] = getInlineStylesArray(nodeStyles);
-        if (inlineStyles.length > 0 && node.textContent !== '') {
+        if (inlineStyles.length > 0 && node?.textContent !== '') {
           this.mapInlineStylesToMarks(inlineStyles, marks);
         }
       }
@@ -640,7 +637,7 @@ export class LicitHeaderElement extends LicitElement {
 export class LicitParagraphNote extends LicitElement {
   node: HTMLElement;
   styleName: string;
-  capco = '';
+  capco?: string | null;
   constructor(node: HTMLElement) {
     super();
     this.node = node;
@@ -659,7 +656,7 @@ export class LicitParagraphNote extends LicitElement {
   }
   render() {
     const element = this.getBaseElement();
-    const text = this.node.textContent;
+    const text = this.node.textContent ?? '';
     const noteName = text.split(':')[0] + ':';
     const noteValue = text.split(':')[1];
     if (noteName && noteValue) {
@@ -772,14 +769,14 @@ export class LicitParagraphElement extends LicitElement {
 }
 
 export class NewLicitParagraphElement extends LicitElement {
-  text: string;
+  text?: string;
   align: string | null = 'Left';
-  node: NodeList;
+  node!: NodeList;
   marks: Mark[] = [];
   styleName = 'Normal';
   selectionId?: string;
   id?: string = '';
-  capco?: string = '';
+  capco?: string | null = '';
   indent = 0;
   name?: string = '';
   overriddenLineSpacing?: boolean = false;
@@ -789,15 +786,15 @@ export class NewLicitParagraphElement extends LicitElement {
   overriddenAlignValue?: string | null = null;
   overriddenAlign?: boolean = false;
   hangingindent?: boolean = false;
-  reset?: boolean = null;
+  reset?: boolean | null = null;
   constructor(
     node: HTMLElement,
-    infoIconData?: HTMLOListElement[],
+    infoIconData?: InfoIconList,
     renderedContentList?: Node[]
   ) {
     super();
     let className = node?.getAttribute('class');
-    this.id = node?.getAttribute('id');
+    this.id = node?.getAttribute('id') ?? undefined;
     this.setInnerlinks(node);
     className ??= node?.getAttribute('className');
     if (className?.toLowerCase() === 'acronym') {
@@ -851,15 +848,15 @@ export class NewLicitParagraphElement extends LicitElement {
   }
   ConvertMarks(
     node: HTMLElement,
-    infoIconData?: HTMLOListElement[],
+    infoIconData?: InfoIconList,
     renderedContentList?: Node[]
   ) {
     let tMark: Mark[] = [];
     const inlineMarks = this.fetchInlineStyles(node);
     for (const n of Array.from(node?.childNodes ?? [])) {
-      let mark_Colour: string;
+      let mark_Colour = '';
       if (n.nodeName === 'A') {
-        mark_Colour = (n as HTMLElement).getAttribute('color');
+        mark_Colour = (n as HTMLElement).getAttribute('color') ?? '';
       }
 
       if (tMark.length > 0) {
@@ -879,8 +876,8 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private handleTextMark(
     n: HTMLElement,
-    getMark: (n: HTMLElement, data?: HTMLOListElement[]) => Mark | undefined,
-    data?: HTMLOListElement[]
+    getMark: (n: HTMLElement, data?: InfoIconList) => Mark | undefined,
+    data?: InfoIconList
   ) {
     const mark: Mark = getMark(n, data);
     if (mark) {
@@ -904,7 +901,7 @@ export class NewLicitParagraphElement extends LicitElement {
    */
   modifyChildNodes(
     n: HTMLElement,
-    infoIconData: HTMLOListElement[],
+    infoIconData: InfoIconList,
     tMark: Mark[],
     mark_Colour: string,
     node: HTMLElement,
@@ -1046,18 +1043,18 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private handleParagraph(
     n: HTMLElement,
-    infoIconData: HTMLOListElement[] | undefined,
+    infoIconData: InfoIconList,
     tMark: Mark[],
     mark_Colour: string,
-    renderedContentList: Node[]
+    renderedContentList?: Node[]
   ) {
     for (const cNode of Array.from(n.childNodes)) {
       //Subtext needs to be on the same line as that of header
       if (
         !(
           cNode.nodeType === Node.TEXT_NODE &&
-          cNode.textContent.trim() === '' &&
-          cNode.textContent.includes('\n')
+          (cNode.textContent ?? '').trim() === '' &&
+          (cNode.textContent ?? '').includes('\n')
         )
       ) {
         this.modifyChildNodes(
@@ -1075,10 +1072,10 @@ export class NewLicitParagraphElement extends LicitElement {
   private handleSpan(
     n: HTMLElement,
     myMark: Mark,
-    infoIconData: HTMLOListElement[] | undefined,
+    infoIconData: InfoIconList,
     tMark: Mark[],
     mark_Colour: string,
-    renderedContentList: Node[],
+    renderedContentList?: Node[],
     styleMarks: { type: string; attrs?: LicitAttrs }[] = []
   ) {
     //Skipping hidden class
@@ -1115,15 +1112,17 @@ export class NewLicitParagraphElement extends LicitElement {
     const hasLetterSpacing = node.style.letterSpacing !== '';
     return hasOnlySpace && hasLetterSpacing;
   }
-  isLastCharNotEmpty(str) {
+  isLastCharNotEmpty(str?: string | null) {
+    if (!str) return false;
     if (str.length === 0) return false;
-    return str.at(-1).trim() !== '';
+    return (str.at(-1) ?? '').trim() !== '';
   }
   addTrailingSpace() {
-    if (this.marks.at(-1)) {
-      const text = this.marks.at(-1).text;
+    const lastMark = this.marks.at(-1);
+    if (lastMark) {
+      const text = lastMark.text;
       if (this.isLastCharNotEmpty(text)) {
-        this.marks.at(-1).text += ' ';
+        lastMark.text += ' ';
       }
     }
   }
@@ -1177,7 +1176,7 @@ export class NewLicitParagraphElement extends LicitElement {
       this.marks.push(textMark);
     }
   }
-  checkForLinks(text: string, urlRegex: RegExp): RegExpMatchArray {
+  checkForLinks(text: string, urlRegex: RegExp): RegExpMatchArray | null {
     return urlRegex.exec(text);
   }
   addLinks(text: string, urlRegex: RegExp, myMark: Mark) {
@@ -1234,17 +1233,17 @@ export class NewLicitParagraphElement extends LicitElement {
    */
   fetchInlineStyles(node: HTMLElement): { type: string; attrs?: LicitAttrs }[] {
     const inlineMarks: { type: string; attrs?: LicitAttrs }[] = [];
-    if (node?.style?.length > 0) {
-      const nodeStyles: string[] = node.getAttribute('style')?.split(';');
+    if ((node?.style?.length ?? 0) > 0) {
+      const nodeStyles: string[] = node.getAttribute('style')?.split(';') ?? [];
       if (nodeStyles?.length > 0) {
         const inlineStyles: string[] = getInlineStylesArray(nodeStyles);
-        if (inlineStyles.length > 0 && node.textContent !== '') {
+        if (inlineStyles.length > 0 && node?.textContent !== '') {
           this.mapInlineStylesToMarks(inlineStyles, inlineMarks);
         }
       }
     }
     if (node?.getAttribute('align')) {
-      const alignmentValue = node.getAttribute('align').toLowerCase();
+      const alignmentValue = node.getAttribute('align')?.toLowerCase() ?? 'left';
       this.overriddenAlign = true;
       this.align = alignmentValue;
       this.overriddenAlignValue = alignmentValue;
@@ -1322,9 +1321,9 @@ export class NewLicitParagraphElement extends LicitElement {
     source: string,
     altText: string,
     myMark: Mark,
-    width?: string,
-    height?: string,
-    align?: string
+    width?: string | null,
+    height?: string | null,
+    align?: string | null
   ) {
     if (source) {
       const img = new LicitImageElement(source, altText, width, height, align);
@@ -1354,7 +1353,7 @@ export class NewLicitParagraphElement extends LicitElement {
     n: Element,
     myMark: Mark,
     u: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.childNodes.length === 1) {
       myMark?.marks.push(u);
@@ -1365,7 +1364,7 @@ export class NewLicitParagraphElement extends LicitElement {
     } else {
       for (const unodes of Array.from(n.childNodes)) {
         if (unodes.nodeName === 'TEXT' || unodes.nodeName === '#text') {
-          const subMark = {
+          const subMark: Mark = {
             type: 'text',
             marks: [],
             text: '',
@@ -1389,7 +1388,7 @@ export class NewLicitParagraphElement extends LicitElement {
     n: HTMLElement,
     myMark: Mark,
     em: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.childNodes.length === 1) {
       myMark?.marks.push(em);
@@ -1400,7 +1399,7 @@ export class NewLicitParagraphElement extends LicitElement {
     } else {
       for (const enodes of Array.from(n.childNodes)) {
         if (enodes.nodeName === 'TEXT' || enodes.nodeName === '#text') {
-          const subMark = {
+          const subMark: Mark = {
             type: 'text',
             marks: [],
             text: '',
@@ -1427,7 +1426,7 @@ export class NewLicitParagraphElement extends LicitElement {
     n: HTMLElement,
     myMark: Mark,
     b: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.childNodes.length === 1) {
       myMark?.marks.push(b);
@@ -1438,7 +1437,7 @@ export class NewLicitParagraphElement extends LicitElement {
     } else {
       for (const bnodes of Array.from(n.childNodes)) {
         if (bnodes.nodeName === 'TEXT' || bnodes.nodeName === '#text') {
-          const subMark = {
+          const subMark: Mark = {
             type: 'text',
             marks: [],
             text: '',
@@ -1452,7 +1451,7 @@ export class NewLicitParagraphElement extends LicitElement {
           if (myMark) {
             this.marks.push(myMark);
           } else {
-            const subMark = {
+            const subMark: Mark = {
               type: 'text',
               marks: [],
               text: ' ',
@@ -1469,14 +1468,14 @@ export class NewLicitParagraphElement extends LicitElement {
     n: HTMLAnchorElement,
     myMark: Mark,
     mark_Colour: string,
-    infoIconData: HTMLOListElement[],
+    infoIconData: InfoIconList,
     renderedContentList?: Node[]
   ) {
     if (n.id === '_LINK_TO_THIS' || n.textContent.trim() === '') {
       return myMark;
     }
     let selectionIdModified: string;
-    let content: string;
+    let content = '';
     myMark = {
       type: 'text',
       marks: [],
@@ -1495,10 +1494,10 @@ export class NewLicitParagraphElement extends LicitElement {
       content = '';
     } else {
       selectionIdModified = n.hash;
-      if (renderedContentList?.length > 0) {
-        const firstElement = renderedContentList[0];
+      if ((renderedContentList?.length ?? 0) > 0) {
+        const firstElement = renderedContentList![0];
         content = (firstElement as HTMLAnchorElement).innerText;
-        renderedContentList.shift();
+        renderedContentList?.shift();
       }
     }
 
@@ -1566,10 +1565,10 @@ export class NewLicitParagraphElement extends LicitElement {
     mark_Colour: string,
     clr: Mark,
     myMark: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (enodes.nodeName === 'TEXT' || enodes.nodeName === '#text') {
-      const subMark = {
+      const subMark: Mark = {
         type: 'text',
         marks: [],
         text: '',
@@ -1607,9 +1606,9 @@ export class NewLicitParagraphElement extends LicitElement {
     }
   }
   private parseFont(
-    n,
+    n: any,
     myMark: Mark,
-    infoIconData: HTMLOListElement[],
+    infoIconData: InfoIconList,
     tMark: Mark[]
   ) {
     if (!this.hasFontDetails(n)) {
@@ -1704,16 +1703,16 @@ export class NewLicitParagraphElement extends LicitElement {
   }
 
   parseSubMarks(
-    n,
+    n: any,
     mark: Mark,
     _hasOneChild: boolean,
-    infoIconData?: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     let retMark: Mark = null;
-    let mark_Colour: string;
+    let mark_Colour = '';
     let em: Mark;
     if (n.nodeName === 'A') {
-      mark_Colour = n.getAttribute('color');
+      mark_Colour = n.getAttribute('color') ?? '';
     }
     if (n.nodeName === 'BR') {
       return;
@@ -1784,10 +1783,10 @@ export class NewLicitParagraphElement extends LicitElement {
   }
 
   private parseFontWithInfoicon(
-    n,
+    n: any,
     mark: Mark,
     retMark: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.textContent.trim() === '') {
       return retMark;
@@ -1827,7 +1826,7 @@ export class NewLicitParagraphElement extends LicitElement {
     n: HTMLElement,
     mark: Mark,
     retMark: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.textContent.trim() !== '') {
       const u = {
@@ -1856,7 +1855,7 @@ export class NewLicitParagraphElement extends LicitElement {
     em: Mark,
     mark: Mark,
     retMark: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.textContent.trim() !== '') {
       em = {
@@ -1885,7 +1884,7 @@ export class NewLicitParagraphElement extends LicitElement {
     n: HTMLElement,
     mark: Mark,
     retMark: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.textContent.trim() === '') {
       return retMark;
@@ -1926,7 +1925,7 @@ export class NewLicitParagraphElement extends LicitElement {
     mark_Colour: string,
     mark: Mark,
     retMark: Mark,
-    infoIconData: HTMLOListElement[]
+    infoIconData?: InfoIconList
   ) {
     if (n.textContent.trim() !== '') {
       const lnk = {
@@ -1969,7 +1968,7 @@ export class NewLicitParagraphElement extends LicitElement {
     return retMark;
   }
 
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'paragraph',
       attrs: {
@@ -2004,7 +2003,7 @@ export class NewLicitParagraphElement extends LicitElement {
     };
   }
 
-  getEmMarks(node: HTMLElement, data?) {
+  getEmMarks(node: HTMLElement, data?: any) {
     if (!node.childNodes) {
       return {
         type: 'text',
@@ -2039,7 +2038,7 @@ export class NewLicitParagraphElement extends LicitElement {
     }
   }
 
-  getEmInfoIconMark(childNode: ChildNode, data?): Mark | undefined {
+  getEmInfoIconMark(childNode: ChildNode, data?: any): Mark | undefined {
     for (const infoNode of Array.from(childNode.childNodes)) {
       const infoID = (infoNode as { id?: string }).id;
       for (const dataNode of data[0].childNodes) {
@@ -2070,9 +2069,9 @@ export class NewLicitParagraphElement extends LicitElement {
     };
   }
 
-  getSuperScriptMarks(node: HTMLElement, data?) {
+  getSuperScriptMarks(node: HTMLElement, data?: any) {
     if (data && node.id === 'infoIcon') {
-      const infoID = node.childNodes[0]['id'];
+      const infoID = (node.childNodes[0] as HTMLElement | undefined)?.id;
       for (const childNode of data[0].childNodes) {
         if (infoID === childNode?.id) {
           const infoDescription = childNode.innerText;
@@ -2196,7 +2195,7 @@ export class NewLicitParagraphElement extends LicitElement {
 }
 
 export class LicitErrorTextElement extends LicitElement {
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'paragraph',
       attrs: {
@@ -2355,10 +2354,10 @@ export class LicitTableCellElement extends LicitElement {
   ) {
     super();
     this.text = text;
-    this.bgColor = bgColor;
-    this.align = alignment;
-    this.colwidth = colWidth;
-    this.vAlign = verticalAlignment;
+    this.bgColor = bgColor ?? '';
+    this.align = alignment ?? '';
+    this.colwidth = colWidth ?? [0];
+    this.vAlign = verticalAlignment ?? '';
   }
 
   render(): LicitTableCellJSON {
@@ -2373,7 +2372,7 @@ export class LicitTableCellElement extends LicitElement {
 }
 
 export class LicitTableCellParagraph extends LicitElement {
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'table_cell',
       attrs: {
@@ -2387,12 +2386,12 @@ export class LicitTableCellParagraph extends LicitElement {
     };
   }
 
-  node: HTMLElement;
+  node!: HTMLElement;
   rowspan = 1;
   colspan = 1;
   bgColor: string;
   colWidth: [number];
-  content = [];
+  content: any[] = [];
   vAlign: string;
   cellStyleInfo?: CellStyleInfo;
   constructor(
@@ -2403,9 +2402,9 @@ export class LicitTableCellParagraph extends LicitElement {
     cellStyleInfo?: CellStyleInfo,
   ) {
     super();
-    this.bgColor = bgColor;
-    this.colWidth = colwidth;
-    this.vAlign = vericalAlignment;
+    this.bgColor = bgColor ?? '';
+    this.colWidth = colwidth ?? [0];
+    this.vAlign = vericalAlignment ?? '';
     this.cellStyleInfo = cellStyleInfo;
     const paragraph = new NewLicitParagraphElement(node, null);
     if (paragraph) {
@@ -2425,7 +2424,7 @@ export class LicitTableCellParagraph extends LicitElement {
 }
 
 export class NewLicitTableCellParagraph extends LicitElement {
-  getBaseElement() {
+  getBaseElement(): any {
     const defaultColWidth = 100;
     const defaultBgColor = '#FFFFFF';
 
@@ -2434,7 +2433,7 @@ export class NewLicitTableCellParagraph extends LicitElement {
       attrs: {
         colspan: 1,
         rowspan: 1,
-        colwidth: this.colWidth || defaultColWidth,
+        colwidth: this.colWidth.length ? this.colWidth : defaultColWidth,
         background: this.bgColor || defaultBgColor,
         vAlign: this.vAlign || 'top',
       },
@@ -2442,12 +2441,12 @@ export class NewLicitTableCellParagraph extends LicitElement {
     };
   }
 
-  node: HTMLElement;
+  node!: HTMLElement;
   rowspan = 1;
   colspan = 1;
   bgColor: string;
-  colWidth: [number];
-  content = [];
+  colWidth: number[];
+  content: any[] = [];
   vAlign: string;
   constructor(
     node: HTMLElement,
@@ -2456,9 +2455,9 @@ export class NewLicitTableCellParagraph extends LicitElement {
     vericalAlignment?: string
   ) {
     super();
-    this.vAlign = vericalAlignment;
-    this.bgColor = bgColor;
-    this.colWidth = colwidth;
+    this.vAlign = vericalAlignment ?? '';
+    this.bgColor = bgColor ?? '';
+    this.colWidth = colwidth ?? [];
 
     const paragraph = new NewLicitParagraphElement(node, null);
     //paraElement
@@ -2474,8 +2473,8 @@ export class NewLicitTableCellParagraph extends LicitElement {
       ...baseElement.attrs,
       colspan: this.colspan,
       rowspan: this.rowspan,
-      background: this.bgColor,
-      vAlign: this.vAlign,
+      background: this.bgColor || baseElement.attrs.background,
+      vAlign: this.vAlign || baseElement.attrs.vAlign,
     };
     return baseElement;
   }
@@ -2525,11 +2524,11 @@ export class LicitTableCellImageElement extends LicitElement {
     };
   }
 
-  text: string;
+  text = '';
   src: string;
   rowspan = 1;
   colspan = 1;
-  height: string;
+  height: string | null;
   bgColor: string;
   colWidth: [number];
   alt: string;
@@ -2549,9 +2548,9 @@ export class LicitTableCellImageElement extends LicitElement {
     super();
     this.src = src;
     this.bgColor = '#d8d8d8';
-    this.height = imgHeight;
-    this.colWidth = colWidth;
-    this.alt = alt;
+    this.height = imgHeight ?? null;
+    this.colWidth = colWidth ?? [0];
+    this.alt = alt ?? '';
     this.fillImg = fillImg;
     this.fitToParent = fitToParent;
     this.cellStyleInfo = cellStyleInfo;
@@ -2568,7 +2567,7 @@ export class LicitTableCellImageElement extends LicitElement {
 }
 
 export class LicitVignetteElement extends LicitElement {
-  getBaseElement() {
+  getBaseElement(): any {
     const width = '0.25px';
     const style = 'solid';
     const cssValue = `${width} ${style} ${this.borderColor}`;
@@ -2591,15 +2590,15 @@ export class LicitVignetteElement extends LicitElement {
     };
   }
 
-  text: string;
-  src: string;
+  text = '';
+  src = '';
   rowspan = 1;
   colspan = 1;
   borderColor: string;
   bgColor: string;
-  isVignet: boolean;
+  isVignet = false;
   width: number[] = [];
-  content = [];
+  content: any[] = [];
 
   constructor(
     node: Element,
@@ -2690,7 +2689,7 @@ export class LicitVignetteElement extends LicitElement {
     }
   }
 
-  handleVignetteSpan(pNode) {
+  handleVignetteSpan(pNode: any) {
     let paragraph;
     switch (pNode.nodeName) {
       case 'P':
@@ -2761,12 +2760,12 @@ export class LicitTableCellParaElement extends LicitElement {
     };
   }
 
-  node: HTMLElement;
+  node!: HTMLElement;
   rowspan = 1;
   colspan = 1;
   bgColor: string;
   colWidth: number[];
-  content = [];
+  content: any[] = [];
   vAlign: string;
   isTableHeader: boolean;
   isTransparentTable: boolean;
@@ -2781,11 +2780,11 @@ export class LicitTableCellParaElement extends LicitElement {
     cellStyleInfo?: CellStyleInfo,
   ) {
     super();
-    this.bgColor = bgColor;
-    this.colWidth = colwidth;
-    this.vAlign = vericalAlignment;
-    this.isTableHeader = isTableHeader;
-    this.isTransparentTable = isTransparentTable;
+    this.bgColor = bgColor ?? '';
+    this.colWidth = colwidth ?? [];
+    this.vAlign = vericalAlignment ?? '';
+    this.isTableHeader = isTableHeader ?? false;
+    this.isTransparentTable = isTransparentTable ?? false;
     this.cellStyleInfo = cellStyleInfo;
     this.ConvertElements(node);
   }
@@ -2858,13 +2857,13 @@ export class LicitTableCellParaElement extends LicitElement {
       overriddenMarks.map((mark) => mark.type),
     );
 
-    for (const contentNode of paragraph.content as Mark[]) {
+    for (const contentNode of paragraph.content) {
       if (contentNode?.type !== 'text') {
         continue;
       }
       contentNode.marks ??= [];
       contentNode.marks = contentNode.marks.filter(
-        (mark) => !overriddenMarkTypes.has(mark?.type),
+        (mark: Mark) => !overriddenMarkTypes.has(mark?.type),
       );
       contentNode.marks.push(...overriddenMarks);
     }
@@ -2916,7 +2915,7 @@ export class LicitTableCellParaElement extends LicitElement {
         (childNode as HTMLElement).childNodes
       ).filter((node) => (node as HTMLElement).tagName?.toLowerCase() === 'li');
       for (const n of childNodes) {
-        n.textContent = this.removeNewLines(n.textContent);
+        n.textContent = this.removeNewLines(n.textContent ?? '');
         const bulletItem = new LicitBulletListItemElement(n as HTMLElement);
         orderedList.addItem(bulletItem);
       }
@@ -2929,7 +2928,7 @@ export class LicitTableCellParaElement extends LicitElement {
     if (ulText && childNode.childNodes && childNode.childNodes.length > 0) {
       const childNodes = Array.from(
         (childNode as HTMLElement).childNodes
-      ).filter((node) => (node as HTMLElement).tagName?.toLowerCase() === 'p');
+      ).filter((node: Node) => (node as HTMLElement).tagName?.toLowerCase() === 'p');
       for (const n of childNodes) {
         this.processTextNodes(n);
         const bulletItem = new LicitBulletListItemElement(n as HTMLElement);
@@ -2939,7 +2938,7 @@ export class LicitTableCellParaElement extends LicitElement {
     this.content.push(bulletList.render());
   }
 
-  processTextNodes(node) {
+  processTextNodes(node: any) {
     if (node.nodeType === Node.TEXT_NODE) {
       node.textContent = this.cleanupText(node.textContent);
       return;
@@ -2950,8 +2949,8 @@ export class LicitTableCellParaElement extends LicitElement {
     }
   }
 
-  cleanupText(text) {
-    return this.removeBullets(this.removeNewLines(text));
+  cleanupText(text: string | null) {
+    return this.removeBullets(this.removeNewLines(text ?? ''));
   }
   removeNewLines(text: string) {
     return text.split('\n').join('');
@@ -3032,7 +3031,7 @@ export class LicitTableElement extends LicitElement {
 
   constructor(isVignette?: boolean, capco?: string) {
     super();
-    this.isVignette = isVignette;
+    this.isVignette = isVignette ?? false;
     this.capco = capco;
   }
 
@@ -3051,7 +3050,7 @@ export class LicitTableElement extends LicitElement {
   }
 }
 export class LicitEnhancedTableElement extends LicitElement {
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'enhanced_table_figure',
       attrs: {
@@ -3064,9 +3063,9 @@ export class LicitEnhancedTableElement extends LicitElement {
       content: [],
     };
   }
-  body: LicitEnhancedTableFigureBodyElement;
-  capco: LicitEnhancedTableFigureCapcoElement;
-  notes: LicitEnhancedTableNotesElement;
+  body!: LicitEnhancedTableFigureBodyElement;
+  capco!: LicitEnhancedTableFigureCapcoElement;
+  notes!: LicitEnhancedTableNotesElement;
   orientation: string;
   constructor(orientation = 'portrait') {
     super();
@@ -3102,8 +3101,8 @@ export class LicitEnhancedTableElement extends LicitElement {
   }
 }
 export class LicitEnhancedTableFigureBodyElement extends LicitElement {
-  table: LicitTableElement;
-  getBaseElement() {
+  table!: LicitTableElement;
+  getBaseElement(): any {
     return {
       content: [],
       type: 'enhanced_table_figure_body',
@@ -3122,7 +3121,7 @@ export class LicitEnhancedTableFigureBodyElement extends LicitElement {
 export class LicitEnhancedTableFigureCapcoElement extends LicitElement {
   text: string;
   capco: string | null;
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'enhanced_table_figure_capco',
       attrs: {
@@ -3161,7 +3160,7 @@ export class LicitEnhancedTableNotesElement extends LicitElement {
     );
   }
 
-  getBaseElement() {
+  getBaseElement(): any {
     return {
       type: 'enhanced_table_figure_notes',
       attrs: {
@@ -3251,8 +3250,8 @@ export function shouldSkipNext(className: string): boolean {
   return classesToSkip.includes(className);
 }
 
-function checkFirstSentenceBold(parentNode: HTMLElement): boolean {
-  return shouldSkipNext(parentNode?.className);
+function checkFirstSentenceBold(parentNode: HTMLElement | null): boolean {
+  return shouldSkipNext(parentNode?.className ?? '');
 }
 /**
  * Adds ". " to the end of the text if it doesn't already end with it.

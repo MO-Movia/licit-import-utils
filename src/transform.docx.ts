@@ -87,13 +87,14 @@ export class DocxTransformer {
       }
     }
 
-    if (element?.children?.length > 0) {
-      const docElements = element.children.filter(
+    const elementChildren = element.children ?? [];
+    if (elementChildren.length > 0) {
+      const docElements = elementChildren.filter(
         (c): c is DocumentElement => 'type' in c
       );
       if (docElements.length > 0) {
         const children = docElements.map((c) => this.transformElement(c));
-        element = { ...element, children: children };
+        element = { ...element, children };
       }
     }
 
@@ -113,9 +114,12 @@ export class DocxTransformer {
     };
 
     if (
-      element.children?.length > 0 &&
+      element.children &&
+      element.children.length > 0 &&
+      element.children[0] &&
       'type' in element.children[0] &&
-      element.children[0].children?.length > 0
+      element.children[0].children &&
+      element.children[0].children.length > 0
     ) {
       const childCharcter = element.children[0].children[0];
       if (
@@ -144,7 +148,10 @@ export class DocxTransformer {
 
     element = {
       ...element,
-      numbering: { ...element.numbering, symbol: '' },
+      numbering: {
+        isOrdered: element.numbering?.isOrdered ?? false,
+        symbol: '',
+      },
     };
 
     if (element?.children?.[0]?.children?.[0]) {
@@ -157,7 +164,10 @@ export class DocxTransformer {
         element.children.splice(0, 1);
         element = {
           ...element,
-          numbering: { ...element.numbering, symbol: '' },
+          numbering: {
+            isOrdered: element.numbering?.isOrdered ?? false,
+            symbol: '',
+          },
         };
       }
     }
@@ -191,7 +201,7 @@ export class DocxTransformer {
     const bulletLimit = element.numbering ? 1 : 2;
     let bulletsCount = 0;
 
-    const trimmedValue = textChild.value.trim();
+    const trimmedValue = textChild.value?.trim() ?? '';
     if (undefinedCharacters.includes(trimmedValue)) {
       bulletsCount += trimmedValue.length;
       element.styleId =

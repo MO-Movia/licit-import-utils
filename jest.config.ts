@@ -204,6 +204,7 @@ const jestConfig: JestConfigWithTsJest = {
         useESM: true,
         tsconfig: {
           allowJs: true,
+          strict: false,
         },
       },
     ],

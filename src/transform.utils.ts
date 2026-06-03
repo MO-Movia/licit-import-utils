@@ -20,7 +20,7 @@ export function base64ToFile(
   const byteNumbers: number[] = new Array(byteCharacters.length);
 
   for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.codePointAt(i);
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
   }
 
   const byteArray = new Uint8Array(byteNumbers);
@@ -137,8 +137,9 @@ export function processAllTableWidths(
     processTableWidths(node);
   }
 
-  if (Array.isArray(node?.content)) {
-    for (const child of node.content) {
+  const content = node?.content;
+  if (Array.isArray(content)) {
+    for (const child of content) {
       processAllTableWidths(child);
     }
   }
@@ -153,7 +154,8 @@ export function processTableWidths(
     | LicitTableJSON
 ) {
   const tableWidths: number[] = [];
-  const firstRow = node.content?.[0];
+  const table = node as LicitTableJSON;
+  const firstRow = table.content?.[0];
   if (firstRow?.content) {
     for (const cell of firstRow.content) {
       if (Array.isArray(cell.attrs?.colwidth)) {
@@ -161,7 +163,7 @@ export function processTableWidths(
       }
     }
     const scaledWidths = scaleWidthArray(tableWidths, 619);
-    for (const row of (node as LicitTableJSON).content) {
+    for (const row of table.content) {
       for (let i = 0; i < row?.content?.length; i++) {
         const cell = row.content[i];
         if (scaledWidths[i] != null) {

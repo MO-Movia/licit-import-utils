@@ -21,6 +21,8 @@ export function parseFGIPortion(
   const parts = clean.replace("//", "").split(/\s{1,10}/);
   const cls = parts.pop();
 
+  if (!cls) return null;
+
   if (!isAllowed(cls)) return null;
 
   // Concealed source
