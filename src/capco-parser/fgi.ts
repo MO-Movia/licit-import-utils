@@ -13,10 +13,15 @@ export function parseFGIPortion(
   isAllowed: (cls: string) => boolean
 ): FGIParseResult | null {
 
+  const compareAlpha = (a: string, b: string) =>
+  a.localeCompare(b, undefined, { sensitivity: "base" });
+
   if (!clean.startsWith("//")) return null;
 
   const parts = clean.replace("//", "").split(/\s{1,10}/);
   const cls = parts.pop();
+
+  if (!cls) return null;
 
   if (!isAllowed(cls)) return null;
 
@@ -24,10 +29,11 @@ export function parseFGIPortion(
   if (parts.length === 1 && parts[0] === "FGI") {
     return { classification: cls, sources: ["FGI"] };
   }
-
   // Identified sources
   if (parts.every(p => /^[A-Z]{3}$/.test(p))) {
-    return { classification: cls, sources: parts.sort() };
+    const sorted = [...parts];
+    sorted.sort(compareAlpha);
+    return { classification: cls, sources: sorted };
   }
 
   return null;

@@ -667,7 +667,7 @@ describe('Converter.addTableImageCell', () => {
   it('should handle TABLE tag in handleNode', () => {
     const table = document.createElement('table');
     const spy = jest.spyOn(
-      converter as unknown as { parseTable: (a, b) => unknown },
+      converter as unknown as { parseTable: () => unknown },
       'parseTable'
     );
 
@@ -3445,7 +3445,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
 
   it('parseHTML handles string input with inner DIV and non-doctrine path', () => {
     const html = '<html><body><div><p class="para">x</p></div></body></html>';
-    const result = converter.parseHTML(html as unknown as Document, false);
+    const result = converter.parseHTML(html, false);
     expect(result).toBeDefined();
   });
 

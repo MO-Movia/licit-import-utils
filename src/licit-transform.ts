@@ -154,9 +154,9 @@ interface CellStyleInfo {
 export class LicitConverter {
   private readonly elementsParsedMap = new Map<string, boolean>();
   private elements: ParserElement[] = [];
-  constructor(private readonly config: TransformConfig) { }
+  constructor(private readonly config: TransformConfig) {}
   public parseHTML(
-    html: Document,
+    html: Document | string,
     isDoctorine: boolean,
     moDocType?: string
   ): LicitDocumentJSON {
@@ -171,7 +171,7 @@ export class LicitConverter {
       nodes = html.querySelectorAll('body > *');
     } else {
       const firstChild = html.querySelector('body > *');
-      if (firstChild.tagName === 'DIV') {
+      if (firstChild?.tagName === 'DIV') {
         nodes = html.querySelectorAll('body > div > *');
       } else {
         nodes = html.querySelectorAll('body > *');
@@ -187,7 +187,7 @@ export class LicitConverter {
       return this.render(nodes);
     }
   }
-  public parseFrameMakerHTML5(html: Element[]): LicitDocumentJSON {
+  public parseFrameMakerHTML5(html: Element[]): LicitDocumentJSON | undefined {
     this.elements = [];
     if (!html?.length) {
       return undefined;
@@ -210,7 +210,7 @@ export class LicitConverter {
     return this.render_FrameMakerHTML5_zip(
       nodes,
       extractInfoIconData(dom),
-      null,
+      undefined,
       renderedContentList
     );
   }
@@ -242,12 +242,15 @@ export class LicitConverter {
 
   private render_FrameMakerHTML5_zip_SwitchHelper(
     e: ParserElement,
-    infoIconData: HTMLOListElement[],
-    renderedContentList: Node[],
+    infoIconData: HTMLOListElement[] | unknown[] | undefined,
+    renderedContentList: Node[] | undefined,
     isNumberReseted: boolean,
     licitDocument: LicitDocumentElement
   ) {
+    infoIconData ??= [];
+    renderedContentList ??= [];
     let resetNumbering = isNumberReseted;
+    const typedInfoIconData = infoIconData as HTMLOListElement[];
     switch (e.type) {
       case ParserElementType.ChapterTitle:
       case ParserElementType.ChapterSubtitle:
@@ -256,7 +259,7 @@ export class LicitConverter {
         if (n) {
           const paragraph = new NewLicitParagraphElement(
             n as HTMLElement,
-            infoIconData,
+            typedInfoIconData,
             renderedContentList
           );
           if (e.subText.length > 0) {
@@ -290,7 +293,7 @@ export class LicitConverter {
         this.figureParagraphCase(
           e,
           licitDocument,
-          infoIconData,
+          typedInfoIconData,
           renderedContentList
         );
         break;
@@ -460,10 +463,12 @@ export class LicitConverter {
       case ParserElementType.Figure: {
         const image = e.node.querySelector('img');
         const source = image?.src;
-        const alt = image?.alt;
-        const width = image?.getAttribute('width');
-        const height = image?.getAttribute('height');
-        const align = getElementAlignment(image);
+        const alt = image?.alt ?? '';
+        const width = image?.getAttribute('width') ?? undefined;
+        const height = image?.getAttribute('height') ?? undefined;
+        const align = image
+          ? (getElementAlignment(image) ?? undefined)
+          : undefined;
         if (source) {
           // seybi excluded image
           const imageElement = new LicitParagraphImageElement(
@@ -592,8 +597,9 @@ export class LicitConverter {
     const text = e.node.textContent;
     if (text) {
       const paragraph = new LicitParagraphElement(text);
-      if (e.node.attributes.getNamedItem('align')) {
-        paragraph.align = e.node.attributes.getNamedItem('align').value;
+      const alignAttr = e.node.attributes.getNamedItem('align');
+      if (alignAttr) {
+        paragraph.align = alignAttr.value;
       }
       licitDocument.appendElement(paragraph);
     }
@@ -664,7 +670,7 @@ export class LicitConverter {
 
   private checkChildNode(
     node: HTMLElement | Element,
-    nextNode: HTMLElement | Element
+    nextNode?: HTMLElement | Element | null
   ): number {
     const children = node.children;
     let skipCount = 0;
@@ -677,7 +683,10 @@ export class LicitConverter {
         }
 
         const childNode = children[j];
-        let nextChildNode = children[j + 1];
+        if (!childNode) {
+          continue;
+        }
+        let nextChildNode: Element | undefined = children[j + 1];
 
         // Handling paragraph combining logic for the case where
         // heading is inside <OL>/<UL> and content is outside
@@ -686,7 +695,7 @@ export class LicitConverter {
           (node.tagName === 'OL' || node.tagName === 'UL') &&
           shouldSkipNext(childNode.className)
         ) {
-          nextChildNode = nextNode;
+          nextChildNode = nextNode ?? undefined;
         }
 
         skipCount = this.handleNode(childNode, nextChildNode);
@@ -698,7 +707,7 @@ export class LicitConverter {
   private render_doc(
     nodes: NodeListOf<Element>,
     infoIconData: HTMLOListElement[] | undefined,
-    moDocType: string
+    moDocType?: string
   ): LicitDocumentJSON {
     // Build elements, joining special cases
     for (const node of Array.from(nodes)) {
@@ -735,8 +744,8 @@ export class LicitConverter {
     e: ParserElement,
     licitDocument: LicitDocumentElement,
     tocRemoved: boolean,
-    infoIconData: HTMLOListElement[],
-    moDocType: string
+    infoIconData: HTMLOListElement[] = [],
+    moDocType?: string
   ) {
     switch (e.type) {
       case ParserElementType.ChapterTitle:
@@ -897,10 +906,7 @@ export class LicitConverter {
       }
     }
 
-    const paragraph = new NewLicitParagraphElement(
-      pElement,
-      infoIconData
-    );
+    const paragraph = new NewLicitParagraphElement(pElement, infoIconData);
     licitDocument.appendElement(paragraph);
   }
 
@@ -922,7 +928,7 @@ export class LicitConverter {
     }
   }
 
-  private handleNode(node: Element, nextNode: Element): number {
+  private handleNode(node: Element, nextNode?: Element | null): number {
     const className = node.className;
     const titleClasses = [
       'attTableTitle',
@@ -967,7 +973,7 @@ export class LicitConverter {
   }
 
   //Merge consecutive spans below the table into a single paragraph
-  private mergeSpans(node: Element, nextNode: Element): number {
+  private mergeSpans(node: Element, nextNode?: Element | null): number {
     const p = document.createElement('p');
     p.classList.add('dynamicTableHeader');
 
@@ -1023,6 +1029,9 @@ export class LicitConverter {
       this.processChildNodesCapco(childrens);
     } else {
       const res = updateCapcoFromContent(e.node);
+      if (!res) {
+        return;
+      }
       if (e.node.nodeType === Node.ELEMENT_NODE) {
         const element = e.node;
         this.updateChildCapcoContentLoopHelper(
@@ -1033,7 +1042,6 @@ export class LicitConverter {
       } else if (e.node.nodeType === Node.TEXT_NODE) {
         e.node.textContent = res.updatedTextContent;
       }
-
     }
 
     if (this.isNoteNode(e.node.className)) {
@@ -1055,31 +1063,27 @@ export class LicitConverter {
   private processChildNodesCapco(childNodes: NodeListOf<ChildNode>) {
     // For skipping trimStart logic for the case while handling " "
     for (const child of Array.from(childNodes)) {
-      //Hidden -> contine;
-      if (
-        child.nodeType === Node.ELEMENT_NODE &&
-        (child as Element).className == 'Hidden'
-      ) {
+      //Hidden -> continue;
+      if (isHiddenNode(child)) {
         continue;
       }
-      if (
-        child.nodeType === Node.TEXT_NODE &&
-        child.textContent.trim() !== ''
-      ) {
+      if (isTextNode(child)) {
         const res = updateCapcoFromContent(child as Element);
-        this.updateCapcoToParagraph(child, res);
+        if (res) {
+          this.updateCapcoToParagraph(child, res);
+        }
         if (!this.checkISTableFigure(child)) {
           break;
         }
       }
       //Recursively looping through nodes
-      else if (
-        child.nodeType === Node.ELEMENT_NODE &&
-        child.childNodes.length > 0
-      ) {
+      else if (hasContent(child)) {
         this.processChildNodesCapco(child.childNodes);
       }
-      if ((child.textContent?.trim()?.length ?? 0) > 0 && !this.checkISTableFigure(child)) {
+      if (
+        (child.textContent?.trim()?.length ?? 0) > 0 &&
+        !this.checkISTableFigure(child)
+      ) {
         break;
       }
     }
@@ -1098,36 +1102,27 @@ export class LicitConverter {
       parent.setAttribute('capco', JSON.stringify(res.capco));
     }
   }
+
   checkISTableFigure(child: ChildNode): boolean {
-    // const firstChild = child.children.item(0);
-    let text = child.textContent;
-    if (text) {
-      if (text.startsWith('Figure')) {
-        text = text.replace(
-          /^Figure\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
-          ''
-        );
-        return true;
-      }
+    const text = child.textContent;
+    if (!text) return false;
 
+    const figurePattern =
+      /^Figure\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/;
 
-      if (text.startsWith('Table')) {
-        text = text.replace(
-          /^Table\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/,
-          ''
-        );
-        return true;
-      }
-    }
-    return false;
+    const tablePattern =
+      /^Table\s{1,50}[A-Za-z0-9.\-:]{1,50}\s{1,50}(\([A-Z]{1,4}\))?\s{0,10}/;
+
+    return figurePattern.test(text) || tablePattern.test(text);
   }
+
   private processTableCapco(tableNode: HTMLTableElement) {
     const table = tableNode.querySelector('tbody');
     const rows = table?.rows;
     if (!rows) {
       table?.setAttribute(
         'capco',
-        JSON.stringify({ ism: undefined, portionMarking: 'U' }),
+        JSON.stringify({ ism: undefined, portionMarking: 'U' })
       );
       return;
     }
@@ -1138,7 +1133,7 @@ export class LicitConverter {
     if (lastRow?.cells?.length !== 1) {
       table?.setAttribute(
         'capco',
-        JSON.stringify({ ism: undefined, portionMarking: 'U' }),
+        JSON.stringify({ ism: undefined, portionMarking: 'U' })
       );
       return;
     }
@@ -1147,13 +1142,15 @@ export class LicitConverter {
 
     // Use the SAME CAPCO parser as paragraphs
     const res = updateCapcoFromContent(cell);
+    if (!res) {
+      table?.setAttribute(
+        'capco',
+        JSON.stringify({ ism: undefined, portionMarking: 'U' })
+      );
+      return;
+    }
     // If CAPCO was found, attach it; otherwise default to U
-    table?.setAttribute(
-      'capco',
-      JSON.stringify(
-        res.capco
-      ),
-    );
+    table?.setAttribute('capco', JSON.stringify(res.capco));
     // Remove the footer CAPCO row from the table unless it contains the word 'note'
     const footerText = (lastRow?.textContent ?? '').toLowerCase();
     if (!footerText.includes('note')) {
@@ -1164,73 +1161,91 @@ export class LicitConverter {
   private extractBracketContent(element: Element) {
     const childNodes = Array.from(element.childNodes);
 
-    let startNodeIndex = -1;
-    let endNodeIndex = -1;
-    let startOffset = -1;
-    let endOffset = -1;
+    const start = this.findBracketStart(childNodes);
+    if (!start) return;
 
-    for (let i = 0; i < childNodes.length; i++) {
-      const node = childNodes[i];
+    const end = this.findBracketEnd(childNodes, start.index);
+    if (!end) return;
 
-      //  Use nodeValue for text nodes, textContent for elements
-      const text = node.nodeType === Node.TEXT_NODE
-        ? node.nodeValue.trim()
-        : node.textContent.trim();
+    const extractedText = this.buildBracketText(childNodes, start, end);
+    this.replaceNodesWithText(childNodes, start, end, extractedText);
+  }
 
-      if (startNodeIndex === -1 && text.includes('(')) {
-        startNodeIndex = i;
-        startOffset = text.indexOf('(');
-      }
+  private getNodeText(node: ChildNode): string {
+    return (
+      (node.nodeType === Node.TEXT_NODE
+        ? node.nodeValue
+        : node.textContent
+      )?.trim() || ''
+    );
+  }
 
-      // Only search for ')' after we found '('
-      if (startNodeIndex !== -1 && text.includes(')')) {
-        endNodeIndex = i;
-        endOffset = text.indexOf(')');
-        break; //  Stop at first closing brace after opening
-      }
+  private findBracketStart(nodes: ChildNode[]) {
+    for (let i = 0; i < nodes.length; i++) {
+      const text = this.getNodeText(nodes[i]);
+      const offset = text.indexOf('(');
+      if (offset !== -1) return { index: i, offset };
     }
+    return null;
+  }
 
-    if (startNodeIndex === -1 || endNodeIndex === -1) return;
+  private findBracketEnd(nodes: ChildNode[], startIndex: number) {
+    for (let i = startIndex; i < nodes.length; i++) {
+      const text = this.getNodeText(nodes[i]);
+      const offset = text.indexOf(')');
+      if (offset !== -1) return { index: i, offset };
+    }
+    return null;
+  }
 
-    // Collect full bracketed text across nodes
-    let extractedText = '';
+  private buildBracketText(
+    nodes: ChildNode[],
+    start: { index: number; offset: number },
+    end: { index: number; offset: number }
+  ): string {
+    let result = '';
 
-    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
-      const node = childNodes[i];
-      const text = node.nodeType === Node.TEXT_NODE
-        ? node.nodeValue.trim()
-        : node.textContent.trim();
+    for (let i = start.index; i <= end.index; i++) {
+      const text = this.getNodeText(nodes[i]);
 
-      if (i === startNodeIndex && i === endNodeIndex) {
-        extractedText += text.slice(startOffset, endOffset + 1);
-      } else if (i === startNodeIndex) {
-        extractedText += text.slice(startOffset);
-      } else if (i === endNodeIndex) {
-        extractedText += text.slice(0, endOffset + 1);
+      if (i === start.index && i === end.index) {
+        result += text.slice(start.offset, end.offset + 1);
+      } else if (i === start.index) {
+        result += text.slice(start.offset);
+      } else if (i === end.index) {
+        result += text.slice(0, end.offset + 1);
       } else {
-        extractedText += text;
+        result += text;
       }
     }
 
-    const startNode = childNodes[startNodeIndex];
-    const endNode = childNodes[endNodeIndex];
+    return result;
+  }
 
-    // Text after ')' in the end node
-    const endNodeRawText = endNode.nodeType === Node.TEXT_NODE
-      ? endNode.nodeValue
-      : endNode.textContent;
+  private replaceNodesWithText(
+    nodes: ChildNode[],
+    start: { index: number },
+    end: { index: number; offset: number },
+    extractedText: string
+  ) {
+    const startNode = nodes[start.index];
+    const endNode = nodes[end.index];
+
+    const endNodeRawText =
+      endNode.nodeType === Node.TEXT_NODE
+        ? (endNode.nodeValue ?? '')
+        : endNode.textContent || '';
+
     const afterEnd = endNodeRawText.slice(endNodeRawText.indexOf(')') + 1);
 
-    // Insert the new single bracket text node
     const newTextNode = document.createTextNode(extractedText);
-    element.insertBefore(newTextNode, startNode);
 
-    // Remove all nodes from startIndex to endIndex
-    for (let i = startNodeIndex; i <= endNodeIndex; i++) {
-      element.removeChild(childNodes[i]);
+    startNode.before(newTextNode);
+
+    for (let i = start.index; i <= end.index; i++) {
+      nodes[i].remove();
     }
 
-    // Reinsert remaining text after ')' 
     if (afterEnd) {
       newTextNode.after(document.createTextNode(afterEnd));
     }
@@ -1282,7 +1297,7 @@ export class LicitConverter {
     const rawWidth = (child as HTMLImageElement).width;
     const width =
       rawWidth && rawWidth > 0 ? this.getScaledWidth(rawWidth) : undefined;
-    const height = child.getAttribute('height');
+    const height = child.getAttribute('height') ?? undefined;
 
     const imageElement = new LicitParagraphImageElement(
       src,
@@ -1327,7 +1342,10 @@ export class LicitConverter {
 
       if (!imageSrc) continue;
 
-      const licitEnhancedImage = this.renderNewLicitImage(imgElement, capco);
+      const licitEnhancedImage = this.renderNewLicitImage(
+        imgElement,
+        capco ?? null
+      );
       licitDocument.appendElement(licitEnhancedImage);
     }
   }
@@ -1387,7 +1405,7 @@ export class LicitConverter {
   }
 
   private renderDocVignet(
-    moDocType: string,
+    moDocType: string | undefined,
     e: ParserElement,
     licitDocument: LicitDocumentElement
   ) {
@@ -1404,10 +1422,10 @@ export class LicitConverter {
   ) {
     const image = e.node.querySelector('img');
     const source = image?.src;
-    const altText = image?.alt;
-    const width = image?.getAttribute('width');
-    const height = image?.getAttribute('height');
-    const align = getElementAlignment(image);
+    const altText = image?.alt ?? '';
+    const width = image?.getAttribute('width') ?? undefined;
+    const height = image?.getAttribute('height') ?? undefined;
+    const align = image ? (getElementAlignment(image) ?? undefined) : undefined;
     if (source) {
       const imageElement = new LicitParagraphImageElement(
         source,
@@ -1442,11 +1460,10 @@ export class LicitConverter {
     const licitRow = new LicitTableRowElement();
     const rowspan = 1;
     const colspan = 1;
-    let licitCell = null;
     const style = e.node.getAttribute('style');
-    let borderColor: string;
-    let bgColor: string;
-    let boxWidth: number;
+    let borderColor = '#36598d';
+    let bgColor = '#dce6f2';
+    let boxWidth = 0;
     if (style) {
       const styleVals = style.split(';');
       for (const val of styleVals) {
@@ -1462,7 +1479,7 @@ export class LicitConverter {
       }
     }
 
-    licitCell = new LicitVignetteElement(
+    const licitCell = new LicitVignetteElement(
       e.node,
       borderColor,
       bgColor,
@@ -1471,7 +1488,7 @@ export class LicitConverter {
 
     licitCell.rowspan = rowspan;
     licitCell.colspan = colspan;
-    licitRow.addCell(licitCell);
+    licitRow.addCell(licitCell as unknown as LicitTableCellElement);
     licitTable.addRow(licitRow);
     licitDocument.appendElement(licitTable);
   }
@@ -1510,7 +1527,9 @@ export class LicitConverter {
     licitTable.noOfColumns = colWidthsArray?.length ?? 0;
     const tableHead = e.node.querySelector('thead');
     const table = e.node.querySelector('tbody');
-    licitTable.capco = getCapcoFromNode(table);
+    licitTable.capco = table
+      ? (getCapcoFromNode(table) ?? undefined)
+      : undefined;
     const isTransparentTable = this.isTransparentTable(e.node);
     //Process table header first and then table body. If there is no body then process table header only.
     if (tableHead) {
@@ -1520,7 +1539,7 @@ export class LicitConverter {
         'th',
         true,
         licitTable,
-        colWidthsArray,
+        colWidthsArray ?? [],
         isTransparentTable
       );
     }
@@ -1531,7 +1550,7 @@ export class LicitConverter {
         'td',
         false,
         licitTable,
-        colWidthsArray,
+        colWidthsArray ?? [],
         isTransparentTable
       );
     }
@@ -1551,18 +1570,18 @@ export class LicitConverter {
       totalWidth = this.getSumOfArray(widthArray);
     }
     const orientation = this.findOrientation(totalWidth);
-    const capco = getCapcoFromNode(table);
+    const capco = table ? getCapcoFromNode(table) : undefined;
     const licitNewTable = new LicitEnhancedTableElement(orientation);
     const newBody = new LicitEnhancedTableFigureBodyElement();
     const tableCapco = new LicitEnhancedTableFigureCapcoElement(
-      safeCapcoParse(capco).portionMarking
+      safeCapcoParse(capco ?? null).portionMarking
     );
     const licitTable = this.getLicitTable(e, widthArray, capco);
     if (licitTable.rows.length > 0) {
       newBody.addTable(licitTable);
       licitNewTable.addBody(newBody);
       licitNewTable.addCapco(tableCapco);
-      const noteParagraphs = this.extractNote(table);
+      const noteParagraphs = table ? this.extractNote(table) : null;
       //If the table has a note, create a new notes element and add it to the table
       if (noteParagraphs) {
         const note = new LicitEnhancedTableNotesElement(noteParagraphs);
@@ -1575,10 +1594,10 @@ export class LicitConverter {
   }
   private getLicitTable(
     e: ParserElement,
-    widthArray: number[],
-    capco?: string
+    widthArray: number[] = [],
+    capco?: string | null
   ): LicitTableElement {
-    const licitTable = new LicitTableElement(false, capco);
+    const licitTable = new LicitTableElement(false, capco ?? undefined);
     const tableHead = e.node.querySelector('thead');
     const table = e.node.querySelector('tbody');
     const isChapterHeader = false;
@@ -1615,13 +1634,13 @@ export class LicitConverter {
     const orientation = this.findOrientation(imageInfo.width);
     const licitImage = new LicitNewImageElement(
       imageInfo.src,
-      imageInfo.width?.toString(),
-      imageInfo.height?.toString(),
+      imageInfo.width.toString(),
+      imageInfo.height.toString(),
       imageInfo.alt,
-      capco
+      capco ?? undefined
     );
     const licitBody = new LicitEnhancedImageBodyElement(licitImage);
-    const capcoString = safeCapcoParse(capco).portionMarking;
+    const capcoString = safeCapcoParse(capco ?? null).portionMarking;
     const licitCapco = new LicitEnhancedTableFigureCapcoElement(capcoString);
     const licitEnhancedImage = new LicitEnhancedImageElement(orientation);
     licitEnhancedImage.addBody(licitBody);
@@ -1635,7 +1654,7 @@ export class LicitConverter {
     const indent = 0;
     const bulletList = new LicitBulletListElement(indent);
     const text = e.node.textContent;
-    if (!text || (!e.node.childNodes && e.node.childNodes.length === 0)) {
+    if (!text || e.node.childNodes.length === 0) {
       return;
     }
     this.removeEmptyATags(e.node);
@@ -1647,22 +1666,18 @@ export class LicitConverter {
       bulletList.styleLevel = e.level;
       this.addElementLicit(licitDocument, bulletList);
     } else {
-      this.processBulletNodes(
-        childNodes,
-        bulletList,
-        licitDocument,
-        indent,
-        e
-      );
+      this.processBulletNodes(childNodes, bulletList, licitDocument, indent, e);
     }
   }
 
   private processBulletNodes(
     childNodes: Node[],
     bulletList: LicitBulletListElement,
-    licitDocument,
+    licitDocument:
+      | LicitDocumentElement
+      | { appendElement?: (element: LicitElement) => void },
     indent: number,
-    e
+    e: ParserElement | { node: unknown }
   ) {
     for (const node of childNodes) {
       const ulNode = Array.from(node.childNodes).find(
@@ -1672,7 +1687,9 @@ export class LicitConverter {
         (childNode) => childNode.nodeName === 'OL'
       );
       if (!(ulNode && olNode) && node.nextSibling && node.nodeName !== 'LI') {
-        const bulletItem = new LicitBulletListItemElement(e.node);
+        const bulletItem = new LicitBulletListItemElement(
+          e.node as HTMLElement
+        );
         bulletList.addItem(bulletItem);
         this.addElementLicit(licitDocument, bulletList);
         break;
@@ -1681,19 +1698,31 @@ export class LicitConverter {
         bulletList.addItem(bulletItem);
         this.addElementLicit(licitDocument, bulletList);
         if (ulNode) {
-          this.handleULNode(licitDocument, indent, ulNode);
+          this.handleULNode(
+            licitDocument as LicitDocumentElement,
+            indent,
+            ulNode
+          );
         }
         if (olNode) {
-          this.parseOL(e, licitDocument);
+          this.parseOL(
+            e as ParserElement,
+            licitDocument as LicitDocumentElement
+          );
         }
       }
       bulletList = new LicitBulletListElement(0);
     }
   }
 
-  private addElementLicit(licitDocument, bulletList: LicitBulletListElement) {
+  private addElementLicit(
+    licitDocument:
+      | LicitDocumentElement
+      | { appendElement?: (element: LicitElement) => void },
+    bulletList: LicitBulletListElement
+  ) {
     if (bulletList.listItems.length > 0) {
-      licitDocument?.appendElement(bulletList);
+      licitDocument?.appendElement?.(bulletList);
     }
   }
 
@@ -1735,8 +1764,10 @@ export class LicitConverter {
       }
       if (e.node.tagName === 'DIV') {
         const caption = e.node.querySelector('p');
-        const paraImages = new NewLicitParagraphElement(caption);
-        licitDocument.appendElement(paraImages);
+        if (caption) {
+          const paraImages = new NewLicitParagraphElement(caption);
+          licitDocument.appendElement(paraImages);
+        }
       }
     }
   }
@@ -1756,9 +1787,7 @@ export class LicitConverter {
       licitDocument.appendElement(imageElement);
       if (imgElement.childNodes.length > 1) {
         imgElement.remove();
-        const textInline = new NewLicitParagraphElement(
-          imgElement
-        );
+        const textInline = new NewLicitParagraphElement(imgElement);
         licitDocument.appendElement(textInline);
       }
     }
@@ -1804,34 +1833,38 @@ export class LicitConverter {
    */
 
   private parseTableContent(
-    _e,
-    tableTag,
-    querySel,
-    isChapterHeader,
-    licitTable,
-    widthArray: number[],
-    isTransparent: boolean
+    _e: ParserElement,
+    tableTag: HTMLTableSectionElement,
+    querySel: 'td' | 'th',
+    isChapterHeader: boolean,
+    licitTable: LicitTableElement,
+    widthArray: number[] = [],
+    isTransparent: boolean = false
   ) {
     const rows = tableTag.querySelectorAll('tr');
     let totalTableHeight = 0;
     for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row) {
+        continue;
+      }
       if (
         !isTransparent &&
         i == 0 &&
         !isChapterHeader &&
-        rows[i].cells.length > 1
+        row.cells.length > 1
       ) {
         isChapterHeader = true;
       }
       const licitRow = new LicitTableRowElement();
       // ** Capture row height **
-      const rowHeight = rows[i].getAttribute('height');
+      const rowHeight = row.getAttribute('height');
       if (rowHeight) {
         licitRow.height = rowHeight;
         licitRow.rowHeight = rowHeight;
-        totalTableHeight += parseFloat(rowHeight);
+        totalTableHeight += Number.parseFloat(rowHeight);
       }
-      const cells = rows[i].querySelectorAll(querySel);
+      const cells = row.querySelectorAll(querySel);
 
       this.parseTableContentInnerLoopHelper(
         cells,
@@ -1851,7 +1884,7 @@ export class LicitConverter {
   }
 
   private parseTableContentInnerLoopHelper(
-    cells,
+    cells: NodeListOf<HTMLTableCellElement>,
     _cellIndex: number,
     isChapterHeader: boolean,
     licitRow: LicitTableRowElement,
@@ -1861,7 +1894,7 @@ export class LicitConverter {
     for (let j = 0; j < cells.length; j++) {
       //Start RK-Dynamic Cell(2-2 of Chapter Header) BgColor
       const style = cells[j].getAttribute('style');
-      let bgColor: string;
+      let bgColor = '';
       if (style) {
         const styleVals = style.split(';');
         for (const val of styleVals) {
@@ -1870,7 +1903,7 @@ export class LicitConverter {
           }
         }
       } else if (cells[j].getAttribute('fillcolor')) {
-        bgColor = cells[j].getAttribute('fillcolor');
+        bgColor = cells[j].getAttribute('fillcolor') ?? '';
       }
       //
       let verAlign = 'top';
@@ -1903,8 +1936,12 @@ export class LicitConverter {
       cellOptions;
     const rowspan = cell.rowSpan;
     const colspan = cell.colSpan;
-    let colWidth: [number];
-    let licitCell = null;
+    let colWidth: [number] | undefined;
+    let licitCell:
+      | LicitTableCellParaElement
+      | LicitTableCellImageElement
+      | LicitTableCellParagraph
+      | null = null;
 
     const text = cell.textContent ?? '';
     // Extract cell-level style information**
@@ -1919,11 +1956,11 @@ export class LicitConverter {
       licitCell = new LicitTableCellParaElement(
         cell,
         bgColor,
-        null,
+        undefined,
         verAlign,
         isChapterHeader,
         isTransparent,
-        cellStyleInfo,
+        cellStyleInfo
       );
     } else if (
       '' === text &&
@@ -1933,9 +1970,9 @@ export class LicitConverter {
         cell,
         bgColor,
         isChapterHeader,
-        licitCell,
+        licitCell ?? undefined,
         verAlign,
-        cellStyleInfo,
+        cellStyleInfo
       ));
     } else {
       if (isChapterHeader) {
@@ -1950,20 +1987,23 @@ export class LicitConverter {
         verAlign,
         isChapterHeader,
         isTransparent,
-        cellStyleInfo,
+        cellStyleInfo
       );
+    }
+    if (!licitCell) {
+      return;
     }
     licitCell.rowspan = rowspan;
     licitCell.colspan = colspan;
     if (widthArray?.length > 0) {
       licitCell.colWidth = this.setCellWidth(colspan, cellIndex, widthArray);
     }
-    licitRow.addCell(licitCell);
+    licitRow.addCell(licitCell as unknown as LicitTableCellElement);
   }
   /**
    * Extracts style information from a table cell element per the ingest requirements.
    * Captures: margins (top/bottom), font-size overrides, and letter-spacing for non-breaking spaces.
-   * 
+   *
    * @param cell - The HTMLTableCellElement to extract styles from
    * @returns Object containing extracted style information
    */
@@ -1995,7 +2035,7 @@ export class LicitConverter {
 
   /**
    * Extracts margin and font-size properties from a style string.
-   * 
+   *
    * @param style - The style attribute string
    * @param styleInfo - The style info object to populate
    */
@@ -2023,7 +2063,7 @@ export class LicitConverter {
 
   /**
    * Extracts the first letter-spacing value from spans containing non-breaking spaces.
-   * 
+   *
    * @param spans - NodeList of span elements with letter-spacing styles
    * @param styleInfo - The style info object to populate
    */
@@ -2031,7 +2071,8 @@ export class LicitConverter {
     spans: NodeListOf<Element>,
     styleInfo: { letterSpacing?: string }
   ): void {
-    const letterSpacingRegex = /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
+    const letterSpacingRegex =
+      /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
 
     for (const span of Array.from(spans)) {
       // Check if this span contains a non-breaking space
@@ -2040,7 +2081,7 @@ export class LicitConverter {
         const spanStyle = (span as HTMLElement).getAttribute('style');
         if (spanStyle) {
           const match = letterSpacingRegex.exec(spanStyle);
-          if (match) {
+          if (match?.[1]) {
             // Store the first letter-spacing value found
             styleInfo.letterSpacing = match[1].trim();
             break;
@@ -2050,7 +2091,7 @@ export class LicitConverter {
     }
   }
   checkCellStyle(style: string | null): string | null {
-    let borderColor: string = null;
+    let borderColor: string | null = null;
     if (style != null) {
       const styleVals = style.split(';');
       for (const val of styleVals) {
@@ -2074,38 +2115,54 @@ export class LicitConverter {
     cell: HTMLElement,
     bgColor: string,
     isChapterHeader: boolean,
-    licitCell: LicitElement,
+    _licitCell: LicitElement | null | undefined,
     verAlign: string,
-    cellStyleInfo?: CellStyleInfo,
-  ) {
+    cellStyleInfo?: CellStyleInfo
+  ): {
+    bgColor: string;
+    isChapterHeader: boolean;
+    licitCell: LicitTableCellImageElement | LicitTableCellParagraph;
+  } {
     const image = (cell.childNodes[0] as Element).querySelector('img');
-    let altText = null;
-    let imgHeight = null;
-    let colWidth = null;
+    if (!image) {
+      return {
+        bgColor,
+        isChapterHeader,
+        licitCell: new LicitTableCellParagraph(
+          cell,
+          bgColor,
+          undefined,
+          verAlign,
+          cellStyleInfo
+        ),
+      };
+    }
+    let altText: string | undefined;
+    let imgHeight: string | undefined;
+    let colWidth: [number] | undefined;
     let fillImg = 0;
     let fitoParent = 0;
     if (['LC-Image-1', 'LC-Image-2'].includes(image.id)) {
-      bgColor = '#d8d8d8';
       fillImg = 1;
       fitoParent = 1;
-      colWidth = image.id === 'LC-Image-1' ? [100, 625] : [100];
-      imgHeight = image?.id === 'LC-Image-2' ? '70' : imgHeight;
+      bgColor = '#d8d8d8';
+      colWidth = (image.id === 'LC-Image-1' ? [100, 625] : [100]) as [number];
+      imgHeight = image.id === 'LC-Image-2' ? '70' : imgHeight;
       isChapterHeader = true;
     } else {
       altText = image.alt;
     }
     const source = image?.getAttribute('srcRelative') ?? image?.src;
+    let licitCell: LicitTableCellImageElement | LicitTableCellParagraph;
     if (source) {
-      // seybi excluded image
       licitCell = new LicitTableCellImageElement(
         source,
         fillImg,
         fitoParent,
-        bgColor,
         imgHeight,
         colWidth,
         altText,
-        cellStyleInfo,
+        cellStyleInfo
       );
     } else {
       licitCell = new LicitTableCellParagraph(
@@ -2113,7 +2170,7 @@ export class LicitConverter {
         bgColor,
         colWidth,
         verAlign,
-        cellStyleInfo,
+        cellStyleInfo
       );
     }
     return { bgColor, isChapterHeader, licitCell };
@@ -2125,13 +2182,15 @@ export class LicitConverter {
     licitDocument: LicitDocumentElement,
     indent: number
   ) {
-    let list: LicitBulletListElement | LicitOrderedListElement;
     const ulType = 'UL';
     const olType = 'OL';
+    let list: LicitBulletListElement | LicitOrderedListElement;
     if (node.nodeName === ulType) {
       list = new LicitBulletListElement(indent);
     } else if (node.nodeName === olType) {
       list = new LicitOrderedListElement(indent);
+    } else {
+      return;
     }
     const text = node.textContent;
     if (text && node.childNodes && node.childNodes.length > 0) {
@@ -2296,7 +2355,7 @@ export class LicitConverter {
   /**
    * Parse a header element
    */
-  private parseHeader(element: Element, nextElement: Element): void {
+  private parseHeader(element: Element, nextElement?: Element | null): void {
     const level = this.extractLevel(element.className);
 
     function updateTextContent(el: Element) {
@@ -2318,7 +2377,7 @@ export class LicitConverter {
 
       // If we found a last text node
       if (lastTextNode) {
-        const text = lastTextNode.textContent.trimEnd();
+        const text = (lastTextNode.textContent ?? '').trimEnd();
 
         if (text.endsWith('.')) {
           // Already ends with a period, just add a space
@@ -2451,7 +2510,7 @@ export class LicitConverter {
   private parseFigureTitle(element: Element): void {
     const level = this.extractLevel(element.className);
     const img = element.querySelector('img');
-    const isNewFiguretype = img?.width > 200;
+    const isNewFiguretype = (img?.width ?? 0) > 200;
 
     this.elements.push({
       node: element,
@@ -2525,7 +2584,7 @@ export class LicitConverter {
    *
    * @param element - The `Element` to be parsed
    */
-  private parseElement(element: Element, nextElement: Element): void {
+  private parseElement(element: Element, nextElement?: Element | null): void {
     this.sanitizeElement(element);
 
     const className = element.className?.trim();
@@ -2684,13 +2743,16 @@ export class LicitConverter {
     }
   }
 
-  private parseElement_doc(element: Element, nextElement: Element): void {
+  private parseElement_doc(
+    element: Element,
+    nextElement?: Element | null
+  ): void {
     // SL-12
 
     this.elementsParsedMap.set(element.tagName, true);
 
     switch (
-    element.tagName // SL-6
+      element.tagName // SL-6
     ) {
       case '_AF_Example':
       case '_AF_Note':
@@ -2831,51 +2893,70 @@ export class LicitConverter {
     return !classList.includes(trimmedClassName);
   }
   private sanitizeElement(element: Element | ChildNode) {
-    const stripTextContent = (node) => {
+    const stripTextContent = (node: ChildNode): void => {
       if (node.nodeType === Node.TEXT_NODE) {
-        const parentClass =
-          (node.parentNode as Element)?.className?.toLowerCase?.() || '';
+        this.handleTextNode(node);
+        return;
+      }
 
-        if (
-          this.config?.stripSectionNumbers &&
-          this.matchClassToExcludeNumber(parentClass) &&
-          parentClass !== 'acronym' // skip if parent is acronym
-        ) {
-          //Fix for paras having double sets of numbering
-          node.textContent = node.textContent
-            .replaceAll(/^[A-Z]?\d{1,5}(?:\.\d{1,5}){0,10}\.?(?=\s)/gm, '')
-            .replaceAll('\n', '');
-        }
-        node.textContent = node.textContent.replace(/•\s{0,10000}/, '');
-
-        node.textContent = node.textContent.replace(/^FM_/, '');
-
-        // remove empty nodes
-        if (node.textContent === '') {
-          node.remove();
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        // Remove spacing spans containing only &nbsp; (FrameMaker spacing artifacts)
-        if (
-          node.tagName === 'SPAN' &&
-          node.getAttribute('style')?.includes('letter-spacing') &&
-          node.textContent === '\u00A0'
-        ) {
-          const prev = node.previousSibling;
-          if (prev?.nodeType === Node.TEXT_NODE && !prev.textContent.endsWith(' ')) {
-            prev.textContent += ' ';
-          }
-          node.remove();
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        if (this.removeSpacingSpan(node as Element)) {
           return;
         }
 
-        for (const childNode of Array.from(node.childNodes)) {
-          stripTextContent(childNode);
+        for (const child of Array.from(node.childNodes)) {
+          stripTextContent(child);
         }
       }
     };
 
     stripTextContent(element);
+  }
+
+  private handleTextNode(node: ChildNode): void {
+    const parentClass =
+      (node.parentNode as Element)?.className?.toLowerCase?.() || '';
+    let textContent = node.textContent ?? '';
+
+    if (
+      this.config?.stripSectionNumbers &&
+      this.matchClassToExcludeNumber(parentClass) &&
+      parentClass !== 'acronym'
+    ) {
+      textContent = textContent
+        .replaceAll(/^[A-Z]?\d{1,5}(?:\.\d{1,5}){0,10}\.?(?=\s)/gm, '')
+        .replaceAll('\n', '');
+    }
+
+    node.textContent = textContent
+      .replace(/•\s{0,10000}/, '')
+      .replace(/^FM_/, '');
+
+    if (node.textContent === '') {
+      node.remove();
+    }
+  }
+
+  private removeSpacingSpan(node: Element): boolean {
+    if (
+      node.tagName === 'SPAN' &&
+      node.getAttribute('style')?.includes('letter-spacing') &&
+      node.textContent === '\u00A0'
+    ) {
+      const prev = node.previousSibling;
+
+      if (
+        prev?.nodeType === Node.TEXT_NODE &&
+        !prev.textContent?.endsWith(' ')
+      ) {
+        prev.textContent += ' ';
+      }
+
+      node.remove();
+      return true;
+    }
+
+    return false;
   }
 
   private getScaledWidth(width: number): string {
@@ -3050,6 +3131,7 @@ export class LicitConverter {
     if (rows.length < 2) return null;
 
     const lastRow = rows.at(-1);
+    if (!lastRow) return null;
     const td = lastRow.querySelector('td');
     if (!td) return null;
 
@@ -3094,14 +3176,15 @@ export class LicitConverter {
   private isTableFigureNode(node: Element): boolean {
     const isImage =
       node.tagName !== 'DIV' && node.children.item(0)?.tagName === 'IMG';
+    const paragraph = node.querySelector('p');
 
     const isShortVignette =
       node.tagName === 'DIV' &&
-      node.querySelector('img') &&
+      !!node.querySelector('img') &&
       node.querySelectorAll('p').length === 1 &&
-      node.querySelector('p').textContent.trim().length < 100;
+      (paragraph?.textContent ?? '').trim().length < 100;
 
-    return isImage || isShortVignette;
+    return isImage || !!isShortVignette;
   }
   /**
    * Determines whether the provided class name corresponds to a note-related node.
@@ -3123,6 +3206,23 @@ export class LicitConverter {
     ];
     return noteClasses.includes(className);
   }
+}
+
+function hasContent(child: ChildNode) {
+  return child.nodeType === Node.ELEMENT_NODE && child.childNodes.length > 0;
+}
+
+function isHiddenNode(child: ChildNode) {
+  return (
+    child.nodeType === Node.ELEMENT_NODE &&
+    (child as Element).className == 'Hidden'
+  );
+}
+
+function isTextNode(child: ChildNode) {
+  return (
+    child.nodeType === Node.TEXT_NODE && (child.textContent ?? '').trim() !== ''
+  );
 }
 
 function extractInfoIconData(
