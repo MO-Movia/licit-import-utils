@@ -26,7 +26,10 @@ const infoIconLockData: InfoIconData = {
 };
 
 type LicitAttrs = Record<string, unknown>;
-type Mark = any;
+type Mark = LicitMarksJSON & {
+  text?: string | null;
+  marks?: Mark[];
+};
 type InfoIconList = HTMLOListElement[] | null | undefined;
 
 export type LicitElementJSON = Record<string, any>;
@@ -563,10 +566,10 @@ export class LicitHeaderElement extends LicitElement {
       }
 
       const anchorElement = n as HTMLAnchorElement;
-      const anchorId = anchorElement.getAttribute('id') || anchorElement.getAttribute('name');
+      const anchorId =
+        anchorElement.getAttribute('id') || anchorElement.getAttribute('name');
 
       if (!anchorElement.href && anchorId) {
-
         this.name = anchorId;
         this.id = anchorId;
         this.selectionId = '#' + anchorId;
@@ -576,7 +579,8 @@ export class LicitHeaderElement extends LicitElement {
   handleInlineStyles(node?: HTMLElement): Mark[] {
     const marks: Mark[] = [];
     if ((node?.style?.length ?? 0) > 0) {
-      const nodeStyles: string[] = node?.getAttribute('style')?.split(';') ?? [];
+      const nodeStyles: string[] =
+        node?.getAttribute('style')?.split(';') ?? [];
       if (nodeStyles?.length > 0) {
         const inlineStyles: string[] = getInlineStylesArray(nodeStyles);
         if (inlineStyles.length > 0 && node?.textContent !== '') {
@@ -836,10 +840,10 @@ export class NewLicitParagraphElement extends LicitElement {
       }
 
       const anchorElement = n as HTMLAnchorElement;
-      const anchorId = anchorElement.getAttribute('id') || anchorElement.getAttribute('name');
+      const anchorId =
+        anchorElement.getAttribute('id') || anchorElement.getAttribute('name');
 
       if (!anchorElement.href && anchorId) {
-
         this.name = anchorId;
         this.id = anchorId;
         this.selectionId = '#' + anchorId;
@@ -879,7 +883,7 @@ export class NewLicitParagraphElement extends LicitElement {
     getMark: (n: HTMLElement, data?: InfoIconList) => Mark | undefined,
     data?: InfoIconList
   ) {
-    const mark: Mark = getMark(n, data);
+    const mark = getMark(n, data);
     if (mark) {
       this.marks.push(mark);
     }
@@ -910,7 +914,7 @@ export class NewLicitParagraphElement extends LicitElement {
   ) {
     let em: Mark;
     let b: Mark;
-    let myMark: Mark;
+    let myMark: Mark | undefined = undefined;
     let source: string;
     let altText: string;
     let u: Mark;
@@ -1071,7 +1075,7 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private handleSpan(
     n: HTMLElement,
-    myMark: Mark,
+    myMark: Mark | undefined,
     infoIconData: InfoIconList,
     tMark: Mark[],
     mark_Colour: string,
@@ -1129,7 +1133,7 @@ export class NewLicitParagraphElement extends LicitElement {
   // To find text with URLs
   handleText(
     textNode: HTMLElement,
-    myMark: Mark,
+    myMark: Mark | undefined,
     isFirstSentenceBold: boolean,
     styleMarks?: { type: string; attrs?: LicitAttrs }[]
   ) {
@@ -1148,7 +1152,7 @@ export class NewLicitParagraphElement extends LicitElement {
       // Apply inline styles if any
       if (styleMarks && styleMarks.length > 0) {
         for (const styleMark of styleMarks) {
-          textMark.marks.push(styleMark);
+          textMark.marks?.push(styleMark);
         }
       }
       if (isFirstSentenceBold) {
@@ -1179,7 +1183,7 @@ export class NewLicitParagraphElement extends LicitElement {
   checkForLinks(text: string, urlRegex: RegExp): RegExpMatchArray | null {
     return urlRegex.exec(text);
   }
-  addLinks(text: string, urlRegex: RegExp, myMark: Mark) {
+  addLinks(text: string, urlRegex: RegExp, myMark: Mark | undefined) {
     const parts = text.split(urlRegex);
 
     for (const part of parts) {
@@ -1213,9 +1217,9 @@ export class NewLicitParagraphElement extends LicitElement {
       }
     }
   }
-  addMark(textMark: Mark, newMark: Mark) {
+  addMark(textMark: Mark, newMark: Mark | undefined) {
     for (const mark of newMark?.marks ?? []) {
-      textMark.marks.push(mark);
+      textMark.marks?.push(mark);
     }
     return textMark;
   }
@@ -1243,7 +1247,8 @@ export class NewLicitParagraphElement extends LicitElement {
       }
     }
     if (node?.getAttribute('align')) {
-      const alignmentValue = node.getAttribute('align')?.toLowerCase() ?? 'left';
+      const alignmentValue =
+        node.getAttribute('align')?.toLowerCase() ?? 'left';
       this.overriddenAlign = true;
       this.align = alignmentValue;
       this.overriddenAlignValue = alignmentValue;
@@ -1320,7 +1325,7 @@ export class NewLicitParagraphElement extends LicitElement {
   private parseImage(
     source: string,
     altText: string,
-    myMark: Mark,
+    myMark: Mark | undefined,
     width?: string | null,
     height?: string | null,
     align?: string | null
@@ -1351,12 +1356,12 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseUnderline(
     n: Element,
-    myMark: Mark,
+    myMark: Mark | undefined,
     u: Mark,
     infoIconData?: InfoIconList
   ) {
     if (n.childNodes.length === 1) {
-      myMark?.marks.push(u);
+      myMark?.marks?.push(u);
       myMark = this.parseSubMarks(n.childNodes[0], myMark, true, infoIconData);
       if (myMark) {
         this.marks.push(myMark);
@@ -1369,11 +1374,11 @@ export class NewLicitParagraphElement extends LicitElement {
             marks: [],
             text: '',
           };
-          subMark.marks.push(u);
+          subMark.marks?.push(u);
           subMark.text = unodes.textContent;
           this.marks.push(subMark);
         } else {
-          myMark?.marks.push(u);
+          myMark?.marks?.push(u);
           myMark = this.parseSubMarks(unodes, myMark, false, infoIconData);
           if (myMark) {
             this.marks.push(myMark);
@@ -1386,12 +1391,12 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseEmphisis(
     n: HTMLElement,
-    myMark: Mark,
+    myMark: Mark | undefined,
     em: Mark,
     infoIconData?: InfoIconList
   ) {
     if (n.childNodes.length === 1) {
-      myMark?.marks.push(em);
+      myMark?.marks?.push(em);
       myMark = this.parseSubMarks(n.childNodes[0], myMark, true, infoIconData);
       if (myMark) {
         this.marks.push(myMark);
@@ -1404,11 +1409,11 @@ export class NewLicitParagraphElement extends LicitElement {
             marks: [],
             text: '',
           };
-          subMark.marks.push(em);
+          subMark.marks?.push(em);
           subMark.text = enodes.textContent;
           this.marks.push(subMark);
         } else {
-          myMark?.marks.push(em);
+          myMark?.marks?.push(em);
           myMark = this.parseSubMarks(enodes, myMark, false, infoIconData);
           if (myMark) {
             this.marks.push(myMark);
@@ -1424,12 +1429,12 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseStrong(
     n: HTMLElement,
-    myMark: Mark,
+    myMark: Mark | undefined,
     b: Mark,
     infoIconData?: InfoIconList
   ) {
     if (n.childNodes.length === 1) {
-      myMark?.marks.push(b);
+      myMark?.marks?.push(b);
       myMark = this.parseSubMarks(n.childNodes[0], myMark, true, infoIconData);
       if (myMark) {
         this.marks.push(myMark);
@@ -1442,11 +1447,11 @@ export class NewLicitParagraphElement extends LicitElement {
             marks: [],
             text: '',
           };
-          subMark.marks.push(b);
+          subMark.marks?.push(b);
           subMark.text = bnodes.textContent;
           this.marks.push(subMark);
         } else {
-          myMark?.marks.push(b);
+          myMark?.marks?.push(b);
           myMark = this.parseSubMarks(bnodes, myMark, false, infoIconData);
           if (myMark) {
             this.marks.push(myMark);
@@ -1466,7 +1471,7 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseAnchor(
     n: HTMLAnchorElement,
-    myMark: Mark,
+    myMark: Mark | undefined,
     mark_Colour: string,
     infoIconData: InfoIconList,
     renderedContentList?: Node[]
@@ -1474,7 +1479,7 @@ export class NewLicitParagraphElement extends LicitElement {
     if (n.id === '_LINK_TO_THIS' || n.textContent.trim() === '') {
       return myMark;
     }
-    let selectionIdModified: string;
+    let selectionIdModified = '';
     let content = '';
     myMark = {
       type: 'text',
@@ -1489,10 +1494,7 @@ export class NewLicitParagraphElement extends LicitElement {
       };
       myMark.marks?.push(b);
     }
-    if (n.hash == '') {
-      selectionIdModified = '';
-      content = '';
-    } else {
+    if (n.hash) {
       selectionIdModified = n.hash;
       if ((renderedContentList?.length ?? 0) > 0) {
         const firstElement = renderedContentList![0];
@@ -1505,17 +1507,17 @@ export class NewLicitParagraphElement extends LicitElement {
     const isLink = href && href.trim() !== '';
 
     const lnk = isLink
-      ? {
-        type: 'link',
-        attrs: {
-          href: href,
-          rel: n.rel,
-          target: 'blank',
-          title: null,
-          selectionId: selectionIdModified,
-        },
-      }
-      : null;
+      ? ({
+          type: 'link',
+          attrs: {
+            href: href,
+            rel: n.rel,
+            target: 'blank',
+            title: null,
+            selectionId: selectionIdModified,
+          },
+        } as Mark)
+      : undefined;
     const clr = {
       type: 'mark-text-color',
       attrs: {
@@ -1547,24 +1549,24 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private applyLinkAndColorMarks(
     myMark: Mark,
-    lnk: Mark | null,
+    lnk: Mark | undefined,
     clr: Mark,
     mark_Colour: string
   ) {
     if (lnk) {
-      myMark?.marks.push(lnk);
+      myMark?.marks?.push(lnk);
       if (mark_Colour) {
-        myMark?.marks.push(clr);
+        myMark?.marks?.push(clr);
       }
     }
   }
 
   private parseLinkText(
     enodes: HTMLLinkElement,
-    lnk: Mark,
+    lnk: Mark | undefined,
     mark_Colour: string,
     clr: Mark,
-    myMark: Mark,
+    myMark: Mark | undefined,
     infoIconData?: InfoIconList
   ) {
     if (enodes.nodeName === 'TEXT' || enodes.nodeName === '#text') {
@@ -1573,16 +1575,20 @@ export class NewLicitParagraphElement extends LicitElement {
         marks: [],
         text: '',
       };
-      subMark.marks.push(lnk);
+      if (lnk) {
+        subMark.marks?.push(lnk);
+      }
       if (mark_Colour) {
-        subMark.marks.push(clr);
+        subMark.marks?.push(clr);
       }
       subMark.text = enodes.textContent;
       this.marks.push(subMark);
     } else if (enodes.textContent.trim() !== '') {
-      myMark?.marks.push(lnk);
+      if (lnk) {
+        myMark?.marks?.push(lnk);
+      }
       if (mark_Colour) {
-        myMark?.marks.push(clr);
+        myMark?.marks?.push(clr);
       }
       myMark = this.parseSubMarks(enodes, myMark, false, infoIconData);
       if (myMark) {
@@ -1593,7 +1599,7 @@ export class NewLicitParagraphElement extends LicitElement {
   }
   private setLink(myMark: Mark) {
     const urlRegex = /(https?:\/\/[^\s]{1,2048})/g;
-    if (urlRegex.test(myMark.text)) {
+    if (urlRegex.test(myMark.text as string)) {
       const linkMark: Mark = {
         type: 'link',
         attrs: {
@@ -1602,12 +1608,12 @@ export class NewLicitParagraphElement extends LicitElement {
           rel: 'noopener noreferrer',
         },
       };
-      myMark.marks.push(linkMark);
+      myMark.marks?.push(linkMark);
     }
   }
   private parseFont(
     n: any,
-    myMark: Mark,
+    myMark: Mark | undefined,
     infoIconData: InfoIconList,
     tMark: Mark[]
   ) {
@@ -1629,12 +1635,12 @@ export class NewLicitParagraphElement extends LicitElement {
     };
 
     if (n.childNodes.length === 1) {
-      myMark?.marks.push(f);
+      myMark?.marks?.push(f);
       return this.parseSubMarks(n.childNodes[0], myMark, true, infoIconData);
     }
     let subMark: Mark;
     let innerFontMark: Mark;
-    myMark?.marks.push(f);
+    myMark?.marks?.push(f);
     for (const fnodes of n.childNodes) {
       if (fnodes.nodeName === 'IMG') {
         return;
@@ -1645,7 +1651,7 @@ export class NewLicitParagraphElement extends LicitElement {
           marks: [],
           text: '',
         };
-        subMark.marks.push(f);
+        subMark.marks?.push(f);
         subMark.text = fnodes.textContent;
         tMark.push(subMark);
       } else if (fnodes.nodeName === 'FONT') {
@@ -1665,7 +1671,7 @@ export class NewLicitParagraphElement extends LicitElement {
     return myMark;
   }
   //Handling superscript and subscript with class name
-  handleClassName(className: string, mark: Mark) {
+  handleClassName(className: string, mark: Mark | undefined) {
     if (className == 'superscript') {
       const m = {
         type: 'super',
@@ -1673,7 +1679,7 @@ export class NewLicitParagraphElement extends LicitElement {
           overridden: true,
         },
       };
-      mark?.marks.push(m);
+      mark?.marks?.push(m);
     } else if (className == 'subscript') {
       const m = {
         type: 'sub',
@@ -1681,7 +1687,7 @@ export class NewLicitParagraphElement extends LicitElement {
           overridden: true,
         },
       };
-      mark?.marks.push(m);
+      mark?.marks?.push(m);
     }
   }
   getEmptyTextMark() {
@@ -1704,13 +1710,12 @@ export class NewLicitParagraphElement extends LicitElement {
 
   parseSubMarks(
     n: any,
-    mark: Mark,
+    mark: Mark | undefined,
     _hasOneChild: boolean,
     infoIconData?: InfoIconList
-  ) {
-    let retMark: Mark = null;
+  ): Mark | undefined {
+    let retMark: Mark | undefined = undefined;
     let mark_Colour = '';
-    let em: Mark;
     if (n.nodeName === 'A') {
       mark_Colour = n.getAttribute('color') ?? '';
     }
@@ -1755,7 +1760,13 @@ export class NewLicitParagraphElement extends LicitElement {
         retMark = this.parseStrongWithInfoicon(n, mark, retMark, infoIconData);
         break;
       case 'EM':
-        retMark = this.parseEMWithInfoicon(n, em, mark, retMark, infoIconData);
+        retMark = this.parseEMWithInfoicon(
+          n,
+          undefined,
+          mark,
+          retMark,
+          infoIconData
+        );
         break;
       case 'U':
         retMark = this.parseUnderlineWithInfoicon(
@@ -1784,10 +1795,10 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseFontWithInfoicon(
     n: any,
-    mark: Mark,
-    retMark: Mark,
+    mark: Mark | undefined,
+    retMark: Mark | undefined,
     infoIconData?: InfoIconList
-  ) {
+  ): Mark | undefined {
     if (n.textContent.trim() === '') {
       return retMark;
     }
@@ -1802,10 +1813,10 @@ export class NewLicitParagraphElement extends LicitElement {
       };
 
       if (n.childNodes.length === 1) {
-        mark?.marks.push(f);
+        mark?.marks?.push(f);
         retMark = this.parseSubMarks(n.childNodes[0], mark, true, infoIconData);
       } else {
-        const m = mark?.marks.push(f);
+        const m = mark?.marks?.push(f);
         retMark = {
           type: 'text',
           marks: [],
@@ -1824,20 +1835,20 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseUnderlineWithInfoicon(
     n: HTMLElement,
-    mark: Mark,
-    retMark: Mark,
+    mark: Mark | undefined,
+    retMark: Mark | undefined,
     infoIconData?: InfoIconList
-  ) {
+  ): Mark | undefined {
     if (n.textContent.trim() !== '') {
       const u = {
         type: 'underline',
         attrs: { overridden: true },
       };
       if (n.childNodes.length === 1) {
-        mark?.marks.push(u);
+        mark?.marks?.push(u);
         retMark = this.parseSubMarks(n.childNodes[0], mark, true, infoIconData);
       } else {
-        mark?.marks.push(u);
+        mark?.marks?.push(u);
         retMark = {
           type: 'text',
           marks: mark?.marks,
@@ -1852,11 +1863,11 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseEMWithInfoicon(
     n: HTMLElement,
-    em: Mark,
-    mark: Mark,
-    retMark: Mark,
+    em: Mark | undefined,
+    mark: Mark | undefined,
+    retMark: Mark | undefined,
     infoIconData?: InfoIconList
-  ) {
+  ): Mark | undefined {
     if (n.textContent.trim() !== '') {
       em = {
         type: 'em',
@@ -1864,10 +1875,10 @@ export class NewLicitParagraphElement extends LicitElement {
       };
 
       if (n.childNodes.length === 1) {
-        mark?.marks.push(em);
+        mark?.marks?.push(em);
         retMark = this.parseSubMarks(n.childNodes[0], mark, true, infoIconData);
       } else {
-        mark?.marks.push(em);
+        mark?.marks?.push(em);
         retMark = {
           type: 'text',
           marks: mark?.marks,
@@ -1882,10 +1893,10 @@ export class NewLicitParagraphElement extends LicitElement {
 
   private parseStrongWithInfoicon(
     n: HTMLElement,
-    mark: Mark,
-    retMark: Mark,
+    mark: Mark | undefined,
+    retMark: Mark | undefined,
     infoIconData?: InfoIconList
-  ) {
+  ): Mark | undefined {
     if (n.textContent.trim() === '') {
       return retMark;
     }
@@ -1894,10 +1905,10 @@ export class NewLicitParagraphElement extends LicitElement {
       attrs: { overridden: true },
     };
     if (n.childNodes.length === 1) {
-      mark?.marks.push(b);
+      mark?.marks?.push(b);
       retMark = this.parseSubMarks(n.childNodes[0], mark, true, infoIconData);
     } else {
-      mark?.marks.push(b);
+      mark?.marks?.push(b);
       retMark = {
         type: 'text',
         marks: mark?.marks,
@@ -1923,8 +1934,8 @@ export class NewLicitParagraphElement extends LicitElement {
   private parseAnchorWithInfoIcon(
     n: HTMLAnchorElement,
     mark_Colour: string,
-    mark: Mark,
-    retMark: Mark,
+    mark: Mark | undefined,
+    retMark: Mark | undefined,
     infoIconData?: InfoIconList
   ) {
     if (n.textContent.trim() !== '') {
@@ -1946,15 +1957,15 @@ export class NewLicitParagraphElement extends LicitElement {
       };
 
       if (n.childNodes.length === 1) {
-        mark?.marks.push(lnk);
+        mark?.marks?.push(lnk);
         if (mark_Colour) {
-          mark?.marks.push(clr);
+          mark?.marks?.push(clr);
         }
         retMark = this.parseSubMarks(n.childNodes[0], mark, true, infoIconData);
       } else {
-        mark?.marks.push(lnk);
+        mark?.marks?.push(lnk);
         if (mark_Colour) {
-          mark?.marks.push(clr);
+          mark?.marks?.push(clr);
         }
         retMark = {
           type: 'text',
