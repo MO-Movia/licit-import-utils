@@ -7,6 +7,7 @@ import { parsePortionMarking } from "./capco-parser";
 import { ISM, ParseResult } from "./capco-parser/types";
 
 const DEFAULT_PORTION = 'U';
+const EMPTY_PORTION_FALLBACK = 'TBD';
 
 export interface UpdatedCapco {
   capco: ParseResult;
@@ -127,10 +128,23 @@ export function getCapcoNames(): string[] {
 }
 
 export function getCapcoFromNode(node: HTMLElement): string | null | undefined {
-  return (
+  const capco: unknown =
     node?.getAttribute('capco') ??
-    node?.querySelector('span')?.getAttribute('capco')
-  );
+    node?.querySelector('span')?.getAttribute('capco');
+
+  if (capco == null) {
+    return capco as null | undefined;
+  }
+
+  if (typeof capco !== 'string') {
+    return JSON.stringify(safeCapcoParse(capco));
+  }
+
+  if (!capco.trim().startsWith('{')) {
+    return capco;
+  }
+
+  return JSON.stringify(safeCapcoParse(capco));
 }
 
 export function safeCapcoParse(capco: unknown, fallback?: ParseResult): ParseResult {
@@ -144,14 +158,14 @@ export function safeCapcoParse(capco: unknown, fallback?: ParseResult): ParseRes
 
   if (capco && typeof capco === 'string') {
     try {
-      return JSON.parse(capco) as ParseResult;
+      return normalizeCapcoResult(JSON.parse(capco) as ParseResult);
     } catch (e) {
       console.warn('could not parse capco text: ' + capco, e);
     }
   }
 
   if (capco && typeof capco === 'object') {
-    return capco as ParseResult;
+    return normalizeCapcoResult(capco as ParseResult);
   }
 
   return fallback;
@@ -177,4 +191,34 @@ export function removeCapcoTextFromNode(node: Node) {
       removeCapcoTextFromNode(child);
     }
   }
+}
+
+function normalizeCapcoResult(capco: ParseResult): ParseResult {
+  const portionMarking = capco?.portionMarking?.trim();
+  if (portionMarking) {
+    return capco;
+  }
+
+  return {
+    ...capco,
+    ism: normalizeIsmCapco(capco?.ism, EMPTY_PORTION_FALLBACK),
+    portionMarking: EMPTY_PORTION_FALLBACK,
+    finalMarking: `(${EMPTY_PORTION_FALLBACK})`,
+    rawTextPreserved: capco?.rawTextPreserved ?? false,
+  };
+}
+
+function normalizeIsmCapco(ism: ISM | undefined, classification: string): ISM {
+  return {
+    version: ism?.version ?? "1",
+    classification: [classification],
+    ownerProducer: ism?.ownerProducer ?? "USA",
+    sciControls: ism?.sciControls ?? [],
+    sarIdentifiers: ism?.sarIdentifiers ?? [],
+    atomicEnergyMarkings: ism?.atomicEnergyMarkings ?? [],
+    fgiSourceOpen: ism?.fgiSourceOpen ?? [],
+    releasableTo: ism?.releasableTo ?? [],
+    disseminationControls: ism?.disseminationControls ?? [],
+    nonICmarkings: ism?.nonICmarkings ?? [],
+  };
 }
