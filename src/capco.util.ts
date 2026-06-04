@@ -130,12 +130,12 @@ export function getCapcoNames(): string[] {
 }
 
 export function getCapcoFromNode(node: HTMLElement): string | null | undefined {
-  const capco: unknown =
+  const capco: string | null | undefined =
     node?.getAttribute('capco') ??
     node?.querySelector('span')?.getAttribute('capco');
 
   if (capco == null) {
-    return capco as null | undefined;
+    return capco;
   }
 
   if (typeof capco !== 'string') {

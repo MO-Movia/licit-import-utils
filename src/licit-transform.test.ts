@@ -667,7 +667,7 @@ describe('Converter.addTableImageCell', () => {
   it('should handle TABLE tag in handleNode', () => {
     const table = document.createElement('table');
     const spy = jest.spyOn(
-      converter as unknown as { parseTable: (a, b) => unknown },
+      converter as unknown as { parseTable: () => unknown },
       'parseTable'
     );
 

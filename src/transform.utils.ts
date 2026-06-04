@@ -20,7 +20,7 @@ export function base64ToFile(
   const byteNumbers: number[] = new Array(byteCharacters.length);
 
   for (let i = 0; i < byteCharacters.length; i++) {
-    byteNumbers[i] = byteCharacters.charCodeAt(i);
+    byteNumbers[i] = byteCharacters.codePointAt(i) as number;
   }
 
   const byteArray = new Uint8Array(byteNumbers);

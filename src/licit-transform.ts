@@ -154,7 +154,7 @@ interface CellStyleInfo {
 export class LicitConverter {
   private readonly elementsParsedMap = new Map<string, boolean>();
   private elements: ParserElement[] = [];
-  constructor(private readonly config: TransformConfig) { }
+  constructor(private readonly config: TransformConfig) {}
   public parseHTML(
     html: Document | string,
     isDoctorine: boolean,
@@ -242,11 +242,13 @@ export class LicitConverter {
 
   private render_FrameMakerHTML5_zip_SwitchHelper(
     e: ParserElement,
-    infoIconData: HTMLOListElement[] | unknown[] = [],
-    renderedContentList: Node[] = [],
+    infoIconData: HTMLOListElement[] | unknown[] | undefined,
+    renderedContentList: Node[] | undefined,
     isNumberReseted: boolean,
     licitDocument: LicitDocumentElement
   ) {
+    infoIconData ??= [];
+    renderedContentList ??= [];
     let resetNumbering = isNumberReseted;
     const typedInfoIconData = infoIconData as HTMLOListElement[];
     switch (e.type) {
@@ -464,7 +466,9 @@ export class LicitConverter {
         const alt = image?.alt ?? '';
         const width = image?.getAttribute('width') ?? undefined;
         const height = image?.getAttribute('height') ?? undefined;
-        const align = image ? getElementAlignment(image) ?? undefined : undefined;
+        const align = image
+          ? (getElementAlignment(image) ?? undefined)
+          : undefined;
         if (source) {
           // seybi excluded image
           const imageElement = new LicitParagraphImageElement(
@@ -902,10 +906,7 @@ export class LicitConverter {
       }
     }
 
-    const paragraph = new NewLicitParagraphElement(
-      pElement,
-      infoIconData
-    );
+    const paragraph = new NewLicitParagraphElement(pElement, infoIconData);
     licitDocument.appendElement(paragraph);
   }
 
@@ -1041,7 +1042,6 @@ export class LicitConverter {
       } else if (e.node.nodeType === Node.TEXT_NODE) {
         e.node.textContent = res.updatedTextContent;
       }
-
     }
 
     if (this.isNoteNode(e.node.className)) {
@@ -1063,17 +1063,11 @@ export class LicitConverter {
   private processChildNodesCapco(childNodes: NodeListOf<ChildNode>) {
     // For skipping trimStart logic for the case while handling " "
     for (const child of Array.from(childNodes)) {
-      //Hidden -> contine;
-      if (
-        child.nodeType === Node.ELEMENT_NODE &&
-        (child as Element).className == 'Hidden'
-      ) {
+      //Hidden -> continue;
+      if (isHiddenNode(child)) {
         continue;
       }
-      if (
-        child.nodeType === Node.TEXT_NODE &&
-        (child.textContent ?? '').trim() !== ''
-      ) {
+      if (isTextNode(child)) {
         const res = updateCapcoFromContent(child as Element);
         if (res) {
           this.updateCapcoToParagraph(child, res);
@@ -1083,13 +1077,13 @@ export class LicitConverter {
         }
       }
       //Recursively looping through nodes
-      else if (
-        child.nodeType === Node.ELEMENT_NODE &&
-        child.childNodes.length > 0
-      ) {
+      else if (hasContent(child)) {
         this.processChildNodesCapco(child.childNodes);
       }
-      if ((child.textContent?.trim()?.length ?? 0) > 0 && !this.checkISTableFigure(child)) {
+      if (
+        (child.textContent?.trim()?.length ?? 0) > 0 &&
+        !this.checkISTableFigure(child)
+      ) {
         break;
       }
     }
@@ -1128,7 +1122,7 @@ export class LicitConverter {
     if (!rows) {
       table?.setAttribute(
         'capco',
-        JSON.stringify({ ism: undefined, portionMarking: 'U' }),
+        JSON.stringify({ ism: undefined, portionMarking: 'U' })
       );
       return;
     }
@@ -1139,7 +1133,7 @@ export class LicitConverter {
     if (lastRow?.cells?.length !== 1) {
       table?.setAttribute(
         'capco',
-        JSON.stringify({ ism: undefined, portionMarking: 'U' }),
+        JSON.stringify({ ism: undefined, portionMarking: 'U' })
       );
       return;
     }
@@ -1151,17 +1145,12 @@ export class LicitConverter {
     if (!res) {
       table?.setAttribute(
         'capco',
-        JSON.stringify({ ism: undefined, portionMarking: 'U' }),
+        JSON.stringify({ ism: undefined, portionMarking: 'U' })
       );
       return;
     }
     // If CAPCO was found, attach it; otherwise default to U
-    table?.setAttribute(
-      'capco',
-      JSON.stringify(
-        res.capco
-      ),
-    );
+    table?.setAttribute('capco', JSON.stringify(res.capco));
     // Remove the footer CAPCO row from the table unless it contains the word 'note'
     const footerText = (lastRow?.textContent ?? '').toLowerCase();
     if (!footerText.includes('note')) {
@@ -1183,9 +1172,12 @@ export class LicitConverter {
   }
 
   private getNodeText(node: ChildNode): string {
-    return (node.nodeType === Node.TEXT_NODE
-      ? node.nodeValue
-      : node.textContent)?.trim() || '';
+    return (
+      (node.nodeType === Node.TEXT_NODE
+        ? node.nodeValue
+        : node.textContent
+      )?.trim() || ''
+    );
   }
 
   private findBracketStart(nodes: ChildNode[]) {
@@ -1241,7 +1233,7 @@ export class LicitConverter {
 
     const endNodeRawText =
       endNode.nodeType === Node.TEXT_NODE
-        ? endNode.nodeValue ?? ''
+        ? (endNode.nodeValue ?? '')
         : endNode.textContent || '';
 
     const afterEnd = endNodeRawText.slice(endNodeRawText.indexOf(')') + 1);
@@ -1258,7 +1250,7 @@ export class LicitConverter {
       newTextNode.after(document.createTextNode(afterEnd));
     }
   }
-  
+
   private figureTitleCase(
     e: ParserElement,
     licitDocument: LicitDocumentElement
@@ -1433,7 +1425,7 @@ export class LicitConverter {
     const altText = image?.alt ?? '';
     const width = image?.getAttribute('width') ?? undefined;
     const height = image?.getAttribute('height') ?? undefined;
-    const align = image ? getElementAlignment(image) ?? undefined : undefined;
+    const align = image ? (getElementAlignment(image) ?? undefined) : undefined;
     if (source) {
       const imageElement = new LicitParagraphImageElement(
         source,
@@ -1535,7 +1527,9 @@ export class LicitConverter {
     licitTable.noOfColumns = colWidthsArray?.length ?? 0;
     const tableHead = e.node.querySelector('thead');
     const table = e.node.querySelector('tbody');
-    licitTable.capco = table ? getCapcoFromNode(table) ?? undefined : undefined;
+    licitTable.capco = table
+      ? (getCapcoFromNode(table) ?? undefined)
+      : undefined;
     const isTransparentTable = this.isTransparentTable(e.node);
     //Process table header first and then table body. If there is no body then process table header only.
     if (tableHead) {
@@ -1587,7 +1581,7 @@ export class LicitConverter {
       newBody.addTable(licitTable);
       licitNewTable.addBody(newBody);
       licitNewTable.addCapco(tableCapco);
-    const noteParagraphs = table ? this.extractNote(table) : null;
+      const noteParagraphs = table ? this.extractNote(table) : null;
       //If the table has a note, create a new notes element and add it to the table
       if (noteParagraphs) {
         const note = new LicitEnhancedTableNotesElement(noteParagraphs);
@@ -1672,20 +1666,16 @@ export class LicitConverter {
       bulletList.styleLevel = e.level;
       this.addElementLicit(licitDocument, bulletList);
     } else {
-      this.processBulletNodes(
-        childNodes,
-        bulletList,
-        licitDocument,
-        indent,
-        e
-      );
+      this.processBulletNodes(childNodes, bulletList, licitDocument, indent, e);
     }
   }
 
   private processBulletNodes(
     childNodes: Node[],
     bulletList: LicitBulletListElement,
-    licitDocument: LicitDocumentElement | { appendElement?: (element: LicitElement) => void },
+    licitDocument:
+      | LicitDocumentElement
+      | { appendElement?: (element: LicitElement) => void },
     indent: number,
     e: ParserElement | { node: unknown }
   ) {
@@ -1708,10 +1698,17 @@ export class LicitConverter {
         bulletList.addItem(bulletItem);
         this.addElementLicit(licitDocument, bulletList);
         if (ulNode) {
-          this.handleULNode(licitDocument as LicitDocumentElement, indent, ulNode);
+          this.handleULNode(
+            licitDocument as LicitDocumentElement,
+            indent,
+            ulNode
+          );
         }
         if (olNode) {
-          this.parseOL(e as ParserElement, licitDocument as LicitDocumentElement);
+          this.parseOL(
+            e as ParserElement,
+            licitDocument as LicitDocumentElement
+          );
         }
       }
       bulletList = new LicitBulletListElement(0);
@@ -1719,7 +1716,9 @@ export class LicitConverter {
   }
 
   private addElementLicit(
-    licitDocument: LicitDocumentElement | { appendElement?: (element: LicitElement) => void },
+    licitDocument:
+      | LicitDocumentElement
+      | { appendElement?: (element: LicitElement) => void },
     bulletList: LicitBulletListElement
   ) {
     if (bulletList.listItems.length > 0) {
@@ -1788,9 +1787,7 @@ export class LicitConverter {
       licitDocument.appendElement(imageElement);
       if (imgElement.childNodes.length > 1) {
         imgElement.remove();
-        const textInline = new NewLicitParagraphElement(
-          imgElement
-        );
+        const textInline = new NewLicitParagraphElement(imgElement);
         licitDocument.appendElement(textInline);
       }
     }
@@ -1842,7 +1839,7 @@ export class LicitConverter {
     isChapterHeader: boolean,
     licitTable: LicitTableElement,
     widthArray: number[] = [],
-    isTransparent: boolean
+    isTransparent: boolean = false
   ) {
     const rows = tableTag.querySelectorAll('tr');
     let totalTableHeight = 0;
@@ -1963,7 +1960,7 @@ export class LicitConverter {
         verAlign,
         isChapterHeader,
         isTransparent,
-        cellStyleInfo,
+        cellStyleInfo
       );
     } else if (
       '' === text &&
@@ -1975,7 +1972,7 @@ export class LicitConverter {
         isChapterHeader,
         licitCell ?? undefined,
         verAlign,
-        cellStyleInfo,
+        cellStyleInfo
       ));
     } else {
       if (isChapterHeader) {
@@ -1990,7 +1987,7 @@ export class LicitConverter {
         verAlign,
         isChapterHeader,
         isTransparent,
-        cellStyleInfo,
+        cellStyleInfo
       );
     }
     if (!licitCell) {
@@ -2006,7 +2003,7 @@ export class LicitConverter {
   /**
    * Extracts style information from a table cell element per the ingest requirements.
    * Captures: margins (top/bottom), font-size overrides, and letter-spacing for non-breaking spaces.
-   * 
+   *
    * @param cell - The HTMLTableCellElement to extract styles from
    * @returns Object containing extracted style information
    */
@@ -2038,7 +2035,7 @@ export class LicitConverter {
 
   /**
    * Extracts margin and font-size properties from a style string.
-   * 
+   *
    * @param style - The style attribute string
    * @param styleInfo - The style info object to populate
    */
@@ -2066,7 +2063,7 @@ export class LicitConverter {
 
   /**
    * Extracts the first letter-spacing value from spans containing non-breaking spaces.
-   * 
+   *
    * @param spans - NodeList of span elements with letter-spacing styles
    * @param styleInfo - The style info object to populate
    */
@@ -2074,7 +2071,8 @@ export class LicitConverter {
     spans: NodeListOf<Element>,
     styleInfo: { letterSpacing?: string }
   ): void {
-    const letterSpacingRegex = /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
+    const letterSpacingRegex =
+      /letter-spacing\s{0,1000}:\s{0,1000}([^;]{1,1000})/;
 
     for (const span of Array.from(spans)) {
       // Check if this span contains a non-breaking space
@@ -2119,7 +2117,7 @@ export class LicitConverter {
     isChapterHeader: boolean,
     _licitCell: LicitElement | null | undefined,
     verAlign: string,
-    cellStyleInfo?: CellStyleInfo,
+    cellStyleInfo?: CellStyleInfo
   ): {
     bgColor: string;
     isChapterHeader: boolean;
@@ -2135,7 +2133,7 @@ export class LicitConverter {
           bgColor,
           undefined,
           verAlign,
-          cellStyleInfo,
+          cellStyleInfo
         ),
       };
     }
@@ -2164,7 +2162,7 @@ export class LicitConverter {
         imgHeight,
         colWidth,
         altText,
-        cellStyleInfo,
+        cellStyleInfo
       );
     } else {
       licitCell = new LicitTableCellParagraph(
@@ -2172,7 +2170,7 @@ export class LicitConverter {
         bgColor,
         colWidth,
         verAlign,
-        cellStyleInfo,
+        cellStyleInfo
       );
     }
     return { bgColor, isChapterHeader, licitCell };
@@ -2745,13 +2743,16 @@ export class LicitConverter {
     }
   }
 
-  private parseElement_doc(element: Element, nextElement?: Element | null): void {
+  private parseElement_doc(
+    element: Element,
+    nextElement?: Element | null
+  ): void {
     // SL-12
 
     this.elementsParsedMap.set(element.tagName, true);
 
     switch (
-    element.tagName // SL-6
+      element.tagName // SL-6
     ) {
       case '_AF_Example':
       case '_AF_Note':
@@ -3205,6 +3206,23 @@ export class LicitConverter {
     ];
     return noteClasses.includes(className);
   }
+}
+
+function hasContent(child: ChildNode) {
+  return child.nodeType === Node.ELEMENT_NODE && child.childNodes.length > 0;
+}
+
+function isHiddenNode(child: ChildNode) {
+  return (
+    child.nodeType === Node.ELEMENT_NODE &&
+    (child as Element).className == 'Hidden'
+  );
+}
+
+function isTextNode(child: ChildNode) {
+  return (
+    child.nodeType === Node.TEXT_NODE && (child.textContent ?? '').trim() !== ''
+  );
 }
 
 function extractInfoIconData(
