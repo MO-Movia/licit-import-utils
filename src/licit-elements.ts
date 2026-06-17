@@ -1152,6 +1152,21 @@ export class NewLicitParagraphElement extends LicitElement {
       }
     }
   }
+
+  private shouldPrependSpace(
+    lastMark: Mark | undefined,
+    textContent: string
+  ): boolean {
+    return Boolean(
+      lastMark &&
+        typeof lastMark.text === 'string' &&
+        lastMark.text.length > 0 &&
+        !lastMark.text.endsWith(' ') &&
+        textContent.length > 0 &&
+        !textContent.startsWith(' ')
+    );
+  }
+
   // To find text with URLs
   handleText(
     textNode: HTMLElement,
@@ -1159,17 +1174,10 @@ export class NewLicitParagraphElement extends LicitElement {
     isFirstSentenceBold: boolean,
     styleMarks?: { type: string; attrs?: LicitAttrs }[]
   ) {
-    let textContent = textNode.textContent?.replace(/\u00A0/g, ' ');
+    let textContent = textNode.textContent?.replaceAll('\u00A0', ' ') ?? '';
     const lastMark = this.marks.at(-1);
 
-    if (
-      lastMark &&
-      typeof lastMark.text === 'string' &&
-      lastMark.text.length > 0 &&
-      !lastMark.text.endsWith(' ') &&
-      textContent &&
-      !textContent.startsWith(' ')
-    ) {
+    if (this.shouldPrependSpace(lastMark, textContent)) {
       textContent = ' ' + textContent;
     }
     const urlRegex = /(https?:\/\/[^\s]{1,2048})/g;
