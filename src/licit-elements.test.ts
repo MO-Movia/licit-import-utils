@@ -193,7 +193,7 @@ describe('LicitParagraphImageElement', () => {
     const capco = getCapcoFromNode(fakeNode); // returns JSON string
 
     const element = new LicitParagraphImageElement(src, alt, width, height);
-    element.capco = capco;
+    element.capco = capco as string;
 
     const actual = element.render();
 
@@ -366,7 +366,9 @@ describe('LicitHeaderElement', () => {
     // Ensure only expected attributes are tested
     const expectedAttrs = expectedHeaderJSON.attrs;
     for (const key in expectedAttrs) {
-      expect(actualHeaderJSON.attrs[key]).toBe(expectedAttrs[key]);
+      expect(actualHeaderJSON.attrs[key]).toBe(
+        expectedAttrs[key as keyof typeof expectedAttrs]
+      );
     }
 
     // Check the content array length and content
@@ -446,7 +448,10 @@ describe('LicitHeaderElement', () => {
   });
 
   it('mapInlineStylesToMarks should push multiple styles', () => {
-    const marks = [];
+    const marks: {
+      type: string;
+      attrs?: Record<string, string | undefined>;
+    }[] = [];
     licitHeaderElement.text = 'Mixed';
     jest.spyOn(CSS, 'supports').mockReturnValue(true);
     licitHeaderElement.mapInlineStylesToMarks(
@@ -695,7 +700,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     expect(
       licitParagraph['handleTextMark'](testNode, () => {
-        return {} as unknown as Mark;
+        return {} as Mark;
       })
     ).toBeUndefined();
   });
@@ -963,8 +968,8 @@ describe('LicitElements', () => {
 
       licitParagraph.handleClassName('superscript', mark);
 
-      expect(mark.marks.length).toBe(1);
-      expect(mark.marks[0]).toEqual({
+      expect(mark.marks?.length).toBe(1);
+      expect(mark.marks?.[0]).toEqual({
         type: 'super',
         attrs: {
           overridden: true,
@@ -977,8 +982,8 @@ describe('LicitElements', () => {
 
       licitParagraph.handleClassName('subscript', mark);
 
-      expect(mark.marks.length).toBe(1);
-      expect(mark.marks[0]).toEqual({
+      expect(mark.marks?.length).toBe(1);
+      expect(mark.marks?.[0]).toEqual({
         type: 'sub',
         attrs: {
           overridden: true,
@@ -991,7 +996,7 @@ describe('LicitElements', () => {
 
       licitParagraph.handleClassName('unknown-class', mark);
 
-      expect(mark.marks.length).toBe(0);
+      expect(mark.marks?.length).toBe(0);
     });
   });
 
@@ -1095,9 +1100,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1118,9 +1126,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1139,9 +1150,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1162,9 +1176,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1189,7 +1206,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const spy = jest
       .spyOn(licitParagraph, 'parseSubMarks')
-      .mockReturnValue(false as unknown as Mark);
+      .mockReturnValue(undefined);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1208,9 +1225,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1272,9 +1292,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1293,9 +1316,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1316,9 +1342,12 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'parseSubMarks').mockReturnValue({
+    const mockMark = {
       text: 'demo',
-    } as Mark);
+    } as Mark;
+    const spy = jest
+      .spyOn(licitParagraph, 'parseSubMarks')
+      .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
     expect(spy).toHaveBeenCalled();
   });
@@ -1414,7 +1443,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
@@ -1432,11 +1461,11 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
-    expect(test).toBeDefined();
+    expect(test).toBeUndefined();
   });
   it('should be call parseSubMarks() function inside check the condition  n.nodename === TEXT', () => {
     const n = document.createElement('TEXT');
@@ -1444,7 +1473,7 @@ describe('LicitElements', () => {
     testNode.setAttribute('style', 'Font:Times New Roman');
     testNode.append(n);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const test = licitParagraph.parseSubMarks(n, null, true, []);
+    const test = licitParagraph.parseSubMarks(n, null!, true, []);
     expect(test).toBeDefined();
   });
   it('should be call parseSubMarks() function inside check the condition n.nodeName === A', () => {
@@ -1456,7 +1485,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
@@ -1473,11 +1502,11 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
-    expect(test).toBeDefined();
+    expect(test).toBeUndefined();
   });
   it('should be call parseSubMarks() function inside check the condition n.nodeName === STRONG and n.childNodes.length === 1', () => {
     const n = document.createElement('STRONG');
@@ -1488,7 +1517,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
@@ -1505,7 +1534,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
@@ -1520,7 +1549,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
@@ -1537,11 +1566,11 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
-    expect(test).toBeDefined();
+    expect(test).toBeUndefined();
   });
   it('should be call parseSubMarks() function inside check the condition n.nodeName === U and n.childNodes.length === 1', () => {
     const n = document.createElement('U');
@@ -1552,7 +1581,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
@@ -1569,11 +1598,11 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
-    expect(test).toBeDefined();
+    expect(test).toBeUndefined();
   });
 
   it('should be call parseSubMarks() function inside check the condition n.nodeName === SUP and n.textContent.trim() !== 1', () => {
@@ -1585,7 +1614,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
@@ -1600,11 +1629,11 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(testNode);
     const test = licitParagraph.parseSubMarks(
       n,
-      { marks: [] } as Mark,
+      { marks: [] as Mark[] } as Mark,
       true,
       []
     );
-    expect(test).toBeDefined();
+    expect(test).toBeUndefined();
   });
 
   it('should be call getEmMarks() function', () => {
@@ -1826,7 +1855,7 @@ describe('LicitElements', () => {
     const licitParagraph = new LicitVignetteElement(
       testNode,
       '#undefined',
-      undefined,
+      undefined!,
       20
     );
     const test = licitParagraph.ConvertElements(n);
@@ -2082,7 +2111,7 @@ describe('NewLicitParagraphElement 2', () => {
       [],
       [{}] as Mark[],
       'red',
-      null
+      null!
     );
     expect(test.marks.length).toBe(3);
   });
@@ -2104,7 +2133,7 @@ describe('NewLicitParagraphElement 2', () => {
       [],
       [{}] as Mark[],
       '',
-      null
+      null!
     );
 
     expect(test.marks.length).toBe(3);
@@ -2127,7 +2156,7 @@ describe('NewLicitParagraphElement 2', () => {
       [],
       [{}] as Mark[],
       'red',
-      null
+      null!
     );
 
     expect(test.marks.length).toBe(0);
@@ -2201,7 +2230,7 @@ describe('NewLicitParagraphElement 2', () => {
           textContent: 'test this doc',
           parentElement: { className: 'chsubpara1' },
         } as unknown as HTMLAnchorElement,
-        { marks: [] } as unknown as Mark,
+        { marks: [] as Mark[] } as Mark,
         'red',
         [],
         [{ innerText: '' } as unknown as Node]
@@ -2233,7 +2262,7 @@ describe('NewLicitParagraphElement 2', () => {
           textContent: 'test this doc',
           parentElement: { className: 'chsubpara1' },
         } as unknown as HTMLAnchorElement,
-        { marks: [] } as unknown as Mark,
+        { marks: [] as Mark[] } as Mark,
         'red',
         [],
         [{ innerText: '' } as unknown as Node]
@@ -2264,12 +2293,12 @@ describe('NewLicitParagraphElement 2', () => {
           textContent: 'test this doc',
           parentElement: { className: 'chsubpara1' },
         } as unknown as HTMLAnchorElement,
-        { marks: [] } as unknown as Mark,
+        { marks: [] as Mark[] } as Mark,
         'red',
         [],
         [{ innerText: 'This is a test' } as unknown as Node]
       )
-    ).toBeDefined();
+    ).toBeUndefined();
   });
 
   it('should return inlineMarks for bold, italic, and underline styles', () => {
@@ -2397,7 +2426,7 @@ describe('NewLicitParagraphElement branch coverage additions', () => {
     const result = para['parseStrongWithInfoicon'](
       strong,
       mark,
-      null,
+      null!,
       [] as never
     );
 
@@ -2429,7 +2458,7 @@ describe('NewLicitParagraphElement branch coverage additions', () => {
     const current = { type: 'text', marks: [] } as unknown as Mark;
     const result = para['parseEMWithInfoicon'](
       em,
-      null,
+      null!,
       current,
       current,
       [] as never
@@ -2466,7 +2495,10 @@ describe('NewLicitParagraphElement branch coverage additions', () => {
     const data = [document.createElement('ol')];
     const result = (
       para as unknown as {
-        getEmInfoIconMark: (infoIcon: HTMLElement, data: HTMLElement[]) => Mark | undefined;
+        getEmInfoIconMark: (
+          infoIcon: HTMLElement,
+          data: HTMLElement[]
+        ) => Mark | undefined;
       }
     ).getEmInfoIconMark(infoNode, data);
     expect(result).toBeUndefined();
@@ -2515,9 +2547,9 @@ describe('NewLicitParagraphElement deep branch additions', () => {
     font.textContent = '   ';
     const ret = { type: 'text', marks: [] } as unknown as Mark;
 
-    expect(
-      para['parseFontWithInfoicon'](font, ret, ret, [] as never)
-    ).toBe(ret);
+    expect(para['parseFontWithInfoicon'](font, ret, ret, [] as never)).toBe(
+      ret
+    );
   });
 
   it('parseFontWithInfoicon returns unchanged mark when no font details exist', () => {
@@ -2527,9 +2559,9 @@ describe('NewLicitParagraphElement deep branch additions', () => {
     jest.spyOn(para, 'hasFontDetails').mockReturnValue(false);
     const ret = { type: 'text', marks: [] } as unknown as Mark;
 
-    expect(
-      para['parseFontWithInfoicon'](font, ret, ret, [] as never)
-    ).toBe(ret);
+    expect(para['parseFontWithInfoicon'](font, ret, ret, [] as never)).toBe(
+      ret
+    );
   });
 
   it('parseAnchorWithInfoIcon appends color mark when anchor has color', () => {
@@ -2546,7 +2578,7 @@ describe('NewLicitParagraphElement deep branch additions', () => {
       .mockReturnValue({ type: 'text', marks: [], text: 'ok' });
 
     const mark = { type: 'text', marks: [] } as unknown as Mark;
-    para['parseAnchorWithInfoIcon'](a, '#000000', mark, null, [] as never);
+    para['parseAnchorWithInfoIcon'](a, '#000000', mark, null!, [] as never);
 
     expect(parseSpy).toHaveBeenCalled();
     expect(mark.marks?.some((m) => m.type === 'mark-text-color')).toBe(true);
@@ -2557,8 +2589,13 @@ describe('NewLicitParagraphElement deep branch additions', () => {
     const sup = document.createElement('sup');
     sup.textContent = ' ';
 
-    const result = para.parseSubMarks(sup, { type: 'text', marks: [] }, true, [] as never);
-    expect(result).toBeNull();
+    const result = para.parseSubMarks(
+      sup,
+      { type: 'text', marks: [] },
+      true,
+      [] as never
+    );
+    expect(result).toBeUndefined();
   });
 
   it('parseSubMarks handles SUB with empty text without pushing marks', () => {
@@ -2586,13 +2623,17 @@ describe('NewLicitParagraphElement deep branch additions', () => {
 
     const mark = (
       para as unknown as {
-        getEmInfoIconMark: (info: HTMLElement, data: HTMLElement[]) => Mark | undefined;
+        getEmInfoIconMark: (
+          info: HTMLElement,
+          data: HTMLElement[]
+        ) => Mark | undefined;
       }
     ).getEmInfoIconMark(infoIcon, [dataRoot]);
     expect(mark).toBeDefined();
-    expect((mark as { attrs?: { description?: string } } | undefined)?.attrs?.description).toContain(
-      'Common access card required'
-    );
+    expect(
+      (mark as { attrs?: { description?: string } } | undefined)?.attrs
+        ?.description
+    ).toContain('Common access card required');
   });
 
   it('getSuperScriptMarks returns lock icon json for CAC-required descriptions', () => {
@@ -2611,12 +2652,12 @@ describe('NewLicitParagraphElement deep branch additions', () => {
 
     const mark = para.getSuperScriptMarks(sup, [dataRoot]);
     expect(mark).toBeDefined();
-    expect((mark as { attrs?: { description?: string } } | undefined)?.attrs?.description).toContain(
-      'Common access card required'
-    );
+    expect(
+      (mark as { attrs?: { description?: string } } | undefined)?.attrs
+        ?.description
+    ).toContain('Common access card required');
   });
 });
-
 
 describe('NewLicitParagraphElement additional branch boosts', () => {
   const createPara = () => {
@@ -2631,7 +2672,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
 
     para['applyLinkAndColorMarks'](
       mark,
-      null,
+      null!,
       { type: 'mark-text-color', attrs: { color: '#000' } },
       '#000'
     );
@@ -2659,7 +2700,11 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
 
   it('setLink adds no link mark for non-url text', () => {
     const para = createPara();
-    const mark = { type: 'text', text: 'not a url', marks: [] } as unknown as Mark;
+    const mark = {
+      type: 'text',
+      text: 'not a url',
+      marks: [],
+    } as unknown as Mark;
 
     para['setLink'](mark);
 
@@ -2690,7 +2735,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
       []
     );
 
-    expect(result).toBeNull();
+    expect(result).toBeUndefined();
   });
 
   it('parseAnchor returns existing mark when id is _LINK_TO_THIS', () => {
@@ -2708,7 +2753,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     const para = createPara();
     const textNode = document.createTextNode('alpha');
 
-    const result = para.parseSubMarks(textNode, null, true, [] as never);
+    const result = para.parseSubMarks(textNode, null!, true, [] as never);
     const parsed = result as { text?: string; marks?: unknown[] } | null;
     expect(parsed?.text).toBe('alpha');
     expect(parsed?.marks).toBeUndefined();
@@ -2737,7 +2782,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     a.appendChild(document.createTextNode('go'));
 
     const mark = { type: 'text', marks: [] } as unknown as Mark;
-    para['parseAnchorWithInfoIcon'](a, '', mark, null, [] as never);
+    para['parseAnchorWithInfoIcon'](a, '', mark, null!, [] as never);
 
     expect(mark.marks?.some((m) => m.type === 'mark-text-color')).toBe(false);
   });
@@ -2749,12 +2794,12 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     sup.innerText = '2';
 
     const mark = para.getSuperScriptMarks(sup, []);
-    expect((mark as { marks?: Array<{ type: string }> } | undefined)?.marks?.[0]?.type).toBe(
-      'super'
-    );
+    expect(
+      (mark as { marks?: Array<{ type: string }> } | undefined)?.marks?.[0]
+        ?.type
+    ).toBe('super');
   });
 });
-
 
 describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
   const createPara = () => {
@@ -2797,7 +2842,12 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     sup.innerText = '2';
     sup.id = 'plain';
 
-    const result = para.parseSubMarks(sup, { type: 'text', marks: [] }, true, [] as never);
+    const result = para.parseSubMarks(
+      sup,
+      { type: 'text', marks: [] },
+      true,
+      [] as never
+    );
     expect(result).toBeDefined();
   });
 
@@ -2814,7 +2864,7 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
       a,
       '#000',
       { type: 'text', marks: [] },
-      null,
+      null!,
       [] as never
     );
 
@@ -2862,7 +2912,12 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     font.setAttribute('style', 'font-family: Arial;');
     font.appendChild(document.createTextNode('alpha'));
 
-    const result = para.parseSubMarks(font, { type: 'text', marks: [] }, true, [] as never);
+    const result = para.parseSubMarks(
+      font,
+      { type: 'text', marks: [] },
+      true,
+      [] as never
+    );
     expect((result as { type?: string } | null)?.type).toBe('text');
   });
 
@@ -2872,11 +2927,15 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     a.href = 'https://example.com';
     a.textContent = ' ';
 
-    const result = para.parseSubMarks(a, { type: 'text', marks: [] }, true, [] as never);
-    expect(result).toBeNull();
+    const result = para.parseSubMarks(
+      a,
+      { type: 'text', marks: [] },
+      true,
+      [] as never
+    );
+    expect(result).toBeUndefined();
   });
 });
-
 
 describe('Licit table/vignette/enhanced element branch boosts', () => {
   it('LicitTableCellParaElement render applies transparent table borders', () => {
@@ -3013,8 +3072,8 @@ describe('Licit elements targeted fallback branch boosts', () => {
 
     const withNullish = new LicitNewImageElement(
       'https://example.com/b.png',
-      undefined,
-      undefined,
+      undefined!,
+      undefined!,
       undefined,
       undefined
     );
@@ -3025,7 +3084,12 @@ describe('Licit elements targeted fallback branch boosts', () => {
   });
 
   it('LicitNewImageElement getBaseElement defaults capco to empty string', () => {
-    const img = new LicitNewImageElement('https://example.com/c.png', '10', '10', 'alt');
+    const img = new LicitNewImageElement(
+      'https://example.com/c.png',
+      '10',
+      '10',
+      'alt'
+    );
     const base = img.getBaseElement();
     expect(base.attrs.capco).toBe('');
   });
@@ -3040,7 +3104,12 @@ describe('Licit elements targeted fallback branch boosts', () => {
     expect(defaultsBase.attrs.background).toBe('#FFFFFF');
     expect(defaultsBase.attrs.vAlign).toBe('top');
 
-    const provided = new NewLicitTableCellParagraph(p, '#eeeeee', [140], 'middle');
+    const provided = new NewLicitTableCellParagraph(
+      p,
+      '#eeeeee',
+      [140],
+      'middle'
+    );
     const providedBase = provided.getBaseElement();
     expect(providedBase.attrs.colwidth).toEqual([140]);
     expect(providedBase.attrs.background).toBe('#eeeeee');

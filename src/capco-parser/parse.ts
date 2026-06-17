@@ -9,7 +9,17 @@ import { normalize } from "./normalize";
 import { isBannerMarking, hasRelToNofornConflict } from "./validate";
 import { parseFGIPortion } from "./fgi";
 
-function emptyISM(): ISM {
+type ParsedISM = ISM & {
+  sciControls: string[];
+  sarIdentifiers: string[];
+  atomicEnergyMarkings: string[];
+  fgiSourceOpen: string[];
+  releasableTo: string[];
+  disseminationControls: string[];
+  nonICmarkings: string[];
+};
+
+function emptyISM(): ParsedISM {
   return {
     version: "1",
     classification: [],
@@ -76,6 +86,10 @@ export function parsePortionMarking(
   /* ---------- STANDARD PORTION ---------- */
   const tokens = clean.split("//");
   const cls = tokens.shift();
+
+  if (!cls) {
+    return tbdResult(input);
+  }
 
   if (!isAllowed(cls)) {
     return tbdResult(input);

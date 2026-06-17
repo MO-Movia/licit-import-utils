@@ -3,7 +3,12 @@
  * @copyright Copyright 2026 Modus Operandi Inc. All Rights Reserved.
  */
 
-import { removeCapcoTextFromNode, updateCapcoFromContent } from './capco.util';
+import {
+  getCapcoFromNode,
+  removeCapcoTextFromNode,
+  safeCapcoParse,
+  updateCapcoFromContent
+} from './capco.util';
 
 describe('CapcoService', () => {
   it('should handle (U) marking and remove it from text', () => {
@@ -179,6 +184,63 @@ describe('CapcoService', () => {
     const result = updateCapcoFromContent(element);
 
     expect(result.updatedTextContent).toBe('text with leading spaces');
+  });
+
+  it('should normalize empty portionMarking from an existing capco attribute to TBD', () => {
+    const element = document.createElement('div');
+    element.setAttribute(
+      'capco',
+      JSON.stringify({
+        ism: {
+          version: '1',
+          classification: ['U'],
+          ownerProducer: 'USA',
+        },
+        portionMarking: '',
+        finalMarking: '(U)',
+        rawTextPreserved: false,
+      })
+    );
+
+    const result = JSON.parse(getCapcoFromNode(element) || '{}');
+
+    expect(result.portionMarking).toBe('TBD');
+    expect(result.finalMarking).toBe('(TBD)');
+    expect(result.ism.classification).toStrictEqual(['TBD']);
+  });
+
+  it('should normalize non-string capco values from loose element mocks', () => {
+    const element = {
+      getAttribute: () => null,
+      querySelector: () => ({
+        getAttribute: () => {
+          return {};
+        },
+      }),
+    } as unknown as HTMLElement;
+
+    const result = JSON.parse(getCapcoFromNode(element) || '{}');
+
+    expect(result.portionMarking).toBe('TBD');
+    expect(result.finalMarking).toBe('(TBD)');
+    expect(result.ism.classification).toStrictEqual(['TBD']);
+  });
+
+  it('should normalize empty portionMarking when parsing a capco object', () => {
+    const result = safeCapcoParse({
+      ism: {
+        version: '1',
+        classification: ['U'],
+        ownerProducer: 'USA',
+      },
+      portionMarking: '',
+      finalMarking: '(U)',
+      rawTextPreserved: false,
+    });
+
+    expect(result.portionMarking).toBe('TBD');
+    expect(result.finalMarking).toBe('(TBD)');
+    expect(result.ism.classification).toStrictEqual(['TBD']);
   });
 
   it('should handle removeCapcoTextFromNode', () => {

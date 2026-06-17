@@ -7,6 +7,7 @@ import { parsePortionMarking } from "./capco-parser";
 import { ISM, ParseResult } from "./capco-parser/types";
 
 const DEFAULT_PORTION = 'U';
+const EMPTY_PORTION_FALLBACK = 'TBD';
 
 export interface UpdatedCapco {
   capco: ParseResult;
@@ -24,18 +25,10 @@ const capcoMap: Record<string, string> = {
   'FOR OFFICIAL USE ONLY': 'FOUO',
 };
 
-export function updateCapcoFromContent(
-  element: Element
-): UpdatedCapco | undefined {
-  let text = element.textContent?.trimStart() ?? '';
-  const isTextNode = element.nodeType === Node.TEXT_NODE;
-  if (!isTextNode && element.parentElement?.tagName === 'SPAN' && !extractLeadingPortionMarking(text)) {
-    text = element.parentElement?.parentElement?.textContent?.trimStart() ?? '';
-  }
-
-  const defIsm: ISM = {
+function defaultISM(classification = DEFAULT_PORTION): ISM {
+  return {
     version: "1",
-    classification: ['U'],
+    classification: [classification],
     ownerProducer: "USA",
     sciControls: [],
     sarIdentifiers: [],
@@ -45,9 +38,19 @@ export function updateCapcoFromContent(
     disseminationControls: [],
     nonICmarkings: []
   };
+}
+
+export function updateCapcoFromContent(
+  element: Element
+): UpdatedCapco | undefined {
+  let text = element.textContent?.trimStart() ?? '';
+  const isTextNode = element.nodeType === Node.TEXT_NODE;
+  if (!isTextNode && element.parentElement?.tagName === 'SPAN' && !extractLeadingPortionMarking(text)) {
+    text = element.parentElement?.parentElement?.textContent?.trimStart() ?? '';
+  }
 
   const defaultCapco: ParseResult = {
-    ism: defIsm,
+    ism: defaultISM(),
     portionMarking: DEFAULT_PORTION,
     finalMarking: `(${DEFAULT_PORTION})`,
     rawTextPreserved: false,
@@ -80,7 +83,7 @@ export function updateCapcoFromContent(
   // ❌ unrecognized CAPCO
   return {
     capco: {
-      ism: undefined,
+      ism: defaultISM('TBD'),
       portionMarking: 'TBD',
       finalMarking: '(TBD)',
       rawTextPreserved: false
@@ -127,15 +130,28 @@ export function getCapcoNames(): string[] {
 }
 
 export function getCapcoFromNode(node: HTMLElement): string | null | undefined {
-  return (
+  const capco: string | null | undefined =
     node?.getAttribute('capco') ??
-    node?.querySelector('span')?.getAttribute('capco')
-  );
+    node?.querySelector('span')?.getAttribute('capco');
+
+  if (capco == null) {
+    return capco;
+  }
+
+  if (typeof capco !== 'string') {
+    return JSON.stringify(safeCapcoParse(capco));
+  }
+
+  if (!capco.trim().startsWith('{')) {
+    return capco;
+  }
+
+  return JSON.stringify(safeCapcoParse(capco));
 }
 
 export function safeCapcoParse(capco: unknown, fallback?: ParseResult): ParseResult {
   const defaultFallBack: ParseResult = {
-    ism: undefined,
+    ism: defaultISM('TBD'),
     portionMarking: 'error',
     finalMarking: '(error)',
     rawTextPreserved: false
@@ -144,14 +160,14 @@ export function safeCapcoParse(capco: unknown, fallback?: ParseResult): ParseRes
 
   if (capco && typeof capco === 'string') {
     try {
-      return JSON.parse(capco) as ParseResult;
+      return normalizeCapcoResult(JSON.parse(capco) as ParseResult);
     } catch (e) {
       console.warn('could not parse capco text: ' + capco, e);
     }
   }
 
   if (capco && typeof capco === 'object') {
-    return capco as ParseResult;
+    return normalizeCapcoResult(capco as ParseResult);
   }
 
   return fallback;
@@ -177,4 +193,34 @@ export function removeCapcoTextFromNode(node: Node) {
       removeCapcoTextFromNode(child);
     }
   }
+}
+
+function normalizeCapcoResult(capco: ParseResult): ParseResult {
+  const portionMarking = capco?.portionMarking?.trim();
+  if (portionMarking) {
+    return capco;
+  }
+
+  return {
+    ...capco,
+    ism: normalizeIsmCapco(capco?.ism, EMPTY_PORTION_FALLBACK),
+    portionMarking: EMPTY_PORTION_FALLBACK,
+    finalMarking: `(${EMPTY_PORTION_FALLBACK})`,
+    rawTextPreserved: capco?.rawTextPreserved ?? false,
+  };
+}
+
+function normalizeIsmCapco(ism: ISM | undefined, classification: string): ISM {
+  return {
+    version: ism?.version ?? "1",
+    classification: [classification],
+    ownerProducer: ism?.ownerProducer ?? "USA",
+    sciControls: ism?.sciControls ?? [],
+    sarIdentifiers: ism?.sarIdentifiers ?? [],
+    atomicEnergyMarkings: ism?.atomicEnergyMarkings ?? [],
+    fgiSourceOpen: ism?.fgiSourceOpen ?? [],
+    releasableTo: ism?.releasableTo ?? [],
+    disseminationControls: ism?.disseminationControls ?? [],
+    nonICmarkings: ism?.nonICmarkings ?? [],
+  };
 }

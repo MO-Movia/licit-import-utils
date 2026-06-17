@@ -1,14 +1,11 @@
 {
   "compilerOptions": {
-    "strict": false,
+    "strict": true,
     "target": "ES2022",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "lib": [
-      "ES2022",
-      "dom"
-    ],
+    "lib": ["ES2022", "dom"],
     "outDir": "dist",
     "pretty": false,
     "esModuleInterop": true,
