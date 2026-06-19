@@ -17,12 +17,13 @@ export function normalize(
 
   if (/[()]/.test(out)) {
     fixes.push("Removed parentheses");
-    out = out.replace(/[()]/g, "");
+    out = out.replaceAll(/[()]/g, "");
   }
+
   out = out
-    .replace(/\s{0,10}\/\/\s{0,10}/g, "//")
-    .replace(/\s{0,10}\/\s{0,10}/g, "/")
-    .replace(/\s{0,10},\s{0,10}/g, ", ");
+    .replaceAll(/\s{0,10}\/\/\s{0,10}/g, "//")
+    .replaceAll(/\s{0,10}\/\s{0,10}/g, "/")
+    .replaceAll(/\s{0,10},\s{0,10}/g, ", ");
 
   return out;
 }
