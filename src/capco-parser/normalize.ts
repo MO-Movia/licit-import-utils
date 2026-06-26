@@ -20,6 +20,11 @@ export function normalize(
     out = out.replaceAll(/[()]/g, "");
   }
 
+  if (/\bFOUO\b/.test(out)) {
+    fixes?.push("Converted FOUO to CUI");
+    out = out.replaceAll(/\bFOUO\b/g, "CUI");
+  }
+
   out = out
     .replaceAll(/\s{0,10}\/\/\s{0,10}/g, "//")
     .replaceAll(/\s{0,10}\/\s{0,10}/g, "/")

@@ -55,6 +55,27 @@ describe('CapcoService', () => {
     expect(result.updatedTextContent).toBe('test content');
   });
 
+  it('should convert (FOUO) marking to CUI and remove it from text', () => {
+    const element = document.createElement('div');
+    element.textContent = '(FOUO) For official use only content';
+
+    const result = updateCapcoFromContent(element);
+
+    expect(result.capco.portionMarking).toBe('CUI');
+    expect(result.capco.ism.classification).toStrictEqual(["CUI"]);
+    expect(result.updatedTextContent).toBe('For official use only content');
+  });
+
+  it('should convert (fouo) marking in lowercase to CUI', () => {
+    const element = document.createElement('div');
+    element.textContent = '(fouo) test content';
+
+    const result = updateCapcoFromContent(element);
+
+    expect(result.capco.portionMarking).toBe('CUI');
+    expect(result.updatedTextContent).toBe('test content');
+  });
+
   it('should handle system capco with // and keep original text', () => {
     const element = document.createElement('div');
     element.textContent = '(S//NF) Secret content';
