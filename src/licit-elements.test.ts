@@ -2207,6 +2207,40 @@ describe('NewLicitParagraphElement 2', () => {
     expect(result).toBeFalsy();
   });
 
+  it('should not insert spaces between split italic text runs', () => {
+    const paragraph = document.createElement('p');
+    const fragments = ['J', 'oint ', 'P', 'lanning'];
+
+    for (const fragment of fragments) {
+      const span = document.createElement('span');
+      span.style.fontStyle = 'italic';
+      span.textContent = fragment;
+      paragraph.appendChild(span);
+    }
+
+    const licitParagraph = new NewLicitParagraphElement(paragraph);
+
+    expect(licitParagraph.marks.map((mark) => mark.text).join('')).toBe(
+      'Joint Planning'
+    );
+  });
+
+  it('should preserve explicit letter-spaced table spacer spans', () => {
+    const paragraph = document.createElement('p');
+    paragraph.innerHTML =
+      '<span style="letter-spacing : -0.01em;">mitigate</span>' +
+      '<span style="letter-spacing : -0.07em;">&nbsp;</span>' +
+      '<span style="letter-spacing : -0.01em;">environmental</span>' +
+      '<span style="letter-spacing : -0.06em;">&nbsp;</span>' +
+      '<span style="letter-spacing : -0.01em;">hazards.</span>';
+
+    const licitParagraph = new NewLicitParagraphElement(paragraph);
+
+    expect(licitParagraph.marks.map((mark) => mark.text).join('')).toBe(
+      'mitigate environmental hazards.'
+    );
+  });
+
   it('should handle parseAnchor', () => {
     const test = new NewLicitParagraphElement({
       childNodes: [
