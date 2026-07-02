@@ -1164,7 +1164,7 @@ export class NewLicitParagraphElement extends LicitElement {
     isFirstSentenceBold: boolean,
     styleMarks?: { type: string; attrs?: LicitAttrs }[]
   ) {
-    let textContent = textNode.textContent?.replaceAll('\u00A0', ' ') ?? '';
+    const textContent = textNode.textContent?.replaceAll('\u00A0', ' ') ?? '';
     const urlRegex = /(https?:\/\/[^\s]{1,2048})/g;
     const matches = this.checkForLinks(textContent, urlRegex);
     if (matches) {
