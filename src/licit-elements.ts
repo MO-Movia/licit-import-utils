@@ -1139,7 +1139,7 @@ export class NewLicitParagraphElement extends LicitElement {
     const style = node.getAttribute('style') ?? '';
     const hasLetterSpacing =
       node.style.letterSpacing !== '' ||
-      /(?:^|;)\s*letter-spacing\s*:/.test(style);
+      /(?:^|;)\s{0,10000}letter-spacing\s{0,10000}:/.test(style);
     return hasOnlySpace && hasLetterSpacing;
   }
   isLastCharNotEmpty(str?: string | null) {

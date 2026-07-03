@@ -2180,6 +2180,15 @@ describe('NewLicitParagraphElement 2', () => {
     expect(result).toBeTruthy();
   });
 
+  it('should return true for raw letter-spacing style with bounded whitespace', () => {
+    const span = document.createElement('span');
+    span.textContent = ' ';
+    span.setAttribute('style', 'color:red;  letter-spacing  : 2px;');
+
+    const result = test.isEmptySpaceSpan(span);
+    expect(result).toBeTruthy();
+  });
+
   it('should return false if letter spacing is missing', () => {
     const span = document.createElement('span');
     span.textContent = ' ';
