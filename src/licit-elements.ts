@@ -1110,6 +1110,7 @@ export class NewLicitParagraphElement extends LicitElement {
     }
     if (this.isEmptySpaceSpan(n)) {
       this.addTrailingSpace();
+      return;
     }
     if (myMark) {
       //Adding mark for hyperLinks
@@ -1135,7 +1136,10 @@ export class NewLicitParagraphElement extends LicitElement {
   isEmptySpaceSpan(node: HTMLElement) {
     const hasOnlySpace =
       node.textContent === '\u00A0' || node.textContent === ' ';
-    const hasLetterSpacing = node.style.letterSpacing !== '';
+    const style = node.getAttribute('style') ?? '';
+    const hasLetterSpacing =
+      node.style.letterSpacing !== '' ||
+      /(?:^|;)\s{0,10000}letter-spacing\s{0,10000}:/.test(style);
     return hasOnlySpace && hasLetterSpacing;
   }
   isLastCharNotEmpty(str?: string | null) {
@@ -1153,20 +1157,6 @@ export class NewLicitParagraphElement extends LicitElement {
     }
   }
 
-  private shouldPrependSpace(
-    lastMark: Mark | undefined,
-    textContent: string
-  ): boolean {
-    return Boolean(
-      lastMark &&
-        typeof lastMark.text === 'string' &&
-        lastMark.text.length > 0 &&
-        !lastMark.text.endsWith(' ') &&
-        textContent.length > 0 &&
-        !textContent.startsWith(' ')
-    );
-  }
-
   // To find text with URLs
   handleText(
     textNode: HTMLElement,
@@ -1174,12 +1164,7 @@ export class NewLicitParagraphElement extends LicitElement {
     isFirstSentenceBold: boolean,
     styleMarks?: { type: string; attrs?: LicitAttrs }[]
   ) {
-    let textContent = textNode.textContent?.replaceAll('\u00A0', ' ') ?? '';
-    const lastMark = this.marks.at(-1);
-
-    if (this.shouldPrependSpace(lastMark, textContent)) {
-      textContent = ' ' + textContent;
-    }
+    const textContent = textNode.textContent?.replaceAll('\u00A0', ' ') ?? '';
     const urlRegex = /(https?:\/\/[^\s]{1,2048})/g;
     const matches = this.checkForLinks(textContent, urlRegex);
     if (matches) {
