@@ -3847,6 +3847,20 @@ describe('LicitConverter targeted branch coverage additions', () => {
     expect(root.textContent).toBe('Alpha ');
   });
 
+  it('sanitizeElement preserves spacing spans between styled table text spans', () => {
+    const root = document.createElement('div');
+    root.innerHTML =
+      '<span style="letter-spacing : -0.01em;">mitigate</span>' +
+      '<span style="letter-spacing : -0.07em;">&nbsp;</span>' +
+      '<span style="letter-spacing : -0.01em;">environmental</span>' +
+      '<span style="letter-spacing : -0.06em;">&nbsp;</span>' +
+      '<span style="letter-spacing : -0.01em;">hazards.</span>';
+
+    converter['sanitizeElement'](root);
+
+    expect(root.textContent).toBe('mitigate environmental hazards.');
+  });
+
   it('findOrientation returns landscape for wide content', () => {
     expect(converter['findOrientation'](700)).toBe('landscape');
   });

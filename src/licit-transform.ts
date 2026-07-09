@@ -3168,16 +3168,7 @@ export class LicitConverter {
       node.getAttribute('style')?.includes('letter-spacing') &&
       node.textContent === '\u00A0'
     ) {
-      const prev = node.previousSibling;
-
-      if (
-        prev?.nodeType === Node.TEXT_NODE &&
-        !prev.textContent?.endsWith(' ')
-      ) {
-        prev.textContent += ' ';
-      }
-
-      node.remove();
+      node.replaceWith(document.createTextNode(' '));
       return true;
     }
 
