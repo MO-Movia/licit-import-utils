@@ -6,6 +6,7 @@
 import type JSZip from 'jszip';
 import { openZip } from './zip.utils';
 import { updateImageSrc } from './transform.utils';
+import { findBorderedImagePadding } from './image-padding.utils';
 
 interface HTMLFile {
   name: string;
@@ -22,6 +23,13 @@ interface ImjObj {
   fallback: Promise<string>;
   file: Promise<File>;
 }
+
+const EIC_FIGURE_TITLE_CLASSES = new Set([
+  'attFigureTitle',
+  'attFigureTitleCont',
+  'chFigureTitle',
+  'chFigureTitleCont',
+]);
 
 export async function parseFrameMakerHTM5Zip(
   this: void,
@@ -317,11 +325,23 @@ async function processImages(
 
     if (file) {
       try {
-        const f = await file.file; // Wait for file resolution
+        const originalFile = await file.file; // Wait for file resolution
+        let f = originalFile;
+        if (isEnhancedFigureImage(img)) {
+          try {
+            f = await trimBorderedImagePadding(originalFile);
+          } catch (error) {
+            console.warn(`Unable to trim ${targetFileName}:`, error);
+          }
+        }
+        const fallback =
+          f === originalFile
+            ? file.fallback
+            : readFileAsDataURL(f).catch(() => file.fallback);
 
         await updateImageSize(f, targetFileName, img);
 
-        await updateImageSrc(f, img, updateSrc, file.fallback);
+        await updateImageSrc(f, img, updateSrc, fallback);
       } catch (error) {
         console.error(`Error processing ${targetFileName}:`, error);
       }
@@ -337,6 +357,127 @@ async function processImages(
 
 function extractFileName(this: void, fullPath: string): string | undefined {
   return fullPath.split('/').pop();
+}
+
+function isEnhancedFigureImage(this: void, img: HTMLImageElement): boolean {
+  const parentClasses = img.parentElement?.classList;
+  return (
+    img.width > 200 &&
+    !!parentClasses &&
+    [...EIC_FIGURE_TITLE_CLASSES].some((name) =>
+      parentClasses.contains(name)
+    )
+  );
+}
+
+function loadImageFile(this: void, file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = (error) => {
+      URL.revokeObjectURL(objectUrl);
+      reject(
+        new Error('Unable to load the image for border trimming', {
+          cause: error,
+        })
+      );
+    };
+    image.src = objectUrl;
+  });
+}
+
+function canvasToBlob(
+  this: void,
+  canvas: HTMLCanvasElement,
+  type: string
+): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type));
+}
+
+async function trimBorderedImagePadding(
+  this: void,
+  file: File
+): Promise<File> {
+  const imageType = file.type.toLowerCase();
+  if (imageType !== 'image/png') {
+    return file;
+  }
+
+  const image = await loadImageFile(file);
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = image.naturalWidth || image.width;
+  sourceCanvas.height = image.naturalHeight || image.height;
+  const sourceContext = sourceCanvas.getContext('2d', {
+    willReadFrequently: true,
+  });
+  if (!sourceContext || !sourceCanvas.width || !sourceCanvas.height) {
+    return file;
+  }
+
+  sourceContext.drawImage(image, 0, 0);
+  const imageData = sourceContext.getImageData(
+    0,
+    0,
+    sourceCanvas.width,
+    sourceCanvas.height
+  );
+  const padding = findBorderedImagePadding(
+    imageData.data,
+    sourceCanvas.width,
+    sourceCanvas.height
+  );
+  if (!padding) {
+    return file;
+  }
+
+  const width = sourceCanvas.width - padding.left - padding.right;
+  const height = sourceCanvas.height - padding.top - padding.bottom;
+  const croppedCanvas = document.createElement('canvas');
+  croppedCanvas.width = width;
+  croppedCanvas.height = height;
+  const croppedContext = croppedCanvas.getContext('2d');
+  if (!croppedContext) {
+    return file;
+  }
+  croppedContext.drawImage(
+    sourceCanvas,
+    padding.left,
+    padding.top,
+    width,
+    height,
+    0,
+    0,
+    width,
+    height
+  );
+  const blob = await canvasToBlob(croppedCanvas, imageType);
+  return blob
+    ? new File([blob], file.name, {
+        type: imageType,
+        lastModified: file.lastModified,
+      })
+    : file;
+}
+
+function readFileAsDataURL(this: void, file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === 'string'
+        ? resolve(reader.result)
+        : reject(new Error('Unable to encode the cropped image'));
+    reader.onerror = () =>
+      reject(
+        new Error('Unable to read the cropped image', {
+          cause: reader.error,
+        })
+      );
+    reader.readAsDataURL(file);
+  });
 }
 
 async function updateImageSize(
