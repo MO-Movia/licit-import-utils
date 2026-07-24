@@ -8,6 +8,7 @@ import * as transformUtils from './transform.utils';
 import JSZip from 'jszip';
 
 import { parseFrameMakerHTM5Zip } from './transform.zip';
+import { findBorderedImagePadding } from './image-padding.utils';
 const actualZipUtils = jest.requireActual<typeof import('./zip.utils')>(
   './zip.utils'
 );
@@ -159,6 +160,118 @@ describe('transform.zip', () => {
     const fullPath = 'path/to/image.jpg';
     const fileName = fullPath.split('/').pop();
     expect(fileName).toBe('image.jpg');
+  });
+});
+
+describe('findBorderedImagePadding', () => {
+  function createPixels(
+    width: number,
+    height: number,
+    color = 255
+  ): Uint8ClampedArray {
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    for (let offset = 0; offset < pixels.length; offset += 4) {
+      pixels[offset] = color;
+      pixels[offset + 1] = color;
+      pixels[offset + 2] = color;
+      pixels[offset + 3] = 255;
+    }
+    return pixels;
+  }
+
+  function setPixel(
+    pixels: Uint8ClampedArray,
+    width: number,
+    x: number,
+    y: number,
+    color = 0
+  ): void {
+    const offset = (y * width + x) * 4;
+    pixels[offset] = color;
+    pixels[offset + 1] = color;
+    pixels[offset + 2] = color;
+    pixels[offset + 3] = 255;
+  }
+
+  function drawBorder(
+    pixels: Uint8ClampedArray,
+    width: number,
+    left: number,
+    top: number,
+    right: number,
+    bottom: number
+  ): void {
+    for (let x = left; x <= right; x++) {
+      setPixel(pixels, width, x, top);
+      setPixel(pixels, width, x, bottom);
+    }
+    for (let y = top; y <= bottom; y++) {
+      setPixel(pixels, width, left, y);
+      setPixel(pixels, width, right, y);
+    }
+  }
+
+  it('detects small white padding outside a complete figure border', () => {
+    const width = 20;
+    const height = 16;
+    const pixels = createPixels(width, height);
+    drawBorder(pixels, width, 3, 2, 15, 11);
+
+    expect(findBorderedImagePadding(pixels, width, height)).toEqual({
+      top: 2,
+      right: 4,
+      bottom: 4,
+      left: 3,
+    });
+  });
+
+  it('treats transparent perimeter pixels as removable padding', () => {
+    const width = 12;
+    const height = 10;
+    const pixels = createPixels(width, height);
+    for (let offset = 3; offset < pixels.length; offset += 4) {
+      pixels[offset] = 0;
+    }
+    drawBorder(pixels, width, 1, 1, 10, 8);
+
+    expect(findBorderedImagePadding(pixels, width, height)).toEqual({
+      top: 1,
+      right: 1,
+      bottom: 1,
+      left: 1,
+    });
+  });
+
+  it('does not crop whitespace without a surrounding rectangular border', () => {
+    const width = 20;
+    const height = 16;
+    const pixels = createPixels(width, height);
+    for (let x = 5; x <= 14; x++) {
+      setPixel(pixels, width, x, 7, 80);
+    }
+    for (let y = 4; y <= 10; y++) {
+      setPixel(pixels, width, 10, y, 80);
+    }
+
+    expect(findBorderedImagePadding(pixels, width, height)).toBeNull();
+  });
+
+  it('does not crop padding larger than the safe edge limit', () => {
+    const width = 30;
+    const height = 30;
+    const pixels = createPixels(width, height);
+    drawBorder(pixels, width, 9, 9, 20, 20);
+
+    expect(findBorderedImagePadding(pixels, width, height)).toBeNull();
+  });
+
+  it('does not crop images whose border already reaches every edge', () => {
+    const width = 12;
+    const height = 10;
+    const pixels = createPixels(width, height);
+    drawBorder(pixels, width, 0, 0, width - 1, height - 1);
+
+    expect(findBorderedImagePadding(pixels, width, height)).toBeNull();
   });
 });
 
