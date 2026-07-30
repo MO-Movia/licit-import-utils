@@ -3199,10 +3199,10 @@ export class LicitTableCellParaElement extends LicitElement {
     return this.removeBullets(this.removeNewLines(text ?? ''));
   }
   removeNewLines(text: string) {
-    return text.split('\n').join('');
+    return text.replaceAll('\n', '');
   }
   removeBullets(text: string) {
-    return text.split('•').join('');
+    return text.replaceAll('•', '');
   }
 
   render() {

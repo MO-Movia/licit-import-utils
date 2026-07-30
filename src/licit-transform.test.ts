@@ -3762,6 +3762,67 @@ describe('LicitConverter targeted branch coverage additions', () => {
     expect(element.textContent).toBe('prefix (U trailing');
   });
 
+  it('extractBracketContent does not treat a non-leading ( as a portion marking', () => {
+    // Reproduces the merged "first sentence bold" + continuation scenario:
+    // paragraph A (no punctuation) had paragraph B appended as a child, and
+    // B contains "(U)" mid-text. The "(" is NOT a leading portion marking,
+    // so nothing should be extracted and the prefix text must be preserved.
+    const element = document.createElement('div');
+    element.appendChild(document.createTextNode('A text. '));
+    const continuation = document.createElement('span');
+    continuation.textContent = 'Some leading text. (U) more text';
+    element.appendChild(continuation);
+
+    converter['extractBracketContent'](element);
+
+    expect(element.textContent).toBe('A text. Some leading text. (U) more text');
+    expect(continuation.parentNode).toBe(element);
+  });
+
+  it('extractBracketContent still consolidates a leading portion marking split across nodes', () => {
+    // Leading "(" in the first non-empty node at offset 0 is still extracted,
+    // even when split across multiple text nodes.
+    const element = document.createElement('div');
+    element.appendChild(document.createTextNode('   '));
+    element.appendChild(document.createTextNode('(U)'));
+    element.appendChild(document.createTextNode(' body text'));
+
+    converter['extractBracketContent'](element);
+
+    // The bracket text is consolidated and the trailing text is preserved.
+    expect(element.textContent).toContain('(U)');
+    expect(element.textContent).toContain('body text');
+  });
+
+  it('parseHeader + capco pipeline preserves continuation text and avoids bolding it', () => {
+    // Full reproduction of the reported bug: a "first sentence bold" paragraph
+    // with no trailing punctuation, followed by a paragraph that contains
+    // "(U)" mid-text. The continuation must be preserved verbatim and must NOT
+    // receive a `strong` mark from the header's first-sentence-bold logic.
+    const header = document.createElement('p');
+    header.className = 'chpara0';
+    header.textContent = 'Bold first sentence with no punctuation';
+
+    const next = document.createElement('p');
+    next.className = 'para';
+    next.textContent = 'Leading text before marking. (U) trailing text';
+
+    converter['parseHeader'](header, next);
+
+    // parseHeader appends `next` as a child of `header`; run the capco
+    // extraction step that render_doc applies to every element.
+    const parserElement =
+      converter['elements'][converter['elements'].length - 1];
+    converter['updateChildCapcoContent'](parserElement);
+
+    const merged = parserElement.node as HTMLElement;
+    // The continuation text (including the part before "(") is intact.
+    expect(merged.textContent).toContain('Leading text before marking.');
+    expect(merged.textContent).toContain('(U) trailing text');
+    // The continuation wrapper element was not destroyed.
+    expect(next.parentNode).toBe(merged);
+  });
+
   it('handleImageChild scales width when image width is greater than zero', () => {
     const doc = new LicitDocumentElement();
     const appendSpy = jest.spyOn(doc, 'appendElement');
