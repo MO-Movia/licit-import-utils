@@ -1203,10 +1203,18 @@ export class LicitConverter {
   }
 
   private findBracketStart(nodes: ChildNode[]) {
+    // A CAPCO portion marking must be the *leading* content of the paragraph.
+    // Skip whitespace-only nodes, then require the first non-empty node to
+    // start with '('. A '(' that appears mid-text (e.g. after a merged
+    // "first sentence bold" continuation) is not a leading portion marking
+    // and must not be extracted, otherwise the text before it is dropped and
+    // the surrounding wrapper element is destroyed.
     for (let i = 0; i < nodes.length; i++) {
       const text = this.getNodeText(nodes[i]);
+      if (!text) continue;
       const offset = text.indexOf('(');
-      if (offset !== -1) return { index: i, offset };
+      if (offset === 0) return { index: i, offset };
+      return null;
     }
     return null;
   }
