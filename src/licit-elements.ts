@@ -480,7 +480,11 @@ export class LicitEnhancedImageBodyElement extends LicitElement {
   }
   render() {
     const element = this.getBaseElement();
-    element.content.push(this.image.render());
+    element.content.push({
+      type: 'paragraph',
+      attrs: { styleName: 'Normal' },
+      content: [this.image.render()],
+    });
     return element;
   }
 }

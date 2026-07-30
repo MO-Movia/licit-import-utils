@@ -7,6 +7,7 @@
 import {
   LicitDocumentElement,
   LicitDocumentJSON,
+  LicitEnhancedImageBodyElement,
   LicitEnhancedTableElement,
   LicitEnhancedTableFigureBodyElement,
   LicitHeaderElement,
@@ -2981,6 +2982,42 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
 });
 
 describe('Licit table/vignette/enhanced element branch boosts', () => {
+  it('LicitEnhancedImageBodyElement wraps inline image content in a paragraph block', () => {
+    const image = new LicitNewImageElement(
+      'https://example.com/figure.png',
+      '320',
+      '240',
+      'Figure alt',
+      'SECRET'
+    );
+    const body = new LicitEnhancedImageBodyElement(image);
+
+    expect(body.render()).toEqual({
+      type: 'enhanced_table_figure_body',
+      content: [
+        {
+          type: 'paragraph',
+          attrs: { styleName: 'Normal' },
+          content: [
+            {
+              type: 'image',
+              attrs: {
+                alt: 'Figure alt',
+                height: '240',
+                src: 'https://example.com/figure.png',
+                title: null,
+                width: '320',
+                fitToParent: null,
+                simpleImg: 'false',
+                capco: 'SECRET',
+              },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
   it('LicitTableCellParaElement render applies transparent table borders', () => {
     const td = document.createElement('td');
     const p = document.createElement('p');
