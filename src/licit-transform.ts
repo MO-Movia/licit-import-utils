@@ -1713,7 +1713,7 @@ export class LicitConverter {
       const ulNode = Array.from(node.childNodes).find(
         (childNode) => childNode.nodeName === 'UL'
       );
-      const olNode = Array.from(node.childNodes).find(
+      const olNode = Array.from(node.childNodes).some(
         (childNode) => childNode.nodeName === 'OL'
       );
       if (!(ulNode && olNode) && node.nextSibling && node.nodeName !== 'LI') {
