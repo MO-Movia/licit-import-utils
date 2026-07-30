@@ -132,7 +132,7 @@ async function getTocArray(
   const startIndx = tocContent.indexOf('<?xml');
   const endIndx = tocContent.length - 2;
   const xmlStr = tocContent.substring(startIndx, endIndx);
-  const xmlString = xmlStr.split('\\').join('');
+  const xmlString = xmlStr.replaceAll('\\', '');
   let currentIndex = 0;
   while (currentIndex < xmlString.length) {
     const urlIndex = xmlString.indexOf('url="', currentIndex);
@@ -323,34 +323,34 @@ async function processImages(
       (f) => extractFileName(f.name) === targetFileName
     );
 
-    if (file) {
-      try {
-        const originalFile = await file.file; // Wait for file resolution
-        let f = originalFile;
-        if (isEnhancedFigureImage(img)) {
-          try {
-            f = await trimBorderedImagePadding(originalFile);
-          } catch (error) {
-            console.warn(`Unable to trim ${targetFileName}:`, error);
-          }
-        }
-        const fallback =
-          f === originalFile
-            ? file.fallback
-            : readFileAsDataURL(f).catch(() => file.fallback);
-
-        await updateImageSize(f, targetFileName, img);
-
-        await updateImageSrc(f, img, updateSrc, fallback);
-      } catch (error) {
-        console.error(`Error processing ${targetFileName}:`, error);
-      }
-    } else {
+    if (!file) {
       const errorMessage = `${targetFileName} missing from doc`;
       console.warn(errorMessage);
 
       img.src = '';
       img.alt = `WARNING! File ${targetFileName} was missing during import!`;
+      return;
+    }
+    try {
+      const originalFile = await file.file; // Wait for file resolution
+      let f = originalFile;
+      if (isEnhancedFigureImage(img)) {
+        try {
+          f = await trimBorderedImagePadding(originalFile);
+        } catch (error) {
+          console.warn(`Unable to trim ${targetFileName}:`, error);
+        }
+      }
+      const fallback =
+        f === originalFile
+          ? file.fallback
+          : readFileAsDataURL(f).catch(() => file.fallback);
+
+      await updateImageSize(f, targetFileName, img);
+
+      await updateImageSrc(f, img, updateSrc, fallback);
+    } catch (error) {
+      console.error(`Error processing ${targetFileName}:`, error);
     }
   }
 }
