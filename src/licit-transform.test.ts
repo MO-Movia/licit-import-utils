@@ -3861,6 +3861,111 @@ describe('LicitConverter targeted branch coverage additions', () => {
     expect(root.textContent).toBe('mitigate environmental hazards.');
   });
 
+  it('sanitizeElement removes whitespace following a stripped section number', () => {
+    const root = document.createElement('p');
+    root.className = 'chsubpara2';
+    root.textContent = '1.3.2.1 (U) A normal numbered paragraph.';
+    const sectionNumberConverter = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+
+    sectionNumberConverter['sanitizeElement'](root);
+
+    expect(root.textContent).toBe('(U) A normal numbered paragraph.');
+  });
+
+  it('does not add an extra leading space for a numbered bold heading', () => {
+    const root = document.createElement('div');
+    root.innerHTML =
+      '<p class="chpara0"><span class="bold">1.3 </span>(U) Scope</p>' +
+      '<p class="para0">This document takes a broad perspective.</p>';
+    const sectionNumberConverter = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+
+    const result = sectionNumberConverter.parseFrameMakerHTML5([root]);
+    const paragraph = result?.content[0] as {
+      content: { text?: string }[];
+    };
+    const text = paragraph.content.map((item) => item.text ?? '').join('');
+
+    expect(text).toBe('Scope. This document takes a broad perspective.');
+  });
+
+  it('removes a separate non-breaking-space span after CAPCO', () => {
+    const root = document.createElement('div');
+    root.innerHTML =
+      '<p class="chsubpara2"><span class="bold">1.7.3 </span>' +
+      '<a id="marker">(U)</a>' +
+      '<span style="font-weight: normal;">&nbsp;</span>' +
+      'Mission Planning Cell</p>';
+    const sectionNumberConverter = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+
+    const result = sectionNumberConverter.parseFrameMakerHTML5([root]);
+    const paragraph = result?.content[0] as {
+      content: { text?: string }[];
+    };
+    const text = paragraph.content.map((item) => item.text ?? '').join('');
+
+    expect(text).toBe('Mission Planning Cell');
+  });
+
+  it('removes a styled non-breaking space before normal paragraph text', () => {
+    const root = document.createElement('div');
+    root.innerHTML =
+      '<p class="chsubpara2">1.4.6.1 (U)' +
+      '<span style="font-weight: bold;">&nbsp;</span>' +
+      'Typically the mission starts here.</p>';
+    const sectionNumberConverter = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+
+    const result = sectionNumberConverter.parseFrameMakerHTML5([root]);
+    const paragraph = result?.content[0] as {
+      content: { text?: string }[];
+    };
+    const text = paragraph.content.map((item) => item.text ?? '').join('');
+
+    expect(text).toBe('Typically the mission starts here.');
+  });
+
+  it('preserves bold b-tag content when merging a header with its paragraph', () => {
+    const root = document.createElement('div');
+    const boldText =
+      'The purpose of this attachment is to provide the baseline for Intel TL ' +
+      'responsibilities in support of mission planning and the role of the ' +
+      'greater contingency intelligence network (CIN), ';
+    root.innerHTML =
+      '<p class="attsubpara1">' +
+      '<b>A2.1.1 (U) Purpose.</b> This is the remaining content of paragraph one.' +
+      '</p>' +
+      '<p class="para1"><b>' +
+      boldText +
+      '</b>which supports all phases of mission planning.</p>';
+    const sectionNumberConverter = new LicitConverter(
+      asTransformConfig({ stripSectionNumbers: true })
+    );
+
+    const result = sectionNumberConverter.parseFrameMakerHTML5([root]);
+    const paragraph = result?.content[0] as {
+      content: {
+        text?: string;
+        marks?: { type: string; attrs?: { overridden?: boolean } }[];
+      }[];
+    };
+    const importedBoldText = paragraph.content.find(
+      (item) => item.text === boldText
+    );
+
+    expect(importedBoldText).toBeDefined();
+    expect(importedBoldText?.marks).toContainEqual({
+      type: 'strong',
+      attrs: { overridden: true },
+    });
+  });
+
   it('findOrientation returns landscape for wide content', () => {
     expect(converter['findOrientation'](700)).toBe('landscape');
   });
