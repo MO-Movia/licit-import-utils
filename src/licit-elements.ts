@@ -480,7 +480,11 @@ export class LicitEnhancedImageBodyElement extends LicitElement {
   }
   render() {
     const element = this.getBaseElement();
-    element.content.push(this.image.render());
+    element.content.push({
+      type: 'paragraph',
+      attrs: { styleName: 'Normal' },
+      content: [this.image.render()],
+    });
     return element;
   }
 }
@@ -3195,10 +3199,10 @@ export class LicitTableCellParaElement extends LicitElement {
     return this.removeBullets(this.removeNewLines(text ?? ''));
   }
   removeNewLines(text: string) {
-    return text.split('\n').join('');
+    return text.replaceAll('\n', '');
   }
   removeBullets(text: string) {
-    return text.split('•').join('');
+    return text.replaceAll('•', '');
   }
 
   render() {
