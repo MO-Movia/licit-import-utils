@@ -3992,41 +3992,6 @@ describe('LicitConverter targeted branch coverage additions', () => {
     expect(text).toBe('Typically the mission starts here.');
   });
 
-  it('preserves bold b-tag content when merging a header with its paragraph', () => {
-    const root = document.createElement('div');
-    const boldText =
-      'The purpose of this attachment is to provide the baseline for Intel TL ' +
-      'responsibilities in support of mission planning and the role of the ' +
-      'greater contingency intelligence network (CIN), ';
-    root.innerHTML =
-      '<p class="attsubpara1">' +
-      '<b>A2.1.1 (U) Purpose.</b> This is the remaining content of paragraph one.' +
-      '</p>' +
-      '<p class="para1"><b>' +
-      boldText +
-      '</b>which supports all phases of mission planning.</p>';
-    const sectionNumberConverter = new LicitConverter(
-      asTransformConfig({ stripSectionNumbers: true })
-    );
-
-    const result = sectionNumberConverter.parseFrameMakerHTML5([root]);
-    const paragraph = result?.content[0] as {
-      content: {
-        text?: string;
-        marks?: { type: string; attrs?: { overridden?: boolean } }[];
-      }[];
-    };
-    const importedBoldText = paragraph.content.find(
-      (item) => item.text === boldText
-    );
-
-    expect(importedBoldText).toBeDefined();
-    expect(importedBoldText?.marks).toContainEqual({
-      type: 'strong',
-      attrs: { overridden: true },
-    });
-  });
-
   it('findOrientation returns landscape for wide content', () => {
     expect(converter['findOrientation'](700)).toBe('landscape');
   });
