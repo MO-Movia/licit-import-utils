@@ -1069,6 +1069,38 @@ export class LicitConverter {
     if (this.isNoteNode(e.node.className)) {
       removeCapcoTextFromNode(e.node);
     }
+
+    if (e.node.tagName === 'P') {
+      this.trimLeadingParagraphWhitespace(e.node);
+    }
+  }
+
+  private trimLeadingParagraphWhitespace(element: Element) {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let currentNode = walker.nextNode();
+
+    while (currentNode) {
+      const textNode = currentNode as Text;
+      if (!this.hasHiddenAncestor(textNode, element)) {
+        const trimmedText = (textNode.textContent ?? '').trimStart();
+        textNode.textContent = trimmedText;
+        if (trimmedText !== '') {
+          return;
+        }
+      }
+      currentNode = walker.nextNode();
+    }
+  }
+
+  private hasHiddenAncestor(node: Node, root: Element) {
+    let parent = node.parentElement;
+    while (parent && parent !== root) {
+      if (parent.classList.contains('Hidden')) {
+        return true;
+      }
+      parent = parent.parentElement;
+    }
+    return false;
   }
 
   private updateChildCapcoContentLoopHelper(
@@ -3157,7 +3189,10 @@ export class LicitConverter {
       parentClass !== 'acronym'
     ) {
       textContent = textContent
-        .replaceAll(/^[A-Z]?\d{1,5}(?:\.\d{1,5}){0,10}\.?(?=\s)/gm, '')
+        .replaceAll(
+          /^[A-Z]?\d{1,5}(?:\.\d{1,5}){0,10}\.?\s{1,10000}/gm,
+          ''
+        )
         .replaceAll('\n', '');
     }
 
