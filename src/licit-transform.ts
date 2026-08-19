@@ -18,6 +18,7 @@ import {
   LicitErrorTextElement,
   LicitHeaderElement,
   LicitHRElement,
+  LicitLandscapeSectionElement,
   LicitNewImageElement,
   LicitOrderedListElement,
   LicitParagraphElement,
@@ -55,6 +56,14 @@ interface ImageInfo {
   width: number;
   height: number;
 }
+
+const EIC_PORTRAIT_CONTENT_WIDTH = 624;
+const EIC_TABLE_RENDERING_ALLOWANCE = 2;
+const EIC_PORTRAIT_TABLE_WIDTH =
+  EIC_PORTRAIT_CONTENT_WIDTH - EIC_TABLE_RENDERING_ALLOWANCE;
+const EIC_PORTRAIT_IMAGE_WIDTH = EIC_PORTRAIT_CONTENT_WIDTH;
+const EIC_PORTRAIT_FIT_TOLERANCE = 0.05;
+
 enum ParserElementType {
   ChapterTitle,
   ChapterSubtitle,
@@ -1408,7 +1417,7 @@ export class LicitConverter {
         imgElement,
         capco ?? null
       );
-      licitDocument.appendElement(licitEnhancedImage);
+      this.appendEnhancedElement(licitDocument, licitEnhancedImage);
     }
   }
   private figureParagraphCase(
@@ -1625,9 +1634,12 @@ export class LicitConverter {
     e: ParserElement,
     licitDocument: LicitDocumentElement
   ) {
-    const widthArray = this.getColWidthArray(e.node as HTMLTableElement);
+    const widthArray = this.getColWidthArray(
+      e.node as HTMLTableElement,
+      true
+    );
     const table = e.node.querySelector('tbody');
-    let totalWidth = 619;
+    let totalWidth = EIC_PORTRAIT_TABLE_WIDTH;
     if (widthArray) {
       totalWidth = this.getSumOfArray(widthArray);
     }
@@ -1651,9 +1663,21 @@ export class LicitConverter {
         //Remove the row containing the note from the table
         licitNewTable.removeLastRow();
       }
-      licitDocument.appendElement(licitNewTable);
+      this.appendEnhancedElement(licitDocument, licitNewTable);
     }
   }
+
+  private appendEnhancedElement(
+    licitDocument: LicitDocumentElement,
+    element: LicitEnhancedImageElement | LicitEnhancedTableElement
+  ): void {
+    licitDocument.appendElement(
+      element.orientation === 'landscape'
+        ? new LicitLandscapeSectionElement(element)
+        : element
+    );
+  }
+
   private getLicitTable(
     e: ParserElement,
     widthArray: number[] = [],
@@ -1672,7 +1696,8 @@ export class LicitConverter {
           isChapterHeader,
           licitTable,
           widthArray,
-          false
+          false,
+          true
         );
       }
       this.parseTableContent(
@@ -1682,7 +1707,8 @@ export class LicitConverter {
         isChapterHeader,
         licitTable,
         widthArray,
-        false
+        false,
+        true
       );
     }
     return licitTable;
@@ -1692,7 +1718,9 @@ export class LicitConverter {
     imageElement: HTMLImageElement,
     capco: string | null
   ): LicitEnhancedImageElement {
-    const imageInfo = this.extractImageInfo(imageElement);
+    const imageInfo = this.fitEICImageToPortrait(
+      this.extractImageInfo(imageElement)
+    );
     const orientation = this.findOrientation(imageInfo.width);
     const licitImage = new LicitNewImageElement(
       imageInfo.src,
@@ -1891,6 +1919,7 @@ export class LicitConverter {
    * @param licitTable -Licit Table Element
    * @param widthArray - To scale the table to specific sizes
    * @param isTransparent - flag to distinguish preface table
+   * @param useLogicalColumnIndex - map EIC widths through colspan cells
    * @returns void
    */
 
@@ -1901,7 +1930,8 @@ export class LicitConverter {
     isChapterHeader: boolean,
     licitTable: LicitTableElement,
     widthArray: number[] = [],
-    isTransparent: boolean = false
+    isTransparent: boolean = false,
+    useLogicalColumnIndex = false
   ) {
     const rows = tableTag.querySelectorAll('tr');
     let totalTableHeight = 0;
@@ -1934,7 +1964,8 @@ export class LicitConverter {
         isChapterHeader,
         licitRow,
         widthArray,
-        isTransparent
+        isTransparent,
+        useLogicalColumnIndex
       );
 
       licitTable.addRow(licitRow);
@@ -1951,8 +1982,10 @@ export class LicitConverter {
     isChapterHeader: boolean,
     licitRow: LicitTableRowElement,
     widthArray: number[],
-    isTransparent: boolean
+    isTransparent: boolean,
+    useLogicalColumnIndex: boolean
   ) {
+    let logicalColumnIndex = 0;
     for (let j = 0; j < cells.length; j++) {
       //Start RK-Dynamic Cell(2-2 of Chapter Header) BgColor
       const style = cells[j].getAttribute('style');
@@ -1977,11 +2010,12 @@ export class LicitConverter {
         bgColor,
         isChapterHeader,
         verAlign,
-        cellIndex: j,
+        cellIndex: useLogicalColumnIndex ? logicalColumnIndex : j,
         widthArray,
         isTransparent,
       };
       this.addCell(cells[j], licitRow, cellOptions);
+      logicalColumnIndex += Math.max(cells[j].colSpan, 1);
     }
   }
 
@@ -3263,13 +3297,19 @@ export class LicitConverter {
    * This function reads `<col>` elements within a `<colgroup>` of the table and
    * computes the pixel-based width for each column. It handles widths specified
    * in percentages and pixels. If all widths are in pixels, they are scaled using
-   * a separate scaling method. If the computed widths are invalid or incomplete,
-   * the function returns `undefined`.
+   * a separate scaling method. Near-portrait EIC tables instead preserve every
+   * column except the last, which absorbs the difference to the portrait width.
+   * If the computed widths are invalid or incomplete, the function returns
+   * `undefined`.
    *
    * @param {HTMLTableElement} table - The HTML table element from which column widths are to be extracted.
+   * @param {boolean} fitEICToPortrait - Whether to apply EIC portrait-width fitting.
    * @returns {number[] | undefined} An array of column widths in pixels, or `undefined` if the widths are invalid or missing.
    */
-  private getColWidthArray(table: HTMLTableElement): number[] | undefined {
+  private getColWidthArray(
+    table: HTMLTableElement,
+    fitEICToPortrait = false
+  ): number[] | undefined {
     const colElements: HTMLTableColElement[] = Array.from(
       table.querySelectorAll('colgroup > col')
     );
@@ -3299,13 +3339,30 @@ export class LicitConverter {
     }
     //Finding scaled widths for individual widths mentioned in px
     if (rawWidthArray.length === colElements.length) {
-      widthArray = this.scaleWidthArray(rawWidthArray);
+      const rawTotal = this.getSumOfArray(rawWidthArray);
+      widthArray =
+        fitEICToPortrait &&
+        this.isWithinEICPortraitFitTolerance(
+          rawTotal,
+          EIC_PORTRAIT_CONTENT_WIDTH
+        )
+        ? this.fitEICTableWidthsToPortrait(rawWidthArray)
+        : this.scaleWidthArray(rawWidthArray);
     }
     //Return undefined for any invalid case
     if (widthArray.length !== colElements.length) {
       return;
     }
     const sum = this.getSumOfArray(widthArray);
+    if (
+      fitEICToPortrait &&
+      this.isWithinEICPortraitFitTolerance(
+        sum,
+        EIC_PORTRAIT_CONTENT_WIDTH
+      )
+    ) {
+      return this.fitEICTableWidthsToPortrait(widthArray);
+    }
     if (sum < 200) {
       totalPixelWidth = sum;
     } else if (sum > 700) {
@@ -3339,6 +3396,65 @@ export class LicitConverter {
       return 0;
     }
     return array.reduce((sum, n) => sum + n, 0);
+  }
+
+  private isWithinEICPortraitFitTolerance(
+    width: number,
+    targetWidth: number
+  ): boolean {
+    return (
+      Number.isFinite(width) &&
+      width > 0 &&
+      Math.abs(width - targetWidth) <=
+        targetWidth * EIC_PORTRAIT_FIT_TOLERANCE
+    );
+  }
+
+  private fitEICTableWidthsToPortrait(widthArray: number[]): number[] {
+    if (widthArray.length === 0) {
+      return widthArray;
+    }
+
+    const totalWidth = this.getSumOfArray(widthArray);
+    if (
+      !this.isWithinEICPortraitFitTolerance(
+        totalWidth,
+        EIC_PORTRAIT_CONTENT_WIDTH
+      )
+    ) {
+      return widthArray;
+    }
+
+    const lastIndex = widthArray.length - 1;
+    const adjustedLastWidth =
+      widthArray[lastIndex] + EIC_PORTRAIT_TABLE_WIDTH - totalWidth;
+    if (!Number.isFinite(adjustedLastWidth) || adjustedLastWidth <= 0) {
+      return widthArray;
+    }
+
+    const fittedWidths = [...widthArray];
+    fittedWidths[lastIndex] = adjustedLastWidth;
+    return fittedWidths;
+  }
+
+  private fitEICImageToPortrait(imageInfo: ImageInfo): ImageInfo {
+    if (
+      !this.isWithinEICPortraitFitTolerance(
+        imageInfo.width,
+        EIC_PORTRAIT_IMAGE_WIDTH
+      ) ||
+      !Number.isFinite(imageInfo.height) ||
+      imageInfo.height <= 0
+    ) {
+      return imageInfo;
+    }
+
+    const scale = EIC_PORTRAIT_IMAGE_WIDTH / imageInfo.width;
+    return {
+      ...imageInfo,
+      width: EIC_PORTRAIT_IMAGE_WIDTH,
+      height: Math.round(imageInfo.height * scale),
+    };
   }
   /**
    * Determines the orientation (portrait or landscape) based on the total width.

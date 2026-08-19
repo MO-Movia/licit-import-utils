@@ -66,6 +66,26 @@ describe('Parser Service - getColWidthArray', () => {
     expect(sum).toBe(861);
   });
 
+  it('fits a near-portrait EIC table by expanding only its last column', () => {
+    addCols(['300px', '300px']);
+
+    expect(converter['getColWidthArray'](table, true)).toEqual([300, 322]);
+  });
+
+  it('fits a near-portrait EIC table by shrinking only its last column', () => {
+    addCols(['320px', '320px']);
+
+    expect(converter['getColWidthArray'](table, true)).toEqual([320, 302]);
+  });
+
+  it('applies percentage rounding to the last EIC table column', () => {
+    addCols(['40%', '20%', '40%']);
+
+    expect(converter['getColWidthArray'](table, true)).toEqual([
+      248, 124, 250,
+    ]);
+  });
+
   it('should return undefined for mixed % and px widths', () => {
     addCols(['50%', '150px']);
     const widths = converter['getColWidthArray'](table);
@@ -321,6 +341,260 @@ describe('Parser Service - getColWidthArray', () => {
 
     expect(content[0].reset).toBeUndefined();
     expect(content[1].reset).toBeFalsy();
+  });
+});
+
+describe('Landscape EIC import structure', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig);
+  });
+
+  function renderEnhancedImage(
+    width: number,
+    height = 300
+  ): LicitDocumentJSON {
+    const figure = document.createElement('div');
+    figure.className = 'chFigureTitle';
+    const image = document.createElement('img');
+    image.src = 'https://example.com/figure.png';
+    image.alt = 'Figure';
+    image.width = width;
+    image.height = height;
+    figure.appendChild(image);
+
+    const licitDocument = new LicitDocumentElement();
+    converter['renderNewFigureTitle'](
+      {
+        node: figure,
+        type: 19,
+        class: figure.className,
+        level: 0,
+        subText: '',
+      },
+      licitDocument
+    );
+    return licitDocument.render();
+  }
+
+  function renderEnhancedTable(
+    widths: number[],
+    rows = '<tr><td><p>First</p></td><td><p>Second</p></td></tr>'
+  ): LicitDocumentJSON {
+    const table = document.createElement('table');
+    const colgroup = document.createElement('colgroup');
+    for (const width of widths) {
+      const col = document.createElement('col');
+      col.style.width = `${width}px`;
+      colgroup.appendChild(col);
+    }
+    table.appendChild(colgroup);
+    table.insertAdjacentHTML('beforeend', `<tbody>${rows}</tbody>`);
+
+    const licitDocument = new LicitDocumentElement();
+    converter['renderEnhancedTable'](
+      {
+        node: table,
+        type: 12,
+        class: '',
+        level: 0,
+        subText: '',
+      },
+      licitDocument
+    );
+    return licitDocument.render();
+  }
+
+  it('wraps an EIC image at the existing 700px landscape boundary', () => {
+    const rendered = renderEnhancedImage(700);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'landscape_section',
+      attrs: { class: 'section-landscape' },
+      content: [
+        {
+          type: 'enhanced_table_figure',
+          attrs: { figureType: 'figure', orientation: 'landscape' },
+        },
+      ],
+    });
+  });
+
+  it('leaves a portrait EIC image at document level', () => {
+    const rendered = renderEnhancedImage(699);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      attrs: { figureType: 'figure', orientation: 'portrait' },
+    });
+  });
+
+  it('fits a near-portrait EIC image and preserves its aspect ratio', () => {
+    const rendered = renderEnhancedImage(640, 320);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      attrs: { figureType: 'figure', orientation: 'portrait' },
+      content: [
+        {
+          type: 'enhanced_table_figure_body',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'image',
+                  attrs: { width: '624', height: '312' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('does not resize an EIC image outside the portrait tolerance', () => {
+    const rendered = renderEnhancedImage(656, 320);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      content: [
+        {
+          content: [
+            {
+              content: [
+                {
+                  attrs: { width: '656', height: '320' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('does not resize an EIC image without a valid height', () => {
+    const rendered = renderEnhancedImage(600, 0);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      content: [
+        {
+          content: [
+            {
+              content: [
+                {
+                  attrs: { width: '600', height: '0' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('wraps an EIC table whose raw column width is greater than 700px', () => {
+    const rendered = renderEnhancedTable([400, 301]);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'landscape_section',
+      attrs: { class: 'section-landscape' },
+      content: [
+        {
+          type: 'enhanced_table_figure',
+          attrs: { figureType: 'table', orientation: 'landscape' },
+        },
+      ],
+    });
+  });
+
+  it('leaves a 700px EIC table in portrait at document level', () => {
+    const rendered = renderEnhancedTable([400, 300]);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      attrs: { figureType: 'table', orientation: 'portrait' },
+    });
+  });
+
+  it('writes the portrait-width difference into the last table column', () => {
+    const rendered = renderEnhancedTable([300, 300]);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      content: [
+        {
+          type: 'enhanced_table_figure_body',
+          content: [
+            {
+              type: 'table',
+              content: [
+                {
+                  content: [
+                    { attrs: { colwidth: [300] } },
+                    { attrs: { colwidth: [322] } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('maps the adjusted last width through a preceding colspan', () => {
+    const rendered = renderEnhancedTable(
+      [200, 200, 200],
+      '<tr><td colspan="2"><p>Spanning</p></td><td><p>Last</p></td></tr>' +
+        '<tr><td><p>One</p></td><td><p>Two</p></td><td><p>Three</p></td></tr>'
+    );
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      content: [
+        {
+          content: [
+            {
+              content: [
+                {
+                  content: [
+                    { attrs: { colwidth: [200, 200] } },
+                    { attrs: { colwidth: [222] } },
+                  ],
+                },
+                {
+                  content: [
+                    { attrs: { colwidth: [200] } },
+                    { attrs: { colwidth: [200] } },
+                    { attrs: { colwidth: [222] } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('treats both five-percent portrait boundaries as inclusive', () => {
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 0.95, 624)
+    ).toBe(true);
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 1.05, 624)
+    ).toBe(true);
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 0.95 - 0.01, 624)
+    ).toBe(false);
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 1.05 + 0.01, 624)
+    ).toBe(false);
   });
 });
 
