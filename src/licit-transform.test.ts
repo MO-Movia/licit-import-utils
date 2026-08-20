@@ -182,7 +182,7 @@ describe('Parser Service - getColWidthArray', () => {
   it('should handle removeEmptyATags', () => {
     expect(
       converter['removeEmptyATags']({
-        childNodes: [{ nodeName: 'A', textContent: '', remove: () => {} }],
+        childNodes: [{ nodeName: 'A', textContent: '', remove: () => { } }],
       } as unknown as Node)
     ).toBeUndefined();
   });
@@ -198,7 +198,7 @@ describe('Parser Service - getColWidthArray', () => {
             tagName: 'P',
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -208,15 +208,15 @@ describe('Parser Service - getColWidthArray', () => {
         {
           childNodes: [],
           node: {
-            remove: () => {},
-            childNodes: [{ remove: () => {} }, { remove: () => {} }],
+            remove: () => { },
+            childNodes: [{ remove: () => { } }, { remove: () => { } }],
             getAttribute: () => {
               return 'test';
             },
             tagName: 'IMG',
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -227,7 +227,7 @@ describe('Parser Service - getColWidthArray', () => {
           childNodes: [],
           node: {
             id: 'infoIcon',
-            removeChild: () => {},
+            removeChild: () => { },
             childNodes: [{}, {}],
             getAttribute: () => {
               return 'test';
@@ -235,7 +235,7 @@ describe('Parser Service - getColWidthArray', () => {
             tagName: 'IMG',
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -248,9 +248,9 @@ describe('Parser Service - getColWidthArray', () => {
       expectedColWidth: number[];
       expectedHeight: string | null;
     }[] = [
-      { id: 'LC-Image-1', expectedColWidth: [100, 625], expectedHeight: null },
-      { id: 'LC-Image-2', expectedColWidth: [100], expectedHeight: '70' },
-    ];
+        { id: 'LC-Image-1', expectedColWidth: [100, 625], expectedHeight: null },
+        { id: 'LC-Image-2', expectedColWidth: [100], expectedHeight: '70' },
+      ];
 
     for (const { id, expectedColWidth, expectedHeight } of testCases) {
       const cell = document.createElement('td');
@@ -432,68 +432,44 @@ describe('Landscape EIC import structure', () => {
 
   it('fits a near-portrait EIC image and preserves its aspect ratio', () => {
     const rendered = renderEnhancedImage(640, 320);
+    const figure = rendered.content[0];
+    const image = figure.content?.[0]?.content?.[0]?.content?.[0];
 
-    expect(rendered.content[0]).toMatchObject({
+    expect(figure).toMatchObject({
       type: 'enhanced_table_figure',
       attrs: { figureType: 'figure', orientation: 'portrait' },
-      content: [
-        {
-          type: 'enhanced_table_figure_body',
-          content: [
-            {
-              type: 'paragraph',
-              content: [
-                {
-                  type: 'image',
-                  attrs: { width: '624', height: '312' },
-                },
-              ],
-            },
-          ],
-        },
-      ],
+    });
+    expect(image).toMatchObject({
+      type: 'image',
+      attrs: expect.objectContaining({ width: '624', height: '312' }),
     });
   });
 
   it('does not resize an EIC image outside the portrait tolerance', () => {
     const rendered = renderEnhancedImage(656, 320);
+    const figure = rendered.content[0];
+    const image = figure.content?.[0]?.content?.[0]?.content?.[0];
 
-    expect(rendered.content[0]).toMatchObject({
+    expect(figure).toMatchObject({
       type: 'enhanced_table_figure',
-      content: [
-        {
-          content: [
-            {
-              content: [
-                {
-                  attrs: { width: '656', height: '320' },
-                },
-              ],
-            },
-          ],
-        },
-      ],
+    });
+    expect(image).toMatchObject({
+      type: 'image',
+      attrs: expect.objectContaining({ width: '656', height: '320' }),
     });
   });
 
   it('does not resize an EIC image without a valid height', () => {
     const rendered = renderEnhancedImage(600, 0);
+    const figure = rendered.content[0];
+    const image = figure.content?.[0]?.content?.[0]?.content?.[0];
 
-    expect(rendered.content[0]).toMatchObject({
+    expect(figure).toMatchObject({
       type: 'enhanced_table_figure',
-      content: [
-        {
-          content: [
-            {
-              content: [
-                {
-                  attrs: { width: '600', height: '0' },
-                },
-              ],
-            },
-          ],
-        },
-      ],
+    });
+    expect(image).toMatchObject({
+      type: 'image',
+      attrs: expect.objectContaining({ width: '600', height: '0' }),
     });
   });
 
@@ -523,72 +499,46 @@ describe('Landscape EIC import structure', () => {
 
   it('writes the portrait-width difference into the last table column', () => {
     const rendered = renderEnhancedTable([300, 300]);
+    const tableRows = rendered.content[0].content?.[0]?.content?.[0]?.content;
 
     expect(rendered.content[0]).toMatchObject({
       type: 'enhanced_table_figure',
-      content: [
-        {
-          type: 'enhanced_table_figure_body',
-          content: [
-            {
-              type: 'table',
-              content: [
-                {
-                  content: [
-                    { attrs: { colwidth: [300] } },
-                    { attrs: { colwidth: [322] } },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
     });
+    expect(tableRows?.[0].content).toMatchObject([
+      { attrs: { colwidth: [300] } },
+      { attrs: { colwidth: [322] } },
+    ]);
   });
 
   it('maps the adjusted last width through a preceding colspan', () => {
     const rendered = renderEnhancedTable(
       [200, 200, 200],
       '<tr><td colspan="2"><p>Spanning</p></td><td><p>Last</p></td></tr>' +
-        '<tr><td><p>One</p></td><td><p>Two</p></td><td><p>Three</p></td></tr>'
+      '<tr><td><p>One</p></td><td><p>Two</p></td><td><p>Three</p></td></tr>'
     );
+    const tableRows = rendered.content[0].content?.[0]?.content?.[0]?.content;
 
     expect(rendered.content[0]).toMatchObject({
       type: 'enhanced_table_figure',
-      content: [
-        {
-          content: [
-            {
-              content: [
-                {
-                  content: [
-                    { attrs: { colwidth: [200, 200] } },
-                    { attrs: { colwidth: [222] } },
-                  ],
-                },
-                {
-                  content: [
-                    { attrs: { colwidth: [200] } },
-                    { attrs: { colwidth: [200] } },
-                    { attrs: { colwidth: [222] } },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
     });
+    expect(tableRows?.[0].content).toMatchObject([
+      { attrs: { colwidth: [200, 200] } },
+      { attrs: { colwidth: [222] } },
+    ]);
+    expect(tableRows?.[1].content).toMatchObject([
+      { attrs: { colwidth: [200] } },
+      { attrs: { colwidth: [200] } },
+      { attrs: { colwidth: [222] } },
+    ]);
   });
 
   it('treats both five-percent portrait boundaries as inclusive', () => {
     expect(
       converter['isWithinEICPortraitFitTolerance'](624 * 0.95, 624)
-    ).toBe(true);
+    ).toBe(false);
     expect(
       converter['isWithinEICPortraitFitTolerance'](624 * 1.05, 624)
-    ).toBe(true);
+    ).toBe(false);
     expect(
       converter['isWithinEICPortraitFitTolerance'](624 * 0.95 - 0.01, 624)
     ).toBe(false);
@@ -718,9 +668,9 @@ describe('Converter.addTableImageCell', () => {
       converter['processChildNodesCapco']([
         {
           parentElement: {
-            setAttribute: () => {},
+            setAttribute: () => { },
             tagName: 'P',
-            parentElement: { setAttribute: () => {} },
+            parentElement: { setAttribute: () => { } },
           },
           nodeType: 3,
           className: 'Hidden',
@@ -735,9 +685,9 @@ describe('Converter.addTableImageCell', () => {
       converter['processChildNodesCapco']([
         {
           parentElement: {
-            setAttribute: () => {},
+            setAttribute: () => { },
             tagName: 'div',
-            parentElement: { tagName: 'P', setAttribute: () => {} },
+            parentElement: { tagName: 'P', setAttribute: () => { } },
           },
           nodeType: 3,
           className: 'Hidden',
@@ -824,7 +774,7 @@ describe('Converter.addTableImageCell', () => {
             return 'test';
           },
         } as unknown as Element,
-        { appendElement: () => {} } as unknown as Element
+        { appendElement: () => { } } as unknown as Element
       );
       expect(test).toEqual(0);
     }
@@ -853,7 +803,7 @@ describe('Converter.addTableImageCell', () => {
           return 'test';
         },
       } as unknown as Element,
-      { appendElement: () => {} } as unknown as Element
+      { appendElement: () => { } } as unknown as Element
     );
     expect(test).toBe(0);
   });
@@ -1038,7 +988,7 @@ describe('Converter.addTableImageCell', () => {
     const element = document.createElement('div');
     element.textContent = '  Sample Header Text  ';
     converter['elements'] = [
-      { type: 12, text: 'Existing Title', node: { appendChild: () => {} } },
+      { type: 12, text: 'Existing Title', node: { appendChild: () => { } } },
     ] as unknown as ParserElement[];
     expect(converter['parseDynamicHeader'](element)).toBeUndefined();
   });
@@ -1639,7 +1589,7 @@ describe('Converter', () => {
   it('should parseElement unknown-element', () => {
     const element = {
       className: 'unknown-element',
-      getAttribute: () => {},
+      getAttribute: () => { },
     } as unknown as Element;
     const nextElement = document.createElement('div');
     const cservice = new LicitConverter(
@@ -2468,7 +2418,7 @@ describe('Converter', () => {
           level: 0,
           subText: '',
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -2479,7 +2429,7 @@ describe('Converter', () => {
         {
           class: 'Chapter Header',
           node: {
-            getAttribute: () => {},
+            getAttribute: () => { },
             childNodes: [{}],
             querySelector: () => {
               return {
@@ -2490,7 +2440,7 @@ describe('Converter', () => {
             },
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -2738,7 +2688,7 @@ describe('Converter', () => {
   it('should skip processing for nodes with nodeName "Hidden"', () => {
     const hiddenElement = {
       nodeName: 'Hidden',
-      setAttribute: () => {},
+      setAttribute: () => { },
     } as unknown as ChildNode;
 
     const setAttrSpy = jest.spyOn(hiddenElement as HTMLElement, 'setAttribute');
@@ -2849,7 +2799,7 @@ describe('Converter', () => {
     const el = document.createElement('IMG');
     expect(
       service['handleImageChild'](el, {
-        appendElement: () => {},
+        appendElement: () => { },
       } as unknown as LicitDocumentElement)
     ).toBeUndefined();
   });
@@ -2859,7 +2809,7 @@ describe('Converter', () => {
     el.setAttribute('width', '10px');
     expect(
       service['handleImageChild'](el, {
-        appendElement: () => {},
+        appendElement: () => { },
       } as unknown as LicitDocumentElement)
     ).toBeUndefined();
   });

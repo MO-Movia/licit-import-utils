@@ -1605,7 +1605,6 @@ export class LicitConverter {
     //Process table header first and then table body. If there is no body then process table header only.
     if (tableHead) {
       this.parseTableContent(
-        e,
         tableHead,
         'th',
         true,
@@ -1616,7 +1615,6 @@ export class LicitConverter {
     }
     if (table) {
       this.parseTableContent(
-        e,
         table,
         'td',
         false,
@@ -1690,7 +1688,6 @@ export class LicitConverter {
     if (table) {
       if (tableHead) {
         this.parseTableContent(
-          e,
           tableHead,
           'th',
           isChapterHeader,
@@ -1701,7 +1698,6 @@ export class LicitConverter {
         );
       }
       this.parseTableContent(
-        e,
         table,
         'td',
         isChapterHeader,
@@ -1912,7 +1908,6 @@ export class LicitConverter {
 
   /**
    * To parse table data
-   * @param e - element
    * @param tableTag - The tag name or identifier of the table.
    * @param querySel Selector for Querying from table row
    * @param isChapterHeader  flag to determine ChapterHeader
@@ -1924,7 +1919,6 @@ export class LicitConverter {
    */
 
   private parseTableContent(
-    _e: ParserElement,
     tableTag: HTMLTableSectionElement,
     querySel: 'td' | 'th',
     isChapterHeader: boolean,
@@ -3316,27 +3310,13 @@ export class LicitConverter {
     if (colElements.length == 0) {
       return;
     }
-    let widthArray: number[] = [];
-    let totalPixelWidth = 619;
-    const rawWidthArray: number[] = [];
-    for (const col of colElements) {
-      //Added fallback if style attribute is not present
-      const width = col.style.width || col.getAttribute('width');
-      // Skip this column if width is empty (no inline style set)
-      if (!width) {
-        return;
-      }
-      if (width.endsWith('%')) {
-        const percent = Number.parseFloat(width);
-        widthArray.push(Math.round((percent / 100) * 620));
-      } else if (width.endsWith('px')) {
-        rawWidthArray.push(Number.parseFloat(width));
-      }
-      // Skip invalid widths
-      else {
-        return;
-      }
+    const parsedWidths = this.parseColumnWidths(colElements);
+    if (!parsedWidths) {
+      return;
     }
+    let { widthArray } = parsedWidths;
+    const { rawWidthArray } = parsedWidths;
+    let totalPixelWidth = 619;
     //Finding scaled widths for individual widths mentioned in px
     if (rawWidthArray.length === colElements.length) {
       const rawTotal = this.getSumOfArray(rawWidthArray);
@@ -3372,6 +3352,32 @@ export class LicitConverter {
     widthArray[0] += totalPixelWidth - sum;
     return widthArray;
   }
+
+  private parseColumnWidths(colElements: HTMLTableColElement[]):
+    | { widthArray: number[]; rawWidthArray: number[] }
+    | undefined {
+    const widthArray: number[] = [];
+    const rawWidthArray: number[] = [];
+
+    for (const col of colElements) {
+      // Fall back to the width attribute when no inline style is present.
+      const width = col.style.width || col.getAttribute('width');
+      if (!width) {
+        return;
+      }
+      if (width.endsWith('%')) {
+        const percent = Number.parseFloat(width);
+        widthArray.push(Math.round((percent / 100) * 620));
+      } else if (width.endsWith('px')) {
+        rawWidthArray.push(Number.parseFloat(width));
+      } else {
+        return;
+      }
+    }
+
+    return { widthArray, rawWidthArray };
+  }
+
   private setCellWidth(
     colSpan: number,
     cellIndex: number,
