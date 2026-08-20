@@ -135,6 +135,7 @@ export function asTransformConfig(config: Partial<TransformConfig> = {}) {
 
 export interface AddCellOptions {
   bgColor: string;
+  backgroundColorOverridden?: boolean;
   isChapterHeader: boolean;
   verAlign: string;
   cellIndex: number;
@@ -150,14 +151,28 @@ interface CellStyleInfo {
   marginBottom?: string;
   marginLeft?: string;
   fontSize?: string;
+  fontSizeOverridden?: boolean;
   fontName?: string;
+  fontNameOverridden?: boolean;
+  fontWeight?: string;
+  fontWeightOverridden?: boolean;
+  fontStyle?: string;
+  fontStyleOverridden?: boolean;
+  textDecoration?: string;
+  textDecorationOverridden?: boolean;
+  textColor?: string;
+  textColorOverridden?: boolean;
+  textAlign?: string;
+  textAlignOverridden?: boolean;
   letterSpacing?: string[];
+  letterSpacingOverridden?: boolean;
   cellWidth?: string;
   paddingTop?: string;
   paddingRight?: string;
   paddingBottom?: string;
   paddingLeft?: string;
   lineHeight?: string;
+  lineHeightOverridden?: boolean;
   borderWidth?: string;
   borderLeftWidth?: string;
   borderRightWidth?: string;
@@ -1905,19 +1920,15 @@ export class LicitConverter {
   ) {
     const rows = tableTag.querySelectorAll('tr');
     let totalTableHeight = 0;
+    const rowspanOccupancy: number[] = [];
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       if (!row) {
         continue;
       }
-      if (
-        !isTransparent &&
-        i == 0 &&
-        !isChapterHeader &&
-        row.cells.length > 1
-      ) {
-        isChapterHeader = true;
-      }
+      const rowIsChapterHeader =
+        isChapterHeader ||
+        (!isTransparent && this.isSemanticTableHeaderRow(row));
       const licitRow = new LicitTableRowElement();
       // ** Capture row height **
       const rowHeight = row.getAttribute('height');
@@ -1926,15 +1937,18 @@ export class LicitConverter {
         licitRow.rowHeight = rowHeight;
         totalTableHeight += Number.parseFloat(rowHeight);
       }
-      const cells = row.querySelectorAll(querySel);
+      const cells = row.querySelectorAll<HTMLTableCellElement>(
+        querySel === 'td' ? 'td, th' : 'th'
+      );
 
       this.parseTableContentInnerLoopHelper(
         cells,
         i,
-        isChapterHeader,
+        rowIsChapterHeader,
         licitRow,
         widthArray,
-        isTransparent
+        isTransparent,
+        rowspanOccupancy
       );
 
       licitTable.addRow(licitRow);
@@ -1945,28 +1959,64 @@ export class LicitConverter {
     }
   }
 
+  private isSemanticTableHeaderRow(row: HTMLTableRowElement): boolean {
+    const cells = Array.from(row.cells);
+    if (cells.length === 0) {
+      return false;
+    }
+
+    const cellsWithContent = cells.filter(
+      (cell) => (cell.textContent ?? '').trim().length > 0
+    );
+    const evidenceCells = cellsWithContent.length > 0 ? cellsWithContent : cells;
+
+    return evidenceCells.every((cell) => {
+      if (cell.tagName.toLowerCase() === 'th') {
+        return true;
+      }
+
+      const styledElements = [cell, ...Array.from(cell.querySelectorAll('p'))];
+      return styledElements.some((element) =>
+        Array.from(element.classList).some((className) =>
+          className.toLowerCase().endsWith('cellheading')
+        )
+      );
+    });
+  }
+
   private parseTableContentInnerLoopHelper(
     cells: NodeListOf<HTMLTableCellElement>,
     _cellIndex: number,
     isChapterHeader: boolean,
     licitRow: LicitTableRowElement,
     widthArray: number[],
-    isTransparent: boolean
+    isTransparent: boolean,
+    rowspanOccupancy: number[] = []
   ) {
+    let logicalColumnIndex = 0;
     for (let j = 0; j < cells.length; j++) {
+      const colspan = Math.max(1, cells[j].colSpan || 1);
+      logicalColumnIndex = this.findNextAvailableColumn(
+        logicalColumnIndex,
+        colspan,
+        rowspanOccupancy
+      );
       //Start RK-Dynamic Cell(2-2 of Chapter Header) BgColor
-      const style = cells[j].getAttribute('style');
-      let bgColor = '';
-      if (style) {
-        const styleVals = style.split(';');
-        for (const val of styleVals) {
-          if (val.startsWith('background-color')) {
-            bgColor = val.split(':')[1];
-          }
-        }
-      } else if (cells[j].getAttribute('fillcolor')) {
-        bgColor = cells[j].getAttribute('fillcolor') ?? '';
-      }
+      const inlineDeclarations = this.parseStyleDeclarations(
+        cells[j].getAttribute('style') ?? ''
+      );
+      const classDeclarations = this.parseStyleDeclarations(
+        cells[j].getAttribute('data-licit-class-style') ?? ''
+      );
+      const inlineBackground =
+        inlineDeclarations.get('background-color') ??
+        inlineDeclarations.get('background');
+      const classBackground =
+        classDeclarations.get('background-color') ??
+        classDeclarations.get('background');
+      const fillColor = cells[j].getAttribute('fillcolor');
+      const bgColor = inlineBackground ?? fillColor ?? classBackground ?? '';
+      const backgroundColorOverridden = Boolean(inlineBackground ?? fillColor);
       //
       let verAlign = 'top';
       if (cells[j].id === 'LC-Center') {
@@ -1975,13 +2025,55 @@ export class LicitConverter {
       //END
       const cellOptions: AddCellOptions = {
         bgColor,
+        backgroundColorOverridden,
         isChapterHeader,
         verAlign,
-        cellIndex: j,
+        // The DOM index is not the table-grid column after a preceding
+        // colspan. Widths must be sliced from the logical column instead.
+        cellIndex: logicalColumnIndex,
         widthArray,
         isTransparent,
       };
       this.addCell(cells[j], licitRow, cellOptions);
+      const rowspan = Math.max(1, cells[j].rowSpan || 1);
+      if (rowspan > 1) {
+        for (
+          let column = logicalColumnIndex;
+          column < logicalColumnIndex + colspan;
+          column++
+        ) {
+          rowspanOccupancy[column] = Math.max(
+            rowspanOccupancy[column] ?? 0,
+            rowspan
+          );
+        }
+      }
+      logicalColumnIndex += colspan;
+    }
+
+    for (let column = 0; column < rowspanOccupancy.length; column++) {
+      rowspanOccupancy[column] = Math.max(
+        0,
+        (rowspanOccupancy[column] ?? 0) - 1
+      );
+    }
+  }
+
+  private findNextAvailableColumn(
+    startColumn: number,
+    colspan: number,
+    rowspanOccupancy: number[]
+  ): number {
+    let column = startColumn;
+    while (true) {
+      const blockedOffset = Array.from(
+        {length: colspan},
+        (_, offset) => offset
+      ).find((offset) => (rowspanOccupancy[column + offset] ?? 0) > 0);
+      if (blockedOffset === undefined) {
+        return column;
+      }
+      column += blockedOffset + 1;
     }
   }
 
@@ -1994,8 +2086,14 @@ export class LicitConverter {
       return;
     }
     let { bgColor } = cellOptions;
-    const { verAlign, cellIndex, widthArray, isTransparent, isChapterHeader } =
-      cellOptions;
+    const {
+      verAlign,
+      cellIndex,
+      widthArray,
+      isTransparent,
+      isChapterHeader,
+      backgroundColorOverridden,
+    } = cellOptions;
     const rowspan = cell.rowSpan;
     const colspan = cell.colSpan;
     let colWidth: [number] | undefined;
@@ -2010,7 +2108,12 @@ export class LicitConverter {
     const cellStyleInfo = this.extractCellStyles(cell);
     if (widthArray?.length > 0) {
       const computedWidth = this.setCellWidth(colspan, cellIndex, widthArray);
-      cellStyleInfo.cellWidth = computedWidth?.join(',');
+      // `colwidth` owns the per-column values. `cellWidth` is rendered as one
+      // CSS width, so a comma-separated array is invalid and can make a
+      // spanning cell disagree with its colgroup.
+      if (computedWidth.length > 0) {
+        cellStyleInfo.cellWidth = `${this.getSumOfArray(computedWidth)}px`;
+      }
     }
 
     if (cell.childNodes?.length <= 0) {
@@ -2022,7 +2125,8 @@ export class LicitConverter {
         verAlign,
         isChapterHeader,
         isTransparent,
-        cellStyleInfo
+        cellStyleInfo,
+        backgroundColorOverridden
       );
     } else if (
       '' === text &&
@@ -2049,7 +2153,8 @@ export class LicitConverter {
         verAlign,
         isChapterHeader,
         isTransparent,
-        cellStyleInfo
+        cellStyleInfo,
+        backgroundColorOverridden
       );
     }
     if (!licitCell) {
@@ -2072,26 +2177,103 @@ export class LicitConverter {
   private extractCellStyles(cell: HTMLTableCellElement): CellStyleInfo {
     const styleInfo: CellStyleInfo = {};
 
-    const cellStyle = cell.getAttribute('style');
-    if (cellStyle) {
-      this.extractCellBorderStyles(cellStyle, styleInfo);
-    }
+    // Materialized stylesheet declarations establish the base cell style.
+    // Inline declarations are applied second to retain normal CSS precedence.
+    this.extractCellBorderStyles(
+      cell.getAttribute('data-licit-class-style') ?? '',
+      styleInfo
+    );
+    this.extractCellBorderStyles(
+      cell.getAttribute('style') ?? '',
+      styleInfo
+    );
 
-    // Capture class and ID from the paragraph inside the cell
-    const paragraph = cell.querySelector('p');
-    if (paragraph) {
-      if (paragraph.className) {
-        styleInfo.className = paragraph.className;
-      }
-      if (paragraph.id) {
-        styleInfo.id = paragraph.id;
+    const paragraphs = Array.from(cell.querySelectorAll('p'));
+    const paragraphStyles = paragraphs.map((paragraph) => {
+      const paragraphStyle: CellStyleInfo = {};
+      this.extractParagraphStyles(
+        paragraph.getAttribute('data-licit-class-style') ?? '',
+        paragraphStyle,
+        false
+      );
+      this.extractParagraphStyles(
+        paragraph.getAttribute('style') ?? '',
+        paragraphStyle,
+        true
+      );
+      return paragraphStyle;
+    });
+
+    const paragraph = paragraphs[0];
+    const firstParagraphStyle = paragraphStyles[0];
+    if (paragraph && firstParagraphStyle) {
+      Object.assign(
+        styleInfo,
+        Object.fromEntries(
+          Object.entries(firstParagraphStyle).filter(
+            ([, value]) => value !== undefined
+          )
+        )
+      );
+      styleInfo.className = paragraph.className || undefined;
+      styleInfo.id = paragraph.id || undefined;
+
+      const fontSizes = paragraphStyles.map((style) => style.fontSize ?? '');
+      if (!fontSizes[0] || fontSizes.some((value) => value !== fontSizes[0])) {
+        delete styleInfo.fontSize;
+        delete styleInfo.fontSizeOverridden;
+      } else {
+        styleInfo.fontSizeOverridden = paragraphStyles.every(
+          (style) => style.fontSizeOverridden === true
+        );
       }
 
-      // Extract style attributes from the paragraph's style attribute
-      const style = paragraph.getAttribute('style');
-      if (style) {
-        this.extractParagraphStyles(style, styleInfo);
+      const fontNames = paragraphStyles.map((style) => style.fontName ?? '');
+      if (!fontNames[0] || fontNames.some((value) => value !== fontNames[0])) {
+        delete styleInfo.fontName;
+        delete styleInfo.fontNameOverridden;
+      } else {
+        styleInfo.fontNameOverridden = paragraphStyles.every(
+          (style) => style.fontNameOverridden === true
+        );
       }
+
+      this.retainUniformParagraphStyle(
+        styleInfo,
+        paragraphStyles,
+        'fontWeight',
+        'fontWeightOverridden'
+      );
+      this.retainUniformParagraphStyle(
+        styleInfo,
+        paragraphStyles,
+        'fontStyle',
+        'fontStyleOverridden'
+      );
+      this.retainUniformParagraphStyle(
+        styleInfo,
+        paragraphStyles,
+        'textDecoration',
+        'textDecorationOverridden'
+      );
+      this.retainUniformParagraphStyle(
+        styleInfo,
+        paragraphStyles,
+        'textColor',
+        'textColorOverridden'
+      );
+      this.retainUniformParagraphStyle(
+        styleInfo,
+        paragraphStyles,
+        'textAlign',
+        'textAlignOverridden'
+      );
+      this.retainUniformParagraphStyle(
+        styleInfo,
+        paragraphStyles,
+        'lineHeight',
+        'lineHeightOverridden'
+      );
 
       // Extract letter-spacing for non-breaking spaces
       const spans = paragraph.querySelectorAll('span[style*="letter-spacing"]');
@@ -2104,77 +2286,50 @@ export class LicitConverter {
     style: string,
     styleInfo: CellStyleInfo,
   ): void {
-    const styleProps = style.split(';');
-    for (const prop of styleProps) {
-      const trimmedProp = prop.trim();
-      if (!trimmedProp) {
-        continue;
-      }
+    const declarations = this.parseStyleDeclarations(style);
+    const paddingBox = this.expandBoxShorthand(declarations.get('padding'));
 
-      const separatorIndex = trimmedProp.indexOf(':');
-      if (separatorIndex === -1) {
-        continue;
-      }
+    styleInfo.paddingTop =
+      declarations.get('padding-top') ?? paddingBox.top ?? styleInfo.paddingTop;
+    styleInfo.paddingRight =
+      declarations.get('padding-right') ??
+      paddingBox.right ??
+      styleInfo.paddingRight;
+    styleInfo.paddingBottom =
+      declarations.get('padding-bottom') ??
+      paddingBox.bottom ??
+      styleInfo.paddingBottom;
+    styleInfo.paddingLeft =
+      declarations.get('padding-left') ??
+      paddingBox.left ??
+      styleInfo.paddingLeft;
 
-      const cssProp = trimmedProp.slice(0, separatorIndex).trim().toLowerCase();
-      const cssValue = trimmedProp.slice(separatorIndex + 1).trim();
-
-      switch (cssProp) {
-        case 'border-left-width':
-          styleInfo.borderLeftWidth = cssValue;
-          break;
-        case 'border-right-width':
-          styleInfo.borderRightWidth = cssValue;
-          break;
-        case 'border-top-width':
-          styleInfo.borderTopWidth = cssValue;
-          break;
-        case 'border-bottom-width':
-          styleInfo.borderBottomWidth = cssValue;
-          break;
-        case 'border-left-color':
-          styleInfo.borderLeftColor = cssValue;
-          break;
-        case 'border-right-color':
-          styleInfo.borderRightColor = cssValue;
-          break;
-        case 'border-top-color':
-          styleInfo.borderTopColor = cssValue;
-          break;
-        case 'border-bottom-color':
-          styleInfo.borderBottomColor = cssValue;
-          break;
-        case 'border-left-style':
-          styleInfo.borderLeftStyle = cssValue;
-          break;
-        case 'border-right-style':
-          styleInfo.borderRightStyle = cssValue;
-          break;
-        case 'border-top-style':
-          styleInfo.borderTopStyle = cssValue;
-          break;
-        case 'border-bottom-style':
-          styleInfo.borderBottomStyle = cssValue;
-          break;
-        case 'vertical-align':
-          styleInfo.verticalAlign = cssValue;
-          break;
-        case 'padding-bottom':
-          styleInfo.paddingBottom = cssValue;
-          break;
-        case 'padding-top':
-          styleInfo.paddingTop = cssValue;
-          break;
-        case 'padding-right':
-          styleInfo.paddingRight = cssValue;
-          break;
-        case 'padding-left':
-          styleInfo.paddingLeft = cssValue;
-          break;
-        default:
-          break;
-      }
-    }
+    styleInfo.borderLeftWidth =
+      declarations.get('border-left-width') ?? styleInfo.borderLeftWidth;
+    styleInfo.borderRightWidth =
+      declarations.get('border-right-width') ?? styleInfo.borderRightWidth;
+    styleInfo.borderTopWidth =
+      declarations.get('border-top-width') ?? styleInfo.borderTopWidth;
+    styleInfo.borderBottomWidth =
+      declarations.get('border-bottom-width') ?? styleInfo.borderBottomWidth;
+    styleInfo.borderLeftColor =
+      declarations.get('border-left-color') ?? styleInfo.borderLeftColor;
+    styleInfo.borderRightColor =
+      declarations.get('border-right-color') ?? styleInfo.borderRightColor;
+    styleInfo.borderTopColor =
+      declarations.get('border-top-color') ?? styleInfo.borderTopColor;
+    styleInfo.borderBottomColor =
+      declarations.get('border-bottom-color') ?? styleInfo.borderBottomColor;
+    styleInfo.borderLeftStyle =
+      declarations.get('border-left-style') ?? styleInfo.borderLeftStyle;
+    styleInfo.borderRightStyle =
+      declarations.get('border-right-style') ?? styleInfo.borderRightStyle;
+    styleInfo.borderTopStyle =
+      declarations.get('border-top-style') ?? styleInfo.borderTopStyle;
+    styleInfo.borderBottomStyle =
+      declarations.get('border-bottom-style') ?? styleInfo.borderBottomStyle;
+    styleInfo.verticalAlign =
+      declarations.get('vertical-align') ?? styleInfo.verticalAlign;
   }
 
   /**
@@ -2185,20 +2340,8 @@ export class LicitConverter {
    */
   private extractParagraphStyles(
     style: string,
-    styleInfo: {
-      marginTop?: string;
-      marginRight?: string;
-      marginBottom?: string;
-      marginLeft?: string;
-      fontSize?: string;
-      fontName?: string;
-      paddingTop?: string;
-      paddingRight?: string;
-      paddingBottom?: string;
-      paddingLeft?: string;
-      lineHeight?: string;
-      borderWidth?: string;
-    }
+    styleInfo: CellStyleInfo,
+    overridden = true
   ): void {
     const declarations = this.parseStyleDeclarations(style);
     const marginBox = this.expandBoxShorthand(declarations.get('margin'));
@@ -2232,10 +2375,81 @@ export class LicitConverter {
       declarations.get('padding-left') ??
       paddingBox.left ??
       styleInfo.paddingLeft;
-    styleInfo.fontSize = declarations.get('font-size') ?? styleInfo.fontSize;
-    styleInfo.fontName = declarations.get('font-family') ?? styleInfo.fontName;
-    styleInfo.lineHeight = declarations.get('line-height') ?? styleInfo.lineHeight;
+    const fontSize = declarations.get('font-size');
+    if (fontSize) {
+      styleInfo.fontSize = fontSize;
+      styleInfo.fontSizeOverridden = overridden;
+    }
+    const fontName = declarations.get('font-family');
+    if (fontName) {
+      styleInfo.fontName = fontName;
+      styleInfo.fontNameOverridden = overridden;
+    }
+    const lineHeight = declarations.get('line-height');
+    if (lineHeight) {
+      styleInfo.lineHeight = lineHeight;
+      styleInfo.lineHeightOverridden = overridden;
+    }
+    const fontWeight = declarations.get('font-weight');
+    if (fontWeight) {
+      styleInfo.fontWeight = fontWeight;
+      styleInfo.fontWeightOverridden = overridden;
+    }
+    const fontStyle = declarations.get('font-style');
+    if (fontStyle) {
+      styleInfo.fontStyle = fontStyle;
+      styleInfo.fontStyleOverridden = overridden;
+    }
+    const textDecoration = declarations.get('text-decoration');
+    if (textDecoration) {
+      styleInfo.textDecoration = textDecoration;
+      styleInfo.textDecorationOverridden = overridden;
+    }
+    const textColor = declarations.get('color');
+    if (textColor) {
+      styleInfo.textColor = textColor;
+      styleInfo.textColorOverridden = overridden;
+    }
+    const textAlign = declarations.get('text-align');
+    if (textAlign) {
+      styleInfo.textAlign = textAlign;
+      styleInfo.textAlignOverridden = overridden;
+    }
+    const letterSpacing = declarations.get('letter-spacing');
+    if (letterSpacing) {
+      styleInfo.letterSpacing = [letterSpacing];
+      styleInfo.letterSpacingOverridden = overridden;
+    }
     styleInfo.borderWidth = declarations.get('border-width') ?? styleInfo.borderWidth;
+  }
+
+  private retainUniformParagraphStyle(
+    target: CellStyleInfo,
+    sources: CellStyleInfo[],
+    valueKey:
+      | 'fontWeight'
+      | 'fontStyle'
+      | 'textDecoration'
+      | 'textColor'
+      | 'textAlign'
+      | 'lineHeight',
+    overrideKey:
+      | 'fontWeightOverridden'
+      | 'fontStyleOverridden'
+      | 'textDecorationOverridden'
+      | 'textColorOverridden'
+      | 'textAlignOverridden'
+      | 'lineHeightOverridden'
+  ): void {
+    const firstValue = sources[0]?.[valueKey];
+    if (!firstValue || sources.some((source) => source[valueKey] !== firstValue)) {
+      delete target[valueKey];
+      delete target[overrideKey];
+      return;
+    }
+    target[overrideKey] = sources.every(
+      (source) => source[overrideKey] === true
+    );
   }
 
   private parseStyleDeclarations(style: string): Map<string, string> {
