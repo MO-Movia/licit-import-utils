@@ -2887,13 +2887,15 @@ export class LicitTableCellParaElement extends LicitElement {
   cellStyleInfo?: CellStyleInfo;
   constructor(
     node: HTMLElement,
-    bgColor?: string,
-    colwidth?: [number],
-    vericalAlignment?: string,
-    isTableHeader?: boolean,
-    isTransparentTable?: boolean,
-    cellStyleInfo?: CellStyleInfo,
-    backgroundColorOverridden?: boolean,
+    ...[
+      bgColor,
+      colwidth,
+      vericalAlignment,
+      isTableHeader,
+      isTransparentTable,
+      cellStyleInfo,
+      backgroundColorOverridden,
+    ]: [string?, [number]?, string?, boolean?, boolean?, CellStyleInfo?, boolean?]
   ) {
     super();
     this.bgColor = bgColor ?? '';
@@ -3128,7 +3130,7 @@ export class LicitTableCellParaElement extends LicitElement {
     const style = paragraphNode.getAttribute('style') ?? '';
     const declarations = this.parseStyleDeclarations(style);
     const classDeclarations = this.parseStyleDeclarations(
-      paragraphNode.getAttribute('data-licit-class-style') ?? ''
+      paragraphNode.dataset.licitClassStyle ?? ''
     );
     const marginBox = this.expandBoxShorthand(declarations.get('margin'));
     const paddingBox = this.expandBoxShorthand(declarations.get('padding'));

@@ -1994,8 +1994,8 @@ export class LicitConverter {
     rowspanOccupancy: number[] = []
   ) {
     let logicalColumnIndex = 0;
-    for (let j = 0; j < cells.length; j++) {
-      const colspan = Math.max(1, cells[j].colSpan || 1);
+    for (const cell of Array.from(cells)) {
+      const colspan = Math.max(1, cell.colSpan || 1);
       logicalColumnIndex = this.findNextAvailableColumn(
         logicalColumnIndex,
         colspan,
@@ -2003,10 +2003,10 @@ export class LicitConverter {
       );
       //Start RK-Dynamic Cell(2-2 of Chapter Header) BgColor
       const inlineDeclarations = this.parseStyleDeclarations(
-        cells[j].getAttribute('style') ?? ''
+        cell.getAttribute('style') ?? ''
       );
       const classDeclarations = this.parseStyleDeclarations(
-        cells[j].getAttribute('data-licit-class-style') ?? ''
+        cell.dataset.licitClassStyle ?? ''
       );
       const inlineBackground =
         inlineDeclarations.get('background-color') ??
@@ -2014,12 +2014,12 @@ export class LicitConverter {
       const classBackground =
         classDeclarations.get('background-color') ??
         classDeclarations.get('background');
-      const fillColor = cells[j].getAttribute('fillcolor');
+      const fillColor = cell.getAttribute('fillcolor');
       const bgColor = inlineBackground ?? fillColor ?? classBackground ?? '';
       const backgroundColorOverridden = Boolean(inlineBackground ?? fillColor);
       //
       let verAlign = 'top';
-      if (cells[j].id === 'LC-Center') {
+      if (cell.id === 'LC-Center') {
         verAlign = 'middle';
       }
       //END
@@ -2034,8 +2034,8 @@ export class LicitConverter {
         widthArray,
         isTransparent,
       };
-      this.addCell(cells[j], licitRow, cellOptions);
-      const rowspan = Math.max(1, cells[j].rowSpan || 1);
+      this.addCell(cell, licitRow, cellOptions);
+      const rowspan = Math.max(1, cell.rowSpan || 1);
       if (rowspan > 1) {
         for (
           let column = logicalColumnIndex;
@@ -2180,7 +2180,7 @@ export class LicitConverter {
     // Materialized stylesheet declarations establish the base cell style.
     // Inline declarations are applied second to retain normal CSS precedence.
     this.extractCellBorderStyles(
-      cell.getAttribute('data-licit-class-style') ?? '',
+      cell.dataset.licitClassStyle ?? '',
       styleInfo
     );
     this.extractCellBorderStyles(
@@ -2192,7 +2192,7 @@ export class LicitConverter {
     const paragraphStyles = paragraphs.map((paragraph) => {
       const paragraphStyle: CellStyleInfo = {};
       this.extractParagraphStyles(
-        paragraph.getAttribute('data-licit-class-style') ?? '',
+        paragraph.dataset.licitClassStyle ?? '',
         paragraphStyle,
         false
       );
