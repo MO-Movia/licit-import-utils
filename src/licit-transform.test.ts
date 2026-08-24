@@ -11,12 +11,12 @@ import { asTransformConfig, LicitConverter } from './licit-transform';
 import type {
   LicitDocumentJSON,
   LicitElement,
-  LicitTableRowElement,
 } from './licit-elements';
 import {
   LicitBulletListElement,
   LicitDocumentElement,
   LicitTableElement,
+  LicitTableRowElement,
   LicitTableCellImageElement,
   LicitTableCellParagraph,
 } from './licit-elements';
@@ -65,6 +65,26 @@ describe('Parser Service - getColWidthArray', () => {
     const widths = converter['getColWidthArray'](table);
     const sum = widths?.reduce((count, n) => count + n, 0) ?? 0;
     expect(sum).toBe(861);
+  });
+
+  it('fits a near-portrait EIC table by expanding only its last column', () => {
+    addCols(['300px', '300px']);
+
+    expect(converter['getColWidthArray'](table, true)).toEqual([300, 322]);
+  });
+
+  it('fits a near-portrait EIC table by shrinking only its last column', () => {
+    addCols(['320px', '320px']);
+
+    expect(converter['getColWidthArray'](table, true)).toEqual([320, 302]);
+  });
+
+  it('applies percentage rounding to the last EIC table column', () => {
+    addCols(['40%', '20%', '40%']);
+
+    expect(converter['getColWidthArray'](table, true)).toEqual([
+      248, 124, 250,
+    ]);
   });
 
   it('should return undefined for mixed % and px widths', () => {
@@ -163,7 +183,7 @@ describe('Parser Service - getColWidthArray', () => {
   it('should handle removeEmptyATags', () => {
     expect(
       converter['removeEmptyATags']({
-        childNodes: [{ nodeName: 'A', textContent: '', remove: () => {} }],
+        childNodes: [{ nodeName: 'A', textContent: '', remove: () => { } }],
       } as unknown as Node)
     ).toBeUndefined();
   });
@@ -179,7 +199,7 @@ describe('Parser Service - getColWidthArray', () => {
             tagName: 'P',
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -189,15 +209,15 @@ describe('Parser Service - getColWidthArray', () => {
         {
           childNodes: [],
           node: {
-            remove: () => {},
-            childNodes: [{ remove: () => {} }, { remove: () => {} }],
+            remove: () => { },
+            childNodes: [{ remove: () => { } }, { remove: () => { } }],
             getAttribute: () => {
               return 'test';
             },
             tagName: 'IMG',
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -208,7 +228,7 @@ describe('Parser Service - getColWidthArray', () => {
           childNodes: [],
           node: {
             id: 'infoIcon',
-            removeChild: () => {},
+            removeChild: () => { },
             childNodes: [{}, {}],
             getAttribute: () => {
               return 'test';
@@ -216,7 +236,7 @@ describe('Parser Service - getColWidthArray', () => {
             tagName: 'IMG',
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -229,9 +249,9 @@ describe('Parser Service - getColWidthArray', () => {
       expectedColWidth: number[];
       expectedHeight: string | null;
     }[] = [
-      { id: 'LC-Image-1', expectedColWidth: [100, 625], expectedHeight: null },
-      { id: 'LC-Image-2', expectedColWidth: [100], expectedHeight: '70' },
-    ];
+        { id: 'LC-Image-1', expectedColWidth: [100, 625], expectedHeight: null },
+        { id: 'LC-Image-2', expectedColWidth: [100], expectedHeight: '70' },
+      ];
 
     for (const { id, expectedColWidth, expectedHeight } of testCases) {
       const cell = document.createElement('td');
@@ -322,6 +342,210 @@ describe('Parser Service - getColWidthArray', () => {
 
     expect(content[0].reset).toBeUndefined();
     expect(content[1].reset).toBeFalsy();
+  });
+});
+
+describe('Landscape EIC import structure', () => {
+  let converter: LicitConverter;
+
+  beforeEach(() => {
+    converter = new LicitConverter(testConfig);
+  });
+
+  function renderEnhancedImage(
+    width: number,
+    height = 300
+  ): LicitDocumentJSON {
+    const figure = document.createElement('div');
+    figure.className = 'chFigureTitle';
+    const image = document.createElement('img');
+    image.src = 'https://example.com/figure.png';
+    image.alt = 'Figure';
+    image.width = width;
+    image.height = height;
+    figure.appendChild(image);
+
+    const licitDocument = new LicitDocumentElement();
+    converter['renderNewFigureTitle'](
+      {
+        node: figure,
+        type: 19,
+        class: figure.className,
+        level: 0,
+        subText: '',
+      },
+      licitDocument
+    );
+    return licitDocument.render();
+  }
+
+  function renderEnhancedTable(
+    widths: number[],
+    rows = '<tr><td><p>First</p></td><td><p>Second</p></td></tr>'
+  ): LicitDocumentJSON {
+    const table = document.createElement('table');
+    const colgroup = document.createElement('colgroup');
+    for (const width of widths) {
+      const col = document.createElement('col');
+      col.style.width = `${width}px`;
+      colgroup.appendChild(col);
+    }
+    table.appendChild(colgroup);
+    table.insertAdjacentHTML('beforeend', `<tbody>${rows}</tbody>`);
+
+    const licitDocument = new LicitDocumentElement();
+    converter['renderEnhancedTable'](
+      {
+        node: table,
+        type: 12,
+        class: '',
+        level: 0,
+        subText: '',
+      },
+      licitDocument
+    );
+    return licitDocument.render();
+  }
+
+  it('wraps an EIC image at the existing 700px landscape boundary', () => {
+    const rendered = renderEnhancedImage(700);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'landscape_section',
+      attrs: { class: 'section-landscape' },
+      content: [
+        {
+          type: 'enhanced_table_figure',
+          attrs: { figureType: 'figure', orientation: 'landscape' },
+        },
+      ],
+    });
+  });
+
+  it('leaves a portrait EIC image at document level', () => {
+    const rendered = renderEnhancedImage(699);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      attrs: { figureType: 'figure', orientation: 'portrait' },
+    });
+  });
+
+  it('fits a near-portrait EIC image and preserves its aspect ratio', () => {
+    const rendered = renderEnhancedImage(640, 320);
+    const figure = rendered.content[0];
+    const image = figure.content?.[0]?.content?.[0]?.content?.[0];
+
+    expect(figure).toMatchObject({
+      type: 'enhanced_table_figure',
+      attrs: { figureType: 'figure', orientation: 'portrait' },
+    });
+    expect(image).toMatchObject({
+      type: 'image',
+      attrs: expect.objectContaining({ width: '624', height: '312' }),
+    });
+  });
+
+  it('does not resize an EIC image outside the portrait tolerance', () => {
+    const rendered = renderEnhancedImage(656, 320);
+    const figure = rendered.content[0];
+    const image = figure.content?.[0]?.content?.[0]?.content?.[0];
+
+    expect(figure).toMatchObject({
+      type: 'enhanced_table_figure',
+    });
+    expect(image).toMatchObject({
+      type: 'image',
+      attrs: expect.objectContaining({ width: '656', height: '320' }),
+    });
+  });
+
+  it('does not resize an EIC image without a valid height', () => {
+    const rendered = renderEnhancedImage(600, 0);
+    const figure = rendered.content[0];
+    const image = figure.content?.[0]?.content?.[0]?.content?.[0];
+
+    expect(figure).toMatchObject({
+      type: 'enhanced_table_figure',
+    });
+    expect(image).toMatchObject({
+      type: 'image',
+      attrs: expect.objectContaining({ width: '600', height: '0' }),
+    });
+  });
+
+  it('wraps an EIC table whose raw column width is greater than 700px', () => {
+    const rendered = renderEnhancedTable([400, 301]);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'landscape_section',
+      attrs: { class: 'section-landscape' },
+      content: [
+        {
+          type: 'enhanced_table_figure',
+          attrs: { figureType: 'table', orientation: 'landscape' },
+        },
+      ],
+    });
+  });
+
+  it('leaves a 700px EIC table in portrait at document level', () => {
+    const rendered = renderEnhancedTable([400, 300]);
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+      attrs: { figureType: 'table', orientation: 'portrait' },
+    });
+  });
+
+  it('writes the portrait-width difference into the last table column', () => {
+    const rendered = renderEnhancedTable([300, 300]);
+    const tableRows = rendered.content[0].content?.[0]?.content?.[0]?.content;
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+    });
+    expect(tableRows?.[0].content).toMatchObject([
+      { attrs: { colwidth: [300] } },
+      { attrs: { colwidth: [322] } },
+    ]);
+  });
+
+  it('maps the adjusted last width through a preceding colspan', () => {
+    const rendered = renderEnhancedTable(
+      [200, 200, 200],
+      '<tr><td colspan="2"><p>Spanning</p></td><td><p>Last</p></td></tr>' +
+      '<tr><td><p>One</p></td><td><p>Two</p></td><td><p>Three</p></td></tr>'
+    );
+    const tableRows = rendered.content[0].content?.[0]?.content?.[0]?.content;
+
+    expect(rendered.content[0]).toMatchObject({
+      type: 'enhanced_table_figure',
+    });
+    expect(tableRows?.[0].content).toMatchObject([
+      { attrs: { colwidth: [200, 200] } },
+      { attrs: { colwidth: [222] } },
+    ]);
+    expect(tableRows?.[1].content).toMatchObject([
+      { attrs: { colwidth: [200] } },
+      { attrs: { colwidth: [200] } },
+      { attrs: { colwidth: [222] } },
+    ]);
+  });
+
+  it('treats both five-percent portrait boundaries as inclusive', () => {
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 0.95, 624)
+    ).toBe(false);
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 1.05, 624)
+    ).toBe(false);
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 0.95 - 0.01, 624)
+    ).toBe(false);
+    expect(
+      converter['isWithinEICPortraitFitTolerance'](624 * 1.05 + 0.01, 624)
+    ).toBe(false);
   });
 });
 
@@ -445,9 +669,9 @@ describe('Converter.addTableImageCell', () => {
       converter['processChildNodesCapco']([
         {
           parentElement: {
-            setAttribute: () => {},
+            setAttribute: () => { },
             tagName: 'P',
-            parentElement: { setAttribute: () => {} },
+            parentElement: { setAttribute: () => { } },
           },
           nodeType: 3,
           className: 'Hidden',
@@ -462,9 +686,9 @@ describe('Converter.addTableImageCell', () => {
       converter['processChildNodesCapco']([
         {
           parentElement: {
-            setAttribute: () => {},
+            setAttribute: () => { },
             tagName: 'div',
-            parentElement: { tagName: 'P', setAttribute: () => {} },
+            parentElement: { tagName: 'P', setAttribute: () => { } },
           },
           nodeType: 3,
           className: 'Hidden',
@@ -551,7 +775,7 @@ describe('Converter.addTableImageCell', () => {
             return 'test';
           },
         } as unknown as Element,
-        { appendElement: () => {} } as unknown as Element
+        { appendElement: () => { } } as unknown as Element
       );
       expect(test).toEqual(0);
     }
@@ -580,7 +804,7 @@ describe('Converter.addTableImageCell', () => {
           return 'test';
         },
       } as unknown as Element,
-      { appendElement: () => {} } as unknown as Element
+      { appendElement: () => { } } as unknown as Element
     );
     expect(test).toBe(0);
   });
@@ -765,7 +989,7 @@ describe('Converter.addTableImageCell', () => {
     const element = document.createElement('div');
     element.textContent = '  Sample Header Text  ';
     converter['elements'] = [
-      { type: 12, text: 'Existing Title', node: { appendChild: () => {} } },
+      { type: 12, text: 'Existing Title', node: { appendChild: () => { } } },
     ] as unknown as ParserElement[];
     expect(converter['parseDynamicHeader'](element)).toBeUndefined();
   });
@@ -1366,7 +1590,7 @@ describe('Converter', () => {
   it('should parseElement unknown-element', () => {
     const element = {
       className: 'unknown-element',
-      getAttribute: () => {},
+      getAttribute: () => { },
     } as unknown as Element;
     const nextElement = document.createElement('div');
     const cservice = new LicitConverter(
@@ -2195,7 +2419,7 @@ describe('Converter', () => {
           level: 0,
           subText: '',
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -2206,7 +2430,7 @@ describe('Converter', () => {
         {
           class: 'Chapter Header',
           node: {
-            getAttribute: () => {},
+            getAttribute: () => { },
             childNodes: [{}],
             querySelector: () => {
               return {
@@ -2217,7 +2441,7 @@ describe('Converter', () => {
             },
           },
         } as unknown as ParserElement,
-        { appendElement: () => {} } as unknown as LicitDocumentElement
+        { appendElement: () => { } } as unknown as LicitDocumentElement
       )
     ).toBeUndefined();
   });
@@ -2465,7 +2689,7 @@ describe('Converter', () => {
   it('should skip processing for nodes with nodeName "Hidden"', () => {
     const hiddenElement = {
       nodeName: 'Hidden',
-      setAttribute: () => {},
+      setAttribute: () => { },
     } as unknown as ChildNode;
 
     const setAttrSpy = jest.spyOn(hiddenElement as HTMLElement, 'setAttribute');
@@ -2576,7 +2800,7 @@ describe('Converter', () => {
     const el = document.createElement('IMG');
     expect(
       service['handleImageChild'](el, {
-        appendElement: () => {},
+        appendElement: () => { },
       } as unknown as LicitDocumentElement)
     ).toBeUndefined();
   });
@@ -2586,7 +2810,7 @@ describe('Converter', () => {
     el.setAttribute('width', '10px');
     expect(
       service['handleImageChild'](el, {
-        appendElement: () => {},
+        appendElement: () => { },
       } as unknown as LicitDocumentElement)
     ).toBeUndefined();
   });
@@ -3647,7 +3871,6 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
     const licitTable = new LicitTableElement();
 
     converter['parseTableContent'](
-      {} as ParserElement,
       tbody,
       'td',
       false,
@@ -3672,7 +3895,6 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
     const licitTable = new LicitTableElement();
 
     converter['parseTableContent'](
-      {} as ParserElement,
       tbody,
       'td',
       false,

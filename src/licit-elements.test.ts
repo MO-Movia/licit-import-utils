@@ -12,6 +12,7 @@ import {
   LicitEnhancedTableFigureBodyElement,
   LicitHeaderElement,
   LicitImageElement,
+  LicitLandscapeSectionElement,
   LicitNewImageElement,
   LicitParagraphElement,
   NewLicitParagraphElement,
@@ -96,6 +97,31 @@ describe('LicitDocumentElement', () => {
     const renderedDocument: LicitDocumentJSON = licitDocumentElement.render();
     expect(renderedDocument.type).toBe('doc');
     expect(renderedDocument.content.length).toBe(2);
+  });
+});
+
+describe('LicitLandscapeSectionElement', () => {
+  it('wraps a block in the landscape section structure used by Licit', () => {
+    const child = {
+      getBaseElement: jest.fn(),
+      render: jest.fn().mockReturnValue({
+        type: 'enhanced_table_figure',
+        attrs: { orientation: 'landscape' },
+      }),
+    } as unknown as LicitElement;
+
+    expect(new LicitLandscapeSectionElement(child).render()).toEqual({
+      type: 'landscape_section',
+      attrs: {
+        class: 'section-landscape',
+      },
+      content: [
+        {
+          type: 'enhanced_table_figure',
+          attrs: { orientation: 'landscape' },
+        },
+      ],
+    });
   });
 });
 

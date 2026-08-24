@@ -412,7 +412,12 @@ function mergeMaterializedStyle(
     }
   }
   for (let index = 0; index < declaration.length; index++) {
-    const property = declaration.item(index).toLowerCase();
+    const property = (
+      declaration.item?.(index) ?? declaration[index]
+    )?.toLowerCase();
+    if (!property) {
+      continue;
+    }
     values.set(property, declaration.getPropertyValue(property).trim());
   }
   element.setAttribute(

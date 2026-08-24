@@ -270,6 +270,14 @@ export interface LicitDocumentJSON extends LicitElementJSON {
   content: LicitElementJSON[];
 }
 
+interface LicitLandscapeSectionJSON extends LicitElementJSON {
+  type: 'landscape_section';
+  attrs: {
+    class: 'section-landscape';
+  };
+  content: LicitElementJSON[];
+}
+
 export class LicitDocumentElement extends LicitElement {
   getBaseElement(): LicitDocumentJSON {
     return {
@@ -296,6 +304,28 @@ export class LicitDocumentElement extends LicitElement {
       element.content.push(child.render());
     }
 
+    return element;
+  }
+}
+
+export class LicitLandscapeSectionElement extends LicitElement {
+  constructor(private readonly child: LicitElement) {
+    super();
+  }
+
+  getBaseElement(): LicitLandscapeSectionJSON {
+    return {
+      type: 'landscape_section',
+      attrs: {
+        class: 'section-landscape',
+      },
+      content: [],
+    };
+  }
+
+  render(): LicitLandscapeSectionJSON {
+    const element = this.getBaseElement();
+    element.content.push(this.child.render());
     return element;
   }
 }
