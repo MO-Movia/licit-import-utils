@@ -15,6 +15,7 @@ interface HTMLFile {
 
 interface HTMLContent {
   files: HTMLFile[];
+  styleFiles: HTMLFile[];
   imageFiles: ImjObj[];
 }
 
@@ -73,6 +74,7 @@ function filterFiles(
   tocFiles: string[]
 ): HTMLContent {
   let htmlArray: JSZip.JSZipObject[] = [];
+  const styleFiles: HTMLFile[] = [];
   const imageFiles: ImjObj[] = [];
   const regex = /\.(jpeg|jpg|gif|png)$/;
   for (const fileName of fileNames) {
@@ -90,6 +92,12 @@ function filterFiles(
 
     if (fileName.endsWith('.htm')) {
       htmlArray.push(zip[fileName]);
+    }
+    if (/\.css$/i.test(fileName)) {
+      styleFiles.push({
+        name: fileName,
+        content: () => zip[fileName].async('string'),
+      });
     }
   }
 
@@ -109,6 +117,7 @@ function filterFiles(
       name: file.name,
       content: () => file.async('string'),
     })),
+    styleFiles,
     imageFiles: imageFiles,
   };
 }
@@ -221,7 +230,9 @@ async function loopHTMLFiles(
     await Promise.all(
       htmlFiles.files
         .filter((htmlFile) => !!htmlFile)
-        .map((f) => processFile(f, htmlFiles.imageFiles, updateSrc))
+        .map((f) =>
+          processFile(f, htmlFiles.styleFiles, htmlFiles.imageFiles, updateSrc)
+        )
     )
   ).filter((x) => x?.length);
   if (processedHtmlContents.length === 0 && htmlFiles.files.length > 0) {
@@ -232,6 +243,7 @@ async function loopHTMLFiles(
 
 async function processFile(
   file: HTMLFile,
+  styleFiles: HTMLFile[],
   imageFiles: ImjObj[],
   updateSrc: (src: File) => Promise<string>
 ): Promise<Element[]> {
@@ -269,6 +281,7 @@ async function processFile(
     htmlContent,
     'text/html'
   );
+  await applyLinkedStyleSheets(domCollection, file.name, styleFiles);
   //Get the title text
   const titleElement = domCollection.querySelector('title');
   const titleText = titleElement?.textContent?.trim();
@@ -291,6 +304,156 @@ async function processFile(
     (node) => !(node instanceof HTMLScriptElement)
   );
   return nodeArray;
+}
+
+const LICIT_CLASS_STYLE_ATTRIBUTE = 'data-licit-class-style';
+
+async function applyLinkedStyleSheets(
+  importedDocument: Document,
+  htmlFileName: string,
+  styleFiles: HTMLFile[]
+): Promise<void> {
+  const styleFilesByPath = new Map(
+    styleFiles.map((styleFile) => [
+      normalizeZipPath(styleFile.name).toLowerCase(),
+      styleFile,
+    ])
+  );
+  const styleSources = Array.from(
+    importedDocument.querySelectorAll<HTMLLinkElement | HTMLStyleElement>(
+      'link[rel~="stylesheet"][href], style'
+    )
+  );
+
+  for (const source of styleSources) {
+    let cssText = '';
+    if (source.tagName.toLowerCase() === 'style') {
+      cssText = source.textContent ?? '';
+    } else {
+      const resolvedPath = resolveZipPath(
+        htmlFileName,
+        source.getAttribute('href') ?? ''
+      );
+      const styleFile = resolvedPath
+        ? styleFilesByPath.get(resolvedPath.toLowerCase())
+        : undefined;
+      cssText = styleFile ? await styleFile.content() : '';
+    }
+
+    if (cssText) {
+      materializeClassStyles(importedDocument, cssText);
+    }
+  }
+}
+
+function materializeClassStyles(
+  importedDocument: Document,
+  cssText: string
+): void {
+  // A document returned by DOMParser is detached, so a style element added to
+  // it has no CSSStyleSheet in several browsers and in JSDOM. Parse the rules
+  // in the active document, while disabling the sheet so it cannot affect the
+  // editor UI, then apply the declarations to the imported document.
+  const hostDocument = globalThis.document;
+  if (!hostDocument?.head) {
+    return;
+  }
+
+  const styleElement = hostDocument.createElement('style');
+  styleElement.media = 'not all';
+  styleElement.textContent = cssText;
+  hostDocument.head.appendChild(styleElement);
+
+  const applyRules = (rules: CSSRuleList): void => {
+    for (const rule of Array.from(rules)) {
+      if ('selectorText' in rule && 'style' in rule) {
+        const styleRule = rule as CSSStyleRule;
+        let matchingElements: NodeListOf<Element>;
+        try {
+          matchingElements = importedDocument.querySelectorAll(
+            styleRule.selectorText
+          );
+        } catch {
+          continue;
+        }
+        for (const element of Array.from(matchingElements)) {
+          mergeMaterializedStyle(element, styleRule.style);
+        }
+      } else if ('cssRules' in rule) {
+        applyRules((rule as CSSGroupingRule).cssRules);
+      }
+    }
+  };
+
+  try {
+    if (styleElement.sheet) {
+      applyRules(styleElement.sheet.cssRules);
+    }
+  } catch {
+    // A malformed or inaccessible rule must not abort the document import.
+  } finally {
+    styleElement.remove();
+  }
+}
+
+function mergeMaterializedStyle(
+  element: Element,
+  declaration: CSSStyleDeclaration
+): void {
+  const values = new Map<string, string>();
+  const existing = element.getAttribute(LICIT_CLASS_STYLE_ATTRIBUTE) ?? '';
+  for (const entry of existing.split(';')) {
+    const separatorIndex = entry.indexOf(':');
+    if (separatorIndex > 0) {
+      values.set(
+        entry.slice(0, separatorIndex).trim().toLowerCase(),
+        entry.slice(separatorIndex + 1).trim()
+      );
+    }
+  }
+  for (let index = 0; index < declaration.length; index++) {
+    const property = (
+      declaration.item?.(index) ?? declaration[index]
+    )?.toLowerCase();
+    if (!property) {
+      continue;
+    }
+    values.set(property, declaration.getPropertyValue(property).trim());
+  }
+  element.setAttribute(
+    LICIT_CLASS_STYLE_ATTRIBUTE,
+    Array.from(values, ([property, value]) => `${property}: ${value}`).join('; ')
+  );
+}
+
+function resolveZipPath(htmlFileName: string, href: string): string | null {
+  let decodedHref: string;
+  try {
+    decodedHref = decodeURIComponent(href.split(/[?#]/)[0]);
+  } catch {
+    return null;
+  }
+  const cleanHref = decodedHref.replaceAll('\\', '/');
+  if (!cleanHref || /^(?:[a-z]+:)?\/\//i.test(cleanHref) || cleanHref.startsWith('data:')) {
+    return null;
+  }
+  const basePath = htmlFileName.replaceAll('\\', '/').split('/').slice(0, -1);
+  return normalizeZipPath([...basePath, ...cleanHref.split('/')].join('/'));
+}
+
+function normalizeZipPath(path: string): string {
+  const normalized: string[] = [];
+  for (const segment of path.replaceAll('\\', '/').split('/')) {
+    if (!segment || segment === '.') {
+      continue;
+    }
+    if (segment === '..') {
+      normalized.pop();
+    } else {
+      normalized.push(segment);
+    }
+  }
+  return normalized.join('/');
 }
 
 // Fix for file order
