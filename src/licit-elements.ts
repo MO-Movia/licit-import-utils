@@ -156,6 +156,17 @@ interface LicitTableCellAttrsJSON extends LicitElementAttrsJSON {
   borderLeft?: string | null;
   borderRight?: string | null;
   background: string;
+  backgroundColor?: string | null;
+  backgroundColorOverridden?: boolean;
+  fontSizeOverridden?: boolean;
+  fontNameOverridden?: boolean;
+  fontWeightOverridden?: boolean;
+  fontStyleOverridden?: boolean;
+  textDecorationOverridden?: boolean;
+  textColorOverridden?: boolean;
+  textAlignOverridden?: boolean;
+  letterSpacingOverridden?: boolean;
+  lineHeightOverridden?: boolean;
   vignette?: boolean;
   fullSize?: number;
   vAlign?: string | null;
@@ -215,13 +226,27 @@ interface CellStyleInfo {
   marginRight?: string;
   marginLeft?: string;
   fontSize?: string;
+  fontSizeOverridden?: boolean;
   fontName?: string;
+  fontNameOverridden?: boolean;
+  fontWeight?: string;
+  fontWeightOverridden?: boolean;
+  fontStyle?: string;
+  fontStyleOverridden?: boolean;
+  textDecoration?: string;
+  textDecorationOverridden?: boolean;
+  textColor?: string;
+  textColorOverridden?: boolean;
+  textAlign?: string;
+  textAlignOverridden?: boolean;
   letterSpacing?: string[];
+  letterSpacingOverridden?: boolean;
   paddingTop?: string;
   paddingBottom?: string;
   paddingRight?: string;
   paddingLeft?: string;
   lineHeight?: string;
+  lineHeightOverridden?: boolean;
   borderWidth?: string;
   cellWidth?: string;
   borderLeftWidth?: string;
@@ -242,6 +267,14 @@ interface CellStyleInfo {
 export interface LicitDocumentJSON extends LicitElementJSON {
   type: 'doc';
   attrs: LicitDocumentAttrsJSON;
+  content: LicitElementJSON[];
+}
+
+interface LicitLandscapeSectionJSON extends LicitElementJSON {
+  type: 'landscape_section';
+  attrs: {
+    class: 'section-landscape';
+  };
   content: LicitElementJSON[];
 }
 
@@ -271,6 +304,28 @@ export class LicitDocumentElement extends LicitElement {
       element.content.push(child.render());
     }
 
+    return element;
+  }
+}
+
+export class LicitLandscapeSectionElement extends LicitElement {
+  constructor(private readonly child: LicitElement) {
+    super();
+  }
+
+  getBaseElement(): LicitLandscapeSectionJSON {
+    return {
+      type: 'landscape_section',
+      attrs: {
+        class: 'section-landscape',
+      },
+      content: [],
+    };
+  }
+
+  render(): LicitLandscapeSectionJSON {
+    const element = this.getBaseElement();
+    element.content.push(this.child.render());
     return element;
   }
 }
@@ -2468,7 +2523,7 @@ export class LicitTableCellParagraph extends LicitElement {
 export class NewLicitTableCellParagraph extends LicitElement {
   getBaseElement(): any {
     const defaultColWidth = 100;
-    const defaultBgColor = '#FFFFFF';
+    const defaultBgColor = 'transparent';
 
     return {
       type: 'table_cell',
@@ -2782,7 +2837,7 @@ export class LicitVignetteElement extends LicitElement {
 export class LicitTableCellParaElement extends LicitElement {
   getBaseElement(): LicitTableCellJSON {
     const defaultColWidth = 120;
-    const defaultBgColor = '#FFFFFF';
+    const defaultBgColor = 'transparent';
     return {
       type: this.isTableHeader ? 'table_header' : 'table_cell',
       attrs: {
@@ -2790,12 +2845,35 @@ export class LicitTableCellParaElement extends LicitElement {
         rowspan: 1,
         colwidth: this.colWidth || defaultColWidth,
         background: this.bgColor || defaultBgColor,
+        backgroundColor: this.bgColor || defaultBgColor,
+        backgroundColorOverridden: this.backgroundColorOverridden,
         vAlign: this.vAlign || 'middle',
         cellWidth: this.cellStyleInfo?.cellWidth ?? null,
         cellStyle: this.cellStyleInfo?.className ?? null,
         fontSize: this.cellStyleInfo?.fontSize ?? null,
+        fontSizeOverridden:
+          this.cellStyleInfo?.fontSizeOverridden ?? false,
         fontName: this.cellStyleInfo?.fontName ?? null,
+        fontNameOverridden:
+          this.cellStyleInfo?.fontNameOverridden ?? false,
+        fontWeight: this.cellStyleInfo?.fontWeight ?? null,
+        fontWeightOverridden:
+          this.cellStyleInfo?.fontWeightOverridden ?? false,
+        fontStyle: this.cellStyleInfo?.fontStyle ?? null,
+        fontStyleOverridden:
+          this.cellStyleInfo?.fontStyleOverridden ?? false,
+        textDecoration: this.cellStyleInfo?.textDecoration ?? null,
+        textDecorationOverridden:
+          this.cellStyleInfo?.textDecorationOverridden ?? false,
+        textColor: this.cellStyleInfo?.textColor ?? null,
+        textColorOverridden:
+          this.cellStyleInfo?.textColorOverridden ?? false,
+        textAlign: this.cellStyleInfo?.textAlign ?? null,
+        textAlignOverridden:
+          this.cellStyleInfo?.textAlignOverridden ?? false,
         letterSpacing: this.cellStyleInfo?.letterSpacing ?? null,
+        letterSpacingOverridden:
+          this.cellStyleInfo?.letterSpacingOverridden ?? false,
         marginTop: this.cellStyleInfo?.marginTop ?? null,
         marginRight: this.cellStyleInfo?.marginRight ?? null,
         marginBottom: this.cellStyleInfo?.marginBottom ?? null,
@@ -2805,6 +2883,8 @@ export class LicitTableCellParaElement extends LicitElement {
         paddingBottom: this.cellStyleInfo?.paddingBottom ?? null,
         paddingLeft: this.cellStyleInfo?.paddingLeft ?? null,
         lineHeight: this.cellStyleInfo?.lineHeight ?? null,
+        lineHeightOverridden:
+          this.cellStyleInfo?.lineHeightOverridden ?? false,
         borderWidth: this.cellStyleInfo?.borderWidth ?? null,
         borderLeftWidth: this.cellStyleInfo?.borderLeftWidth ?? null,
         borderRightWidth: this.cellStyleInfo?.borderRightWidth ?? null,
@@ -2833,15 +2913,19 @@ export class LicitTableCellParaElement extends LicitElement {
   vAlign: string;
   isTableHeader: boolean;
   isTransparentTable: boolean;
+  backgroundColorOverridden: boolean;
   cellStyleInfo?: CellStyleInfo;
   constructor(
     node: HTMLElement,
-    bgColor?: string,
-    colwidth?: [number],
-    vericalAlignment?: string,
-    isTableHeader?: boolean,
-    isTransparentTable?: boolean,
-    cellStyleInfo?: CellStyleInfo,
+    ...[
+      bgColor,
+      colwidth,
+      vericalAlignment,
+      isTableHeader,
+      isTransparentTable,
+      cellStyleInfo,
+      backgroundColorOverridden,
+    ]: [string?, [number]?, string?, boolean?, boolean?, CellStyleInfo?, boolean?]
   ) {
     super();
     this.bgColor = bgColor ?? '';
@@ -2849,6 +2933,7 @@ export class LicitTableCellParaElement extends LicitElement {
     this.vAlign = vericalAlignment ?? '';
     this.isTableHeader = isTableHeader ?? false;
     this.isTransparentTable = isTransparentTable ?? false;
+    this.backgroundColorOverridden = backgroundColorOverridden ?? false;
     this.cellStyleInfo = cellStyleInfo;
     this.ConvertElements(node);
   }
@@ -2911,26 +2996,31 @@ export class LicitTableCellParaElement extends LicitElement {
     }
   }
   private applyOverriddenCellTextMarks(paragraph: LicitElementJSON) {
-    const overriddenMarks = [this.getFontSizeMark(), this.getFontNameMark(), this.getLetterSpacingMark()]
+    const overriddenMarks = [
+      this.getFontSizeMark(),
+      this.getFontNameMark(),
+      this.getFontWeightMark(),
+      this.getFontStyleMark(),
+      this.getTextDecorationMark(),
+      this.getTextColorMark(),
+      this.getLetterSpacingMark(),
+    ]
       .filter(Boolean) as { type: string; attrs?: LicitAttrs }[];
 
     if (overriddenMarks.length === 0 || !Array.isArray(paragraph?.content)) {
       return;
     }
 
-    const overriddenMarkTypes = new Set(
-      overriddenMarks.map((mark) => mark.type),
-    );
-
     for (const contentNode of paragraph.content) {
       if (contentNode?.type !== 'text') {
         continue;
       }
       contentNode.marks ??= [];
-      contentNode.marks = contentNode.marks.filter(
-        (mark: Mark) => !overriddenMarkTypes.has(mark?.type),
-      );
-      contentNode.marks.push(...overriddenMarks);
+      for (const mark of overriddenMarks) {
+        if (!contentNode.marks.some((current: Mark) => current?.type === mark.type)) {
+          contentNode.marks.push(mark);
+        }
+      }
     }
   }
   private getFontSizeMark(): { type: string; attrs?: LicitAttrs } | null {
@@ -2948,7 +3038,7 @@ export class LicitTableCellParaElement extends LicitElement {
       type: 'mark-font-size',
       attrs: {
         pt,
-        overridden: true,
+        overridden: this.cellStyleInfo?.fontSizeOverridden ?? false,
       },
     };
   }
@@ -2961,7 +3051,68 @@ export class LicitTableCellParaElement extends LicitElement {
       type: 'mark-font-type',
       attrs: {
         name: rawFontName,
-        overridden: true,
+        overridden: this.cellStyleInfo?.fontNameOverridden ?? false,
+      },
+    };
+  }
+
+  private getFontWeightMark(): {type: string; attrs?: LicitAttrs} | null {
+    const fontWeight = this.cellStyleInfo?.fontWeight?.trim().toLowerCase();
+    const numericWeight = Number.parseInt(fontWeight ?? '', 10);
+    if (
+      fontWeight !== 'bold' &&
+      fontWeight !== 'bolder' &&
+      !(Number.isFinite(numericWeight) && numericWeight >= 600)
+    ) {
+      return null;
+    }
+
+    return {
+      type: 'strong',
+      attrs: {
+        overridden: this.cellStyleInfo?.fontWeightOverridden ?? false,
+      },
+    };
+  }
+
+  private getFontStyleMark(): {type: string; attrs?: LicitAttrs} | null {
+    const fontStyle = this.cellStyleInfo?.fontStyle?.trim().toLowerCase();
+    if (fontStyle !== 'italic' && fontStyle !== 'oblique') {
+      return null;
+    }
+
+    return {
+      type: 'em',
+      attrs: {
+        overridden: this.cellStyleInfo?.fontStyleOverridden ?? false,
+      },
+    };
+  }
+
+  private getTextDecorationMark(): {type: string; attrs?: LicitAttrs} | null {
+    if (!this.cellStyleInfo?.textDecoration?.toLowerCase().includes('underline')) {
+      return null;
+    }
+
+    return {
+      type: 'underline',
+      attrs: {
+        overridden: this.cellStyleInfo?.textDecorationOverridden ?? false,
+      },
+    };
+  }
+
+  private getTextColorMark(): {type: string; attrs?: LicitAttrs} | null {
+    const color = this.cellStyleInfo?.textColor?.trim();
+    if (!color) {
+      return null;
+    }
+
+    return {
+      type: 'mark-text-color',
+      attrs: {
+        color,
+        overridden: this.cellStyleInfo?.textColorOverridden ?? false,
       },
     };
   }
@@ -2981,7 +3132,7 @@ export class LicitTableCellParaElement extends LicitElement {
       type: 'mark-letter-spacing',
       attrs: {
         letterSpacing,
-        overridden: true,
+        overridden: this.cellStyleInfo?.letterSpacingOverridden ?? false,
       },
     };
   }
@@ -3008,8 +3159,15 @@ export class LicitTableCellParaElement extends LicitElement {
 
     const style = paragraphNode.getAttribute('style') ?? '';
     const declarations = this.parseStyleDeclarations(style);
+    const classDeclarations = this.parseStyleDeclarations(
+      paragraphNode.dataset.licitClassStyle ?? ''
+    );
     const marginBox = this.expandBoxShorthand(declarations.get('margin'));
     const paddingBox = this.expandBoxShorthand(declarations.get('padding'));
+    const lineHeight =
+      declarations.get('line-height') ??
+      classDeclarations.get('line-height') ??
+      this.cellStyleInfo?.lineHeight;
 
     const marginTop =
       declarations.get('margin-top') ?? marginBox.top ?? this.cellStyleInfo?.marginTop;
@@ -3068,6 +3226,16 @@ export class LicitTableCellParaElement extends LicitElement {
     }
     if (paddingLeft) {
       paragraphWithAttrs.attrs.paddingLeft = paddingLeft;
+    }
+    if (!declarations.has('line-height') && lineHeight) {
+      paragraphWithAttrs.attrs.lineSpacing = lineHeight;
+      paragraphWithAttrs.attrs.overriddenLineSpacing = false;
+      paragraphWithAttrs.attrs.overriddenLineSpacingValue = null;
+    }
+    if (!declarations.has('text-align') && this.cellStyleInfo?.textAlign) {
+      paragraphWithAttrs.attrs.align = this.cellStyleInfo.textAlign;
+      paragraphWithAttrs.attrs.overriddenAlign = false;
+      paragraphWithAttrs.attrs.overriddenAlignValue = null;
     }
   }
 
@@ -3210,7 +3378,10 @@ export class LicitTableCellParaElement extends LicitElement {
     element.content = this.content;
     element.attrs.colspan = this.colspan;
     element.attrs.rowspan = this.rowspan;
-    element.attrs.background = this.bgColor;
+    const backgroundColor = this.bgColor || element.attrs.background;
+    element.attrs.background = backgroundColor;
+    element.attrs.backgroundColor = backgroundColor;
+    element.attrs.backgroundColorOverridden = this.backgroundColorOverridden;
     //Adding border styles for transparent table
     if (this.isTransparentTable) {
       element.attrs.borderTop = '0.25px solid #ffffff';

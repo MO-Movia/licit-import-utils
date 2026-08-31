@@ -12,6 +12,7 @@ import {
   LicitEnhancedTableFigureBodyElement,
   LicitHeaderElement,
   LicitImageElement,
+  LicitLandscapeSectionElement,
   LicitNewImageElement,
   LicitParagraphElement,
   NewLicitParagraphElement,
@@ -96,6 +97,31 @@ describe('LicitDocumentElement', () => {
     const renderedDocument: LicitDocumentJSON = licitDocumentElement.render();
     expect(renderedDocument.type).toBe('doc');
     expect(renderedDocument.content.length).toBe(2);
+  });
+});
+
+describe('LicitLandscapeSectionElement', () => {
+  it('wraps a block in the landscape section structure used by Licit', () => {
+    const child = {
+      getBaseElement: jest.fn(),
+      render: jest.fn().mockReturnValue({
+        type: 'enhanced_table_figure',
+        attrs: { orientation: 'landscape' },
+      }),
+    } as unknown as LicitElement;
+
+    expect(new LicitLandscapeSectionElement(child).render()).toEqual({
+      type: 'landscape_section',
+      attrs: {
+        class: 'section-landscape',
+      },
+      content: [
+        {
+          type: 'enhanced_table_figure',
+          attrs: { orientation: 'landscape' },
+        },
+      ],
+    });
   });
 });
 
@@ -3057,6 +3083,93 @@ describe('Licit table/vignette/enhanced element branch boosts', () => {
     expect(paragraph.attrs?.paddingLeft).toBe('3pt');
   });
 
+  it('LicitTableCellParaElement applies imported class line-height to its paragraph', () => {
+    const td = document.createElement('td');
+    td.innerHTML =
+      '<p class="CellBody" data-licit-class-style="line-height: 14pt">Imported text</p>';
+
+    const cell = new LicitTableCellParaElement(
+      td,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      false,
+      {lineHeight: '14pt', lineHeightOverridden: false}
+    );
+    const rendered = cell.render();
+    const paragraph = rendered.content[0] as {attrs?: Record<string, unknown>};
+
+    expect(rendered.attrs.lineHeight).toBe('14pt');
+    expect(rendered.attrs.lineHeightOverridden).toBe(false);
+    expect(paragraph.attrs?.lineSpacing).toBe('14pt');
+    expect(paragraph.attrs?.overriddenLineSpacing).toBe(false);
+    expect(paragraph.attrs?.overriddenLineSpacingValue).toBeNull();
+  });
+
+  it('LicitTableCellParaElement preserves decimal typography and explicit background provenance', () => {
+    const td = document.createElement('td');
+    td.innerHTML = '<p>Imported text</p>';
+    const cell = new LicitTableCellParaElement(
+      td,
+      '#bfebff',
+      [120],
+      'middle',
+      false,
+      false,
+      {
+        fontSize: '10.70pt',
+        fontSizeOverridden: true,
+        fontName: 'Arial',
+        fontNameOverridden: false,
+        fontWeight: '700',
+        fontWeightOverridden: false,
+        fontStyle: 'italic',
+        fontStyleOverridden: true,
+        textDecoration: 'underline solid',
+        textDecorationOverridden: false,
+        textColor: '#123456',
+        textColorOverridden: true,
+      },
+      true
+    );
+
+    const rendered = cell.render();
+    const text = rendered.content[0].content?.[0] as {
+      marks?: Array<{type: string; attrs?: Record<string, unknown>}>;
+    };
+    const fontSize = text.marks?.find((mark) => mark.type === 'mark-font-size');
+    const fontName = text.marks?.find((mark) => mark.type === 'mark-font-type');
+    const strong = text.marks?.find((mark) => mark.type === 'strong');
+    const em = text.marks?.find((mark) => mark.type === 'em');
+    const underline = text.marks?.find((mark) => mark.type === 'underline');
+    const textColor = text.marks?.find(
+      (mark) => mark.type === 'mark-text-color'
+    );
+
+    expect(rendered.attrs.backgroundColor).toBe('#bfebff');
+    expect(rendered.attrs.backgroundColorOverridden).toBe(true);
+    expect(rendered.attrs.fontSize).toBe('10.70pt');
+    expect(rendered.attrs.fontSizeOverridden).toBe(true);
+    expect(fontSize?.attrs).toEqual({pt: 10.7, overridden: true});
+    expect(fontName?.attrs).toEqual({name: 'Arial', overridden: false});
+    expect(strong?.attrs).toEqual({overridden: false});
+    expect(em?.attrs).toEqual({overridden: true});
+    expect(underline?.attrs).toEqual({overridden: false});
+    expect(textColor?.attrs).toEqual({color: '#123456', overridden: true});
+  });
+
+  it('LicitTableCellParaElement preserves an absent fill as transparent', () => {
+    const td = document.createElement('td');
+    td.innerHTML = '<p>Unfilled cell</p>';
+
+    const rendered = new LicitTableCellParaElement(td).render();
+
+    expect(rendered.attrs.background).toBe('transparent');
+    expect(rendered.attrs.backgroundColor).toBe('transparent');
+    expect(rendered.attrs.backgroundColorOverridden).toBe(false);
+  });
+
   it('LicitTableCellParaElement processChildNode ignores IMG without source', () => {
     const td = document.createElement('td');
     const img = document.createElement('img');
@@ -3181,7 +3294,7 @@ describe('Licit elements targeted fallback branch boosts', () => {
     const defaults = new NewLicitTableCellParagraph(p);
     const defaultsBase = defaults.getBaseElement();
     expect(defaultsBase.attrs.colwidth).toBe(100);
-    expect(defaultsBase.attrs.background).toBe('#FFFFFF');
+    expect(defaultsBase.attrs.background).toBe('transparent');
     expect(defaultsBase.attrs.vAlign).toBe('top');
 
     const provided = new NewLicitTableCellParagraph(

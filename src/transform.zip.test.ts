@@ -110,6 +110,54 @@ describe('transform.zip', () => {
       expect(Array.isArray(result)).toBe(true);
     });
 
+    it('materializes linked ZIP stylesheet values without converting them to inline overrides', async () => {
+      const html = [
+        '<html lang="en-US"><head><title>Test</title>',
+        '<link rel="stylesheet" href="../styles.css"></head>',
+        '<body><table><tr><td class="Shaded">',
+        '<p class="CellBody">Imported text</p>',
+        '</td></tr></table></body></html>',
+      ].join('');
+      const mockZip = {
+        files: {
+          'book/chapter/test.htm': {
+            name: 'book/chapter/test.htm',
+            async: jest.fn().mockResolvedValue(html),
+          },
+          'book/STYLES.CSS': {
+            name: 'book/STYLES.CSS',
+            async: jest
+              .fn()
+              .mockResolvedValue(
+                'p.CellBody { font-size: 12pt; font-family: "Times New Roman"; font-weight: Bold; } td.Shaded { background-color: #bfebff; }'
+              ),
+          },
+        },
+        file: jest.fn().mockReturnValue([]),
+      };
+      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
+
+      const result = await parseFrameMakerHTM5Zip(
+        new File([''], 'styles.zip'),
+        jest.fn().mockResolvedValue('')
+      );
+      const table = result[0] as HTMLTableElement;
+
+      expect(table.querySelector('p')?.getAttribute('style')).toBeNull();
+      expect(
+        table.querySelector('p')?.getAttribute('data-licit-class-style')
+      ).toContain('font-size: 12pt');
+      expect(
+        table.querySelector('p')?.getAttribute('data-licit-class-style')
+      ).toContain('font-family: "Times New Roman"');
+      expect(
+        table.querySelector('p')?.getAttribute('data-licit-class-style')
+      ).toContain('font-weight: Bold');
+      expect(
+        table.querySelector('td')?.getAttribute('data-licit-class-style')
+      ).toContain('background-color: #bfebff');
+    });
+
     it('should handle files with toc.js', async () => {
       const mockFile = new File([''], 'test.zip', {
         type: 'application/zip',
