@@ -276,13 +276,13 @@ describe('DOCX to HTML Converter', () => {
   });
 
   describe('transSubBullets', () => {
-    let getElementSpy: jest.SpyInstance;
+    let getElementSpy: MockInstance;
 
     beforeEach(() => {
       // Mock getElement to control its behavior
-      getElementSpy = jest
+      getElementSpy = vi
         .spyOn(
-          docxTransform as unknown as Record<string, (a, b) => void>,
+          docxTransform,
           'getElement'
         )
         .mockImplementation((parent, text) => {

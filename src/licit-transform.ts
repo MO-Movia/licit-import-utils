@@ -2575,7 +2575,9 @@ export class LicitConverter {
       const declarations = style.split(';');
 
       for (const decl of declarations) {
-        const [prop, val] = decl.split(':').map(s => s?.trim().toLowerCase());
+        const [prop, val] = decl
+          .split(':')
+          .map((s: string): string => s.trim().toLowerCase());
 
         if (prop === 'letter-spacing' && val) {
           values.add(val);
