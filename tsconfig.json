@@ -5,7 +5,7 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "lib": ["ES2022", "dom"],
+    "lib": ["ES2022", "dom", "dom.iterable"],
     "outDir": "dist",
     "pretty": false,
     "esModuleInterop": true,

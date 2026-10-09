@@ -1,7 +1,6 @@
 /**
  * @license MIT
  * @copyright Copyright 2026 Modus Operandi Inc. All Rights Reserved.
- * @jest-environment jsdom
  */
 
 import {
@@ -58,7 +57,7 @@ describe('LicitDocumentElement', () => {
 
     expect(licitDocumentElement.children.length).toBe(1);
     expect(licitDocumentElement.children[0]).toBe(
-      mockChildElement as LicitElement
+      mockChildElement
     );
   });
   it('should return a base document element', () => {
@@ -103,8 +102,8 @@ describe('LicitDocumentElement', () => {
 describe('LicitLandscapeSectionElement', () => {
   it('wraps a block in the landscape section structure used by Licit', () => {
     const child = {
-      getBaseElement: jest.fn(),
-      render: jest.fn().mockReturnValue({
+      getBaseElement: vi.fn(),
+      render: vi.fn().mockReturnValue({
         type: 'enhanced_table_figure',
         attrs: { orientation: 'landscape' },
       }),
@@ -241,7 +240,7 @@ describe('LicitHeaderElement', () => {
 
   it('should call setInnerlinks if node is provided', () => {
     const node = document.createElement('div');
-    jest.spyOn(LicitHeaderElement.prototype, 'setInnerlinks');
+    vi.spyOn(LicitHeaderElement.prototype, 'setInnerlinks');
 
     licitHeaderElement = new LicitHeaderElement(
       'Title',
@@ -459,7 +458,7 @@ describe('LicitHeaderElement', () => {
   });
 
   it('should ignore invalid color values', () => {
-    jest.spyOn(CSS, 'supports').mockReturnValue(false);
+    vi.spyOn(CSS, 'supports').mockReturnValue(false);
     const node = document.createElement('div');
     node.setAttribute('style', 'color: notacolor;');
     node.textContent = 'Sample';
@@ -480,7 +479,7 @@ describe('LicitHeaderElement', () => {
       attrs?: Record<string, string | undefined>;
     }[] = [];
     licitHeaderElement.text = 'Mixed';
-    jest.spyOn(CSS, 'supports').mockReturnValue(true);
+    vi.spyOn(CSS, 'supports').mockReturnValue(true);
     licitHeaderElement.mapInlineStylesToMarks(
       ['italic', 'underline', 'color-blue'],
       marks
@@ -742,7 +741,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(
       document.createElement('div')
     );
-    const modifyChildNodesSpy = jest.spyOn(licitParagraph, 'modifyChildNodes');
+    const modifyChildNodesSpy = vi.spyOn(licitParagraph, 'modifyChildNodes');
 
     licitParagraph.ConvertMarks(span, [
       {
@@ -767,7 +766,7 @@ describe('LicitElements', () => {
     const licitParagraph = new NewLicitParagraphElement(
       document.createElement('div')
     );
-    const modifyChildNodesSpy = jest.spyOn(licitParagraph, 'modifyChildNodes');
+    const modifyChildNodesSpy = vi.spyOn(licitParagraph, 'modifyChildNodes');
 
     licitParagraph.ConvertMarks(p, [
       {
@@ -794,7 +793,7 @@ describe('LicitElements', () => {
       { type: 'underline', attrs: { overridden: true } },
     ];
 
-    const handleTextSpy = jest.spyOn(licitParagraph, 'handleText');
+    const handleTextSpy = vi.spyOn(licitParagraph, 'handleText');
 
     licitParagraph.modifyChildNodes(
       testNode,
@@ -819,7 +818,7 @@ describe('LicitElements', () => {
       text: '',
     };
 
-    jest.spyOn(licitParagraph, 'addMark');
+    vi.spyOn(licitParagraph, 'addMark');
     const element = {
       type: 'text',
     } as unknown as HTMLElement;
@@ -857,7 +856,7 @@ describe('LicitElements', () => {
       },
     ];
 
-    jest.spyOn(licitParagraph, 'addMark');
+    vi.spyOn(licitParagraph, 'addMark');
     const element = {
       type: 'text',
     } as unknown as HTMLElement;
@@ -1130,7 +1129,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1156,7 +1155,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1180,7 +1179,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1206,7 +1205,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1231,7 +1230,7 @@ describe('LicitElements', () => {
     testNode.append(a);
     testNode.append(p);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(undefined);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1255,7 +1254,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1322,7 +1321,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1346,7 +1345,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1372,7 +1371,7 @@ describe('LicitElements', () => {
     const mockMark = {
       text: 'demo',
     } as Mark;
-    const spy = jest
+    const spy = vi
       .spyOn(licitParagraph, 'parseSubMarks')
       .mockReturnValue(mockMark);
     licitParagraph.ConvertMarks(testNode, []);
@@ -1728,7 +1727,7 @@ describe('LicitElements', () => {
     const testNode = document.createElement('div');
     testNode.append(n);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'getInfoIconJson');
+    const spy = vi.spyOn(licitParagraph, 'getInfoIconJson');
     const element1 = {
       type: 'example',
       childNodes: [
@@ -1802,7 +1801,7 @@ describe('LicitElements', () => {
     const testNode = document.createElement('div');
     testNode.append(n);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'getInfoIconJson');
+    const spy = vi.spyOn(licitParagraph, 'getInfoIconJson');
     const element1 = {
       type: 'example',
       childNodes: [
@@ -1989,7 +1988,7 @@ describe('LicitElements', () => {
     const testNode = document.createElement('div');
     testNode.append(n);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'getInfoIconJson');
+    const spy = vi.spyOn(licitParagraph, 'getInfoIconJson');
     const element1 = {
       type: 'example',
       childNodes: [
@@ -2053,7 +2052,7 @@ describe('LicitElements', () => {
     const testNode = document.createElement('div');
     testNode.append(n);
     const licitParagraph = new NewLicitParagraphElement(testNode);
-    const spy = jest.spyOn(licitParagraph, 'getInfoIconJson');
+    const spy = vi.spyOn(licitParagraph, 'getInfoIconJson');
     const element1 = {
       type: 'example',
       childNodes: [
@@ -2487,7 +2486,7 @@ describe('NewLicitParagraphElement branch coverage additions', () => {
     strong.appendChild(document.createTextNode('one'));
     strong.appendChild(document.createTextNode('two'));
 
-    const parseSpy = jest
+    const parseSpy = vi
       .spyOn(para, 'parseSubMarks')
       .mockReturnValueOnce(undefined)
       .mockReturnValueOnce({ type: 'text', marks: [], text: 'ok' });
@@ -2626,7 +2625,7 @@ describe('NewLicitParagraphElement deep branch additions', () => {
     const para = createPara();
     const font = document.createElement('font');
     font.textContent = 'abc';
-    jest.spyOn(para, 'hasFontDetails').mockReturnValue(false);
+    vi.spyOn(para, 'hasFontDetails').mockReturnValue(false);
     const ret = { type: 'text', marks: [] } as unknown as Mark;
 
     expect(para['parseFontWithInfoicon'](font, ret, ret, [] as never)).toBe(
@@ -2643,7 +2642,7 @@ describe('NewLicitParagraphElement deep branch additions', () => {
     a.innerHTML = '';
     a.appendChild(child);
 
-    const parseSpy = jest
+    const parseSpy = vi
       .spyOn(para, 'parseSubMarks')
       .mockReturnValue({ type: 'text', marks: [], text: 'ok' });
 
@@ -2838,7 +2837,7 @@ describe('NewLicitParagraphElement additional branch boosts', () => {
     font.appendChild(t1);
     font.appendChild(t2);
 
-    const spy = jest.spyOn(para, 'parseSubMarks');
+    const spy = vi.spyOn(para, 'parseSubMarks');
     para.parseSubMarks(font, { type: 'text', marks: [] }, false, [] as never);
 
     expect(spy).toHaveBeenCalled();
@@ -2884,9 +2883,9 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     node.setAttribute('highlight-color', '#ff0');
     node.setAttribute('color', '#111');
 
-    const spy = jest
+    const spy = vi
       .spyOn(
-        para as unknown as Record<string, (...args: unknown[]) => void>,
+        para,
         'handleTextMark'
       )
       .mockImplementation(() => undefined);
@@ -2929,7 +2928,7 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     const t2 = document.createTextNode('b');
     a.append(t1, t2);
 
-    const parseSpy = jest.spyOn(para, 'parseSubMarks');
+    const parseSpy = vi.spyOn(para, 'parseSubMarks');
     para['parseAnchorWithInfoIcon'](
       a,
       '#000',
@@ -2947,7 +2946,7 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     emNode.appendChild(document.createTextNode('x'));
     emNode.appendChild(document.createTextNode('y'));
 
-    const parseSpy = jest.spyOn(para, 'parseSubMarks');
+    const parseSpy = vi.spyOn(para, 'parseSubMarks');
     para.parseSubMarks(emNode, { type: 'text', marks: [] }, false, [] as never);
 
     expect(parseSpy).toHaveBeenCalled();
@@ -2959,7 +2958,7 @@ describe('NewLicitParagraphElement deeper parseSubMarks branch boosts', () => {
     uNode.appendChild(document.createTextNode('x'));
     uNode.appendChild(document.createTextNode('y'));
 
-    const parseSpy = jest.spyOn(para, 'parseSubMarks');
+    const parseSpy = vi.spyOn(para, 'parseSubMarks');
     para.parseSubMarks(uNode, { type: 'text', marks: [] }, false, [] as never);
 
     expect(parseSpy).toHaveBeenCalled();

@@ -50,11 +50,8 @@ export class DocxTransformer {
       ignoreEmptyParagraphs: true,
     };
     // Mammoth is big, so we load it only when needed
-    const mammoth = await import('@modusoperandi/mammoth');
-    const result = (await mammoth.default.convertToHtml(
-      { arrayBuffer },
-      options
-    )) as {
+    const { convertToHtml } = await import('@modusoperandi/mammoth');
+    const result = (await convertToHtml({ arrayBuffer }, options)) as {
       value: string;
       messages?: Message[];
     };

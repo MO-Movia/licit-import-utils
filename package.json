@@ -1,6 +1,6 @@
 {
   "name": "@modusoperandi/licit-import-utils",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "license": "MIT",
   "type": "module",
   "subversion": "1",
@@ -12,17 +12,18 @@
     "url": "git+https://github.com/MO-Movia/licit-import-utils.git"
   },
   "scripts": {
-    "test": "jest",
-    "test:unit": "jest",
-    "test:coverage": "jest --env=jsdom --coverage",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "build:clean": "rm -rf dist/ && rm -f modusoperandi-*.*.*.tgz",
     "lint": "eslint src",
     "ci:build": "tsc -b tsconfig.prod.json --clean && tsc -b tsconfig.prod.json && npx copyfiles@2.4.1 package.json LICENSE README.md dist",
     "ci:bom": "npx @cyclonedx/cyclonedx-npm --ignore-npm-errors --short-PURLs --output-format XML --output-file dist/bom.xml",
-    "verify": "npm run lint -- --fix && npm run ci:build && npm run test:coverage && echo 'All Tests Passed!'"
+    "verify": "npm run lint -- --fix && npm run ci:build && npm run test:coverage && echo 'All Tests Passed!'",
+    "test:watch": "vitest"
   },
   "peerDependencies": {
-    "@modusoperandi/mammoth": "^1.7.0-6",
+    "@modusoperandi/mammoth": "^1.13.0",
     "jszip": "^3.10.1"
   },
   "peerDependenciesMeta": {
@@ -33,20 +34,15 @@
       "optional": true
     }
   },
-  "dependencies": {
-    "uuid": "^14.0.2"
-  },
   "devDependencies": {
-    "@modusoperandi/mammoth": "^1.7.0-10",
     "@modusoperandi/eslint-config": "^3.0.4",
-    "@types/jest": "^30.0.0",
-    "jszip": "^3.10.1",
+    "@modusoperandi/mammoth": "^1.13.0",
+    "@types/node": "^26.6.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9.39.5",
-    "jest": "^30.5.0",
-    "jest-environment-jsdom": "^30.5.0",
-    "jest-junit": "^17.0.0",
-    "ts-jest": "^29.4.12",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "jsdom": "^26.1.0",
+    "jszip": "^3.10.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   }
 }
