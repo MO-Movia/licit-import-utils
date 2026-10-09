@@ -106,9 +106,9 @@ describe('Parser Service - getColWidthArray', () => {
     expect(sum).toBeLessThan(200);
   });
   it('should handle renderEnhancedTable', () => {
-    jest
+    vi
       .spyOn(
-        converter as unknown as Record<string, () => unknown>,
+        converter,
         'getColWidthArray'
       )
       .mockReturnValue([]);
@@ -131,9 +131,9 @@ describe('Parser Service - getColWidthArray', () => {
     ).toBeUndefined();
   });
   it('should handle renderEnhancedTable when getColWidthArray returns valid widths', () => {
-    jest
+    vi
       .spyOn(
-        converter as unknown as Record<string, () => unknown>,
+        converter,
         'getColWidthArray'
       )
       .mockReturnValue([1, 2]);
@@ -156,9 +156,9 @@ describe('Parser Service - getColWidthArray', () => {
     ).toBeUndefined();
   });
   it('should handle getLicitTable when getColWidthArray returns value', () => {
-    jest
+    vi
       .spyOn(
-        converter as unknown as Record<string, () => unknown>,
+        converter,
         'getColWidthArray'
       )
       .mockReturnValue([1, 2]);
@@ -637,7 +637,7 @@ describe('Converter.addTableImageCell', () => {
       'style',
       'border: 1px solid #000000; vertical-align: top;'
     );
-    const spy = jest.fn();
+    const spy = vi.fn();
     test['addCell'](
       mockTableCell,
       {
@@ -863,8 +863,8 @@ describe('Converter.addTableImageCell', () => {
     const node = document.createElement('div');
     node.className = 'attTableTitle';
 
-    jest.spyOn(
-      converter as unknown as { parseElement: () => unknown },
+    vi.spyOn(
+      converter,
       'parseElement'
     );
 
@@ -879,8 +879,8 @@ describe('Converter.addTableImageCell', () => {
     const div = document.createElement('div');
     div.appendChild(document.createElement('img'));
 
-    const spy = jest.spyOn(
-      converter as unknown as { parseTableFigure: () => unknown },
+    const spy = vi.spyOn(
+      converter,
       'parseTableFigure'
     );
 
@@ -891,8 +891,8 @@ describe('Converter.addTableImageCell', () => {
 
   it('should handle TABLE tag in handleNode', () => {
     const table = document.createElement('table');
-    const spy = jest.spyOn(
-      converter as unknown as { parseTable: () => unknown },
+    const spy = vi.spyOn(
+      converter,
       'parseTable'
     );
 
@@ -903,9 +903,9 @@ describe('Converter.addTableImageCell', () => {
 
   it('should handle OL/UL via checkChildNode', () => {
     const ol = document.createElement('ol');
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as { checkChildNode: () => unknown },
+        converter,
         'checkChildNode'
       )
       .mockReturnValue(0);
@@ -918,8 +918,8 @@ describe('Converter.addTableImageCell', () => {
 
   it('should handle IMG tag in handleNode', () => {
     const img = document.createElement('img');
-    const spy = jest.spyOn(
-      converter as unknown as { parseFigure: () => unknown },
+    const spy = vi.spyOn(
+      converter,
       'parseFigure'
     );
 
@@ -930,9 +930,9 @@ describe('Converter.addTableImageCell', () => {
 
   it('should handle SPAN tag in handleNode', () => {
     const span = document.createElement('span');
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as { mergeSpans: () => unknown },
+        converter,
         'mergeSpans'
       )
       .mockReturnValue(0);
@@ -948,8 +948,8 @@ describe('Converter.addTableImageCell', () => {
 
   it('should handle default branch in handleNode', () => {
     const p = document.createElement('p');
-    const spy = jest.spyOn(
-      converter as unknown as { parseElement: () => unknown },
+    const spy = vi.spyOn(
+      converter,
       'parseElement'
     );
 
@@ -1079,8 +1079,8 @@ describe('Converter', () => {
   });
 
   it('should handle render', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseElement'
     );
     const node1 = document.createElement('div');
@@ -1129,8 +1129,8 @@ describe('Converter', () => {
   });
 
   it('should handle render_doc', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -1209,9 +1209,9 @@ describe('Converter', () => {
         styleLevel: '5',
       },
     };
-    jest
+    vi
       .spyOn(
-        service as unknown as Record<string, () => unknown>,
+        service,
         'getCustomStyle'
       )
       .mockReturnValue(customStyle);
@@ -1223,9 +1223,9 @@ describe('Converter', () => {
 
   it('should return 0 if no level found', () => {
     const className = 'noStyle';
-    jest
+    vi
       .spyOn(
-        service as unknown as Record<string, () => unknown>,
+        service,
         'getCustomStyle'
       )
       .mockReturnValue(null);
@@ -1241,9 +1241,9 @@ describe('Converter', () => {
       styleName: 'mock',
       styles: {},
     };
-    jest
+    vi
       .spyOn(
-        service as unknown as Record<string, () => unknown>,
+        service,
         'getCustomStyle'
       )
       .mockReturnValue(customStyle);
@@ -1254,7 +1254,7 @@ describe('Converter', () => {
   });
 
   it('should log a warning message', () => {
-    jest.spyOn(console, 'warn');
+    vi.spyOn(console, 'warn');
     const element = document.createElement('div');
     element.className = 'unknown-element';
 
@@ -1294,8 +1294,8 @@ describe('Converter', () => {
   it('should parse _AF_Example', () => {
     const element = { tagName: '_AF_Example' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseNote'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1305,8 +1305,8 @@ describe('Converter', () => {
   it('should parse HR', () => {
     const element = { tagName: 'HR' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseHR'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1316,8 +1316,8 @@ describe('Converter', () => {
   it('should parse chapterTitle', () => {
     const element = { tagName: 'chapterTitle' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseChapterTitle'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1327,8 +1327,8 @@ describe('Converter', () => {
   it('should parse H1', () => {
     const element = { tagName: 'H1' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseHeader'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1338,8 +1338,8 @@ describe('Converter', () => {
   it('should parse chTableTitle', () => {
     const element = { tagName: 'chTableTitle' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTableTitle'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1349,8 +1349,8 @@ describe('Converter', () => {
   it('should parse chText', () => {
     const element = { tagName: 'chText' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseChapterSubtitle'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1360,8 +1360,8 @@ describe('Converter', () => {
   it('should parse i_bullet', () => {
     const element = { tagName: 'i_bullet' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseBullet'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1371,8 +1371,8 @@ describe('Converter', () => {
   it('should parse P', () => {
     const element = document.createElement('P');
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseParagraph'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1385,8 +1385,8 @@ describe('Converter', () => {
       querySelector: () => [],
     } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseFigureTitle'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1399,8 +1399,8 @@ describe('Converter', () => {
       querySelector: () => [],
     } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseFigureTitle'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1410,8 +1410,8 @@ describe('Converter', () => {
   it('should parse ChangeBarPara', () => {
     const element = { tagName: 'ChangeBarPara' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseChangeBarPara'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1421,8 +1421,8 @@ describe('Converter', () => {
   it('should parse sectionTitle', () => {
     const element = { tagName: 'sectionTitle' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseSectionTitle'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1432,8 +1432,8 @@ describe('Converter', () => {
   it('should parse UL', () => {
     const element = { tagName: 'UL' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseBullet'
     );
     service['parseElement_doc'](element, nextElement);
@@ -1443,8 +1443,8 @@ describe('Converter', () => {
   it('should set element as parsed in elementsParsedMap parseElement', () => {
     const element = { className: '_AF_Example' } as unknown as Element;
     const nextElement = document.createElement('div');
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'sanitizeElement'
     );
     service['parseElement'](element, nextElement);
@@ -1458,8 +1458,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseChapterTitle'
     );
     cservice['parseElement'](element, nextElement);
@@ -1472,8 +1472,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseHeader'
     );
     cservice['parseElement'](element, nextElement);
@@ -1486,8 +1486,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseTableTitle'
     );
     cservice['parseElement'](element, nextElement);
@@ -1500,8 +1500,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseChapterSubtitle'
     );
     cservice['parseElement'](element, nextElement);
@@ -1517,8 +1517,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseParagraph'
     );
     cservice['parseElement'](element, nextElement);
@@ -1534,8 +1534,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseParagraph'
     );
     cservice['parseElement'](element, nextElement);
@@ -1551,8 +1551,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseFigureTitle'
     );
     cservice['parseElement'](element, nextElement);
@@ -1565,8 +1565,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseChangeBarPara'
     );
     cservice['parseElement'](element, nextElement);
@@ -1579,8 +1579,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseSectionTitle'
     );
     cservice['parseElement'](element, nextElement);
@@ -1596,8 +1596,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseUnknownElement'
     );
     cservice['parseElement'](element, nextElement);
@@ -1610,8 +1610,8 @@ describe('Converter', () => {
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
-    const spy1 = jest.spyOn(
-      cservice as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      cservice,
       'parseUnknownElement'
     );
     cservice['parseElement'](element, nextElement);
@@ -1623,7 +1623,7 @@ describe('Converter', () => {
 
   it('should parse nested list correctly', () => {
     const licitDocument = new LicitDocumentElement();
-    const spy = jest.spyOn(licitDocument, 'appendElement');
+    const spy = vi.spyOn(licitDocument, 'appendElement');
     const cservice = new LicitConverter(
       asTransformConfig({ stripSectionNumbers: true })
     );
@@ -1638,7 +1638,7 @@ describe('Converter', () => {
 
   it('should parse nested listType is not UL', () => {
     const licitDocument = new LicitDocumentElement();
-    const spy = jest.spyOn(licitDocument, 'appendElement');
+    const spy = vi.spyOn(licitDocument, 'appendElement');
     const indent = 0;
     const mockNode = document.createElement('ul');
     const mockChildNode = document.createElement('test');
@@ -1650,7 +1650,7 @@ describe('Converter', () => {
 
   it('should parse nested list with recursion', () => {
     const licitDocument = new LicitDocumentElement();
-    const spy = jest.spyOn(licitDocument, 'appendElement');
+    const spy = vi.spyOn(licitDocument, 'appendElement');
     const indent = 0;
     const mockNode = document.createElement('ul');
     const mockChildNode = document.createElement('ul');
@@ -1696,8 +1696,8 @@ describe('Converter', () => {
     mocknode.appendChild(mockImg);
     const mockset = document.createElement('div');
     mockset.appendChild(mocknode);
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTableFigure'
     );
     service['render_doc'](
@@ -1716,8 +1716,8 @@ describe('Converter', () => {
     mocknode.appendChild(mockImg);
     const mockset = document.createElement('p');
     mockset.appendChild(mocknode);
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     service['render_doc'](
@@ -1748,8 +1748,8 @@ describe('Converter', () => {
     expect(service['render'](nodes.querySelectorAll('div'))).toBeTruthy();
   });
   it('should handle render_doc when e.type  = Figure', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -1804,8 +1804,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type  = paragraph', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -1860,8 +1860,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type = Figure', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -1921,8 +1921,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type = Table when thead is the tag name', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -1982,8 +1982,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type = Table when table is the tag name', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -2043,8 +2043,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type = Table when something else is the tag name', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -2104,8 +2104,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type = vignet', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -2165,8 +2165,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type = vignet when element.node.nodeName === P)', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -2230,8 +2230,8 @@ describe('Converter', () => {
     expect(spy).toHaveBeenCalled();
   });
   it('should handle render_doc when e.type = vignet when element.node.nodeName === P) 2', () => {
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseTable'
     );
     const node1 = document.createElement('span');
@@ -2371,7 +2371,7 @@ describe('Converter', () => {
     const child = document.createElement('UL');
     const child1 = document.createElement('OL');
     const licit = new LicitDocumentElement();
-    const spy = jest.spyOn(licit, 'appendElement');
+    const spy = vi.spyOn(licit, 'appendElement');
     service['parseOL'](
       {
         node: {
@@ -2448,15 +2448,15 @@ describe('Converter', () => {
 
   it('should call handle_UrlText when text contains a URL', () => {
     const licitDocumentMock = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
     const e = { node: { textContent: 'Check https://example.com' }, level: 1 };
-    const spy1 = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      service,
       'handle_UrlText'
     );
-    const spy2 = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy2 = vi.spyOn(
+      service,
       'text_WithoutUrl'
     );
 
@@ -2476,7 +2476,7 @@ describe('Converter', () => {
   it('should handle text without URLs correctly in handle_UrlText', () => {
     const text = 'This is just plain text without any URL.';
     const licitDocumentElementMock = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
 
     service['handle_UrlText'](text, licitDocumentElementMock);
@@ -2486,7 +2486,7 @@ describe('Converter', () => {
 
   it('should append anchor tags for URLs and text nodes for plain text in handle_UrlText', () => {
     const text = 'https://example.com and https://another.com';
-    const spy = jest.fn();
+    const spy = vi.fn();
     const licitDocumentMock = {
       appendElement: spy,
     } as unknown as LicitDocumentElement;
@@ -2501,11 +2501,11 @@ describe('Converter', () => {
 
   it('should return if text is empty and has no child nodes', () => {
     const licitDocumentMock = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
     const e = { node: document.createElement('div'), level: 1 };
-    jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    vi.spyOn(
+      service,
       'removeEmptyATags'
     );
 
@@ -2519,15 +2519,15 @@ describe('Converter', () => {
 
   it('should add a bullet list item for text node', () => {
     const licitDocumentMock = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
     const e = {
       node: document.createElement('div'),
       level: 2,
     };
     e.node.appendChild(document.createTextNode('Test bullet item'));
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'removeEmptyATags'
     );
 
@@ -2541,7 +2541,7 @@ describe('Converter', () => {
 
   it('should process child nodes if first child is not a text node', () => {
     const licitDocumentMock = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
     const e = {
       node: document.createElement('div'),
@@ -2549,12 +2549,12 @@ describe('Converter', () => {
     };
     const ulNode = document.createElement('ul');
     e.node.appendChild(ulNode);
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'removeEmptyATags'
     );
-    const spy1 = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy1 = vi.spyOn(
+      service,
       'processBulletNodes'
     );
 
@@ -2569,7 +2569,7 @@ describe('Converter', () => {
 
   it('should add bullet item if there are no UL or OL nodes', () => {
     const licitDocumentMock = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
     const parentDiv = document.createElement('div');
     const listItem = document.createElement('li');
@@ -2595,12 +2595,12 @@ describe('Converter', () => {
       nextSibling: true,
     };
     const childNodes = [mockNode];
-    const bulletList = { addItem: jest.fn(), listItems: [] };
+    const bulletList = { addItem: vi.fn(), listItems: [] };
     const licitDocument = {};
     const e = { node: {} };
 
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseOL'
     );
 
@@ -2627,8 +2627,8 @@ describe('Converter', () => {
     const licitDocument = {};
     const e = { node: {} };
 
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseOL'
     );
     service['processBulletNodes'](
@@ -2653,8 +2653,8 @@ describe('Converter', () => {
     const licitDocument = {};
     const e = { node: {} };
 
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'parseOL'
     );
     service['processBulletNodes'](
@@ -2676,8 +2676,8 @@ describe('Converter', () => {
     childElement.appendChild(textNode);
     parentElement.appendChild(childElement);
 
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'processChildNodesCapco'
     );
 
@@ -2692,7 +2692,7 @@ describe('Converter', () => {
       setAttribute: () => { },
     } as unknown as ChildNode;
 
-    const setAttrSpy = jest.spyOn(hiddenElement as HTMLElement, 'setAttribute');
+    const setAttrSpy = vi.spyOn(hiddenElement, 'setAttribute');
 
     service['processChildNodesCapco']([
       hiddenElement,
@@ -2715,11 +2715,11 @@ describe('Converter', () => {
     } as unknown as ParserElement;
 
     const mockDocument = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
 
-    const spy = jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    const spy = vi.spyOn(
+      service,
       'handleImageChild'
     );
 
@@ -2740,11 +2740,11 @@ describe('Converter', () => {
     } as unknown as ParserElement;
 
     const mockDocument = {
-      appendElement: jest.fn(),
+      appendElement: vi.fn(),
     } as unknown as LicitDocumentElement;
 
-    jest.spyOn(
-      service as unknown as Record<string, () => unknown>,
+    vi.spyOn(
+      service,
       'handleImageChild'
     );
 
@@ -3047,9 +3047,9 @@ describe('LicitConverter branch coverage additions', () => {
     const el = document.createElement('div');
     el.className = className;
 
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         method
       )
       .mockImplementation(() => undefined);
@@ -3062,9 +3062,9 @@ describe('LicitConverter branch coverage additions', () => {
   it('parseElement handles empty className via parseUnknownElement', () => {
     const el = document.createElement('div');
     el.className = '   ';
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'parseUnknownElement'
       )
       .mockImplementation(() => undefined);
@@ -3094,9 +3094,9 @@ describe('LicitConverter branch coverage additions', () => {
     ['Hidden', 'parseUnknownElement'],
     ['Cross_Reference', 'parseUnknownElement'],
   ])('parseElement_doc routes "%s" to %s', (tagName, method) => {
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         method
       )
       .mockImplementation(() => undefined);
@@ -3108,14 +3108,14 @@ describe('LicitConverter branch coverage additions', () => {
   });
 
   it('parseElement default path emits warning and calls parseParagraph', () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const parseSpy = jest
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const parseSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'parseParagraph'
       )
       .mockImplementation(() => undefined);
-    const sink = jest.fn();
+    const sink = vi.fn();
     const withSink = new LicitConverter({
       ...(testConfig as TransformConfig),
       messageSink: sink,
@@ -3248,9 +3248,9 @@ describe('LicitConverter exhaustive parse routing additions', () => {
     (className, method) => {
       const el = document.createElement('div');
       el.className = className;
-      const spy = jest
+      const spy = vi
         .spyOn(
-          converter as unknown as Record<string, (...args: unknown[]) => void>,
+          converter,
           method
         )
         .mockImplementation(() => undefined);
@@ -3301,9 +3301,9 @@ describe('LicitConverter exhaustive parse routing additions', () => {
   it.each(parseElementDocRoutes)(
     'parseElement_doc exhaustive route %s -> %s',
     (tagName, method) => {
-      const spy = jest
+      const spy = vi
         .spyOn(
-          converter as unknown as Record<string, (...args: unknown[]) => void>,
+          converter,
           method
         )
         .mockImplementation(() => undefined);
@@ -3335,9 +3335,9 @@ describe('LicitConverter switch/helper branch boosts', () => {
   ])('parseElement extra route %s -> %s', (className, method) => {
     const el = document.createElement('div');
     el.className = className;
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         method
       )
       .mockImplementation(() => undefined);
@@ -3367,9 +3367,9 @@ describe('LicitConverter switch/helper branch boosts', () => {
     ['Hidden', 'parseUnknownElement'],
     ['Cross_Reference', 'parseUnknownElement'],
   ])('parseElement_doc extra route %s -> %s', (tagName, method) => {
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         method
       )
       .mockImplementation(() => undefined);
@@ -3400,9 +3400,9 @@ describe('LicitConverter switch/helper branch boosts', () => {
       subText: '',
     } as unknown as ParserElement;
 
-    const spy = jest
+    const spy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         method
       )
       .mockImplementation(() => undefined);
@@ -3435,7 +3435,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
   });
 
   it('render_FrameMakerHTML5_zip_SwitchHelper handles unknown type in default branch', () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     converter['render_FrameMakerHTML5_zip_SwitchHelper'](
       {
@@ -3456,7 +3456,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
 
   it('renderSwitchHelper skips bullet item append when node text is empty', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
 
     converter['renderSwitchHelper'](
       {
@@ -3474,7 +3474,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
 
   it('renderSwitchHelper skips note append when node text is empty', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
 
     converter['renderSwitchHelper'](
       {
@@ -3491,7 +3491,7 @@ describe('LicitConverter switch/helper branch boosts', () => {
   });
 
   it('renderSwitchHelper default branch warns for unhandled type', () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     converter['renderSwitchHelper'](
       {
@@ -3537,7 +3537,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
 
   it('renderSwitchHelper appends figure image when src exists', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const node = document.createElement('div');
     const img = document.createElement('img');
     img.setAttribute('src', 'https://example.com/a.png');
@@ -3553,7 +3553,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
 
   it('renderSwitchHelper appends bullet and note when text exists', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
 
     const bullet = document.createElement('li');
     bullet.textContent = 'item';
@@ -3574,7 +3574,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
 
   it('renderSwitchHelper handles title and section branches with text', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
 
     const title = document.createElement('p');
     title.textContent = 'Table 1';
@@ -3596,7 +3596,7 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
 
   it('renderTable skips append when no nested table exists', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     converter['renderTable'](
       {
         type: 11,
@@ -3638,25 +3638,25 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
   });
 
   it('render_docSwitchHelper routes ordered, table, vignet and default paths', () => {
-    const parseOlSpy = jest
+    const parseOlSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'parseOL'
       )
       .mockImplementation(() => undefined);
-    const docTableSpy = jest
+    const docTableSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'renderDocTable'
       )
       .mockImplementation(() => undefined);
-    const vignetSpy = jest
+    const vignetSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'renderDocVignet'
       )
       .mockImplementation(() => undefined);
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     const doc = new LicitDocumentElement();
     const node = document.createElement('div');
@@ -3698,9 +3698,9 @@ describe('LicitConverter render_doc and renderSwitch helper branch boosts', () =
   });
 
   it('parseElement_doc falls through default for superscript', () => {
-    const parseSpy = jest
+    const parseSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'parseParagraph'
       )
       .mockImplementation(() => undefined);
@@ -3921,7 +3921,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
 
   it('handleOrderedListItem skips append when text is empty', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
 
     converter['handleOrderedListItem'](
       {
@@ -3939,7 +3939,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
 
   it('renderParagraph skips append when paragraph text is empty', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
 
     converter['renderParagraph'](
       {
@@ -3956,9 +3956,9 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
   });
 
   it('parseTableFigure ignores non-image elements', () => {
-    const parseFigureSpy = jest
+    const parseFigureSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'parseFigure'
       )
       .mockImplementation(() => undefined);
@@ -3972,9 +3972,9 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
 
   it('parseTable chooses enhanced table when requested and non-transparent', () => {
     const el = document.createElement('table');
-    const transparentSpy = jest
+    const transparentSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => unknown>,
+        converter,
         'isTransparentTable'
       )
       .mockReturnValue(false);
@@ -3987,7 +3987,7 @@ describe('LicitConverter parser entry and style extraction branch boosts', () =>
 
   it('ParseNestedList handles nodeName that is neither UL nor OL without appending', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const node = document.createElement('div');
     node.textContent = '';
 
@@ -4023,7 +4023,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('render_FrameMakerHTML5_zip_SwitchHelper appends section title with fallback class name', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const node = document.createElement('p');
     node.textContent = 'Centered section';
 
@@ -4040,7 +4040,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('renderSwitchHelper appends ordered list items', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const li = document.createElement('li');
     li.textContent = 'ordered item';
 
@@ -4054,7 +4054,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('renderSwitchHelper and renderHeader use normal when class attribute is missing', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const titleNode = document.createElement('p');
     titleNode.textContent = 'Untyped title';
     titleNode.removeAttribute('class');
@@ -4076,14 +4076,14 @@ describe('LicitConverter targeted branch coverage additions', () => {
   });
 
   it('render_docSwitchHelper routes bullet items and title fallback branch', () => {
-    const bulletSpy = jest
+    const bulletSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'renderDocBulletItems'
       )
       .mockImplementation(() => undefined);
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
 
     converter['render_docSwitchHelper'](
       {
@@ -4121,9 +4121,9 @@ describe('LicitConverter targeted branch coverage additions', () => {
     const nextNode = document.createElement('p');
     nextNode.className = 'para';
 
-    const handleSpy = jest
+    const handleSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => number>,
+        converter,
         'handleNode'
       )
       .mockReturnValue(0);
@@ -4235,7 +4235,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('handleImageChild scales width when image width is greater than zero', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const img = document.createElement('img');
     img.setAttribute('src', 'https://example.com/image.png');
     img.setAttribute('alt', 'Example');
@@ -4247,7 +4247,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
   });
 
   it('addCell delegates to addTableImageCell for image-only cells', () => {
-    const row = { addCell: jest.fn() } as unknown as LicitTableRowElement;
+    const row = { addCell: vi.fn() } as unknown as LicitTableRowElement;
     const td = document.createElement('td');
     const wrapper = document.createElement('div');
     const img = document.createElement('img');
@@ -4255,9 +4255,9 @@ describe('LicitConverter targeted branch coverage additions', () => {
     wrapper.appendChild(img);
     td.appendChild(wrapper);
 
-    const imageSpy = jest
+    const imageSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => unknown>,
+        converter,
         'addTableImageCell'
       )
       .mockReturnValue({
@@ -4418,7 +4418,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('parseHTML handles string input for doctrine mode', () => {
     const html = '<html><body><p>Doctrine text</p></body></html>';
-    expect(converter.parseHTML(html as unknown as Document, true)).toBeDefined();
+    expect(converter.parseHTML(html, true)).toBeDefined();
   });
 
   it('parseFrameMakerHTML5 handles a non-DIV first element', () => {
@@ -4432,7 +4432,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('render_FrameMakerHTML5_zip_SwitchHelper appends subText marks for heading nodes', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const node = document.createElement('p');
     node.textContent = 'Attachment';
 
@@ -4449,7 +4449,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('renderHeader does not force center alignment for Header type', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const node = document.createElement('div');
     node.className = 'header';
     node.textContent = 'Header text';
@@ -4471,9 +4471,9 @@ describe('LicitConverter targeted branch coverage additions', () => {
     ol.appendChild(child1);
     ol.appendChild(child2);
 
-    const handleSpy = jest
+    const handleSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => number>,
+        converter,
         'handleNode'
       )
       .mockReturnValueOnce(1)
@@ -4486,7 +4486,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('renderTypeParagraph applies indent from dataset', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const node = document.createElement('p');
     node.textContent = 'Indented text';
     node.dataset.indent = '2';
@@ -4510,9 +4510,9 @@ describe('LicitConverter targeted branch coverage additions', () => {
     document.body.appendChild(span1);
     document.body.appendChild(span2);
 
-    const parseSpy = jest
+    const parseSpy = vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => void>,
+        converter,
         'parseElement'
       )
       .mockImplementation(() => undefined);
@@ -4525,7 +4525,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('parseUntypedDocVignet appends image, error text, and paragraph children', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const wrapper = document.createElement('div');
     const img = document.createElement('img');
     img.setAttribute('src', 'https://example.com/vig.png');
@@ -4545,20 +4545,20 @@ describe('LicitConverter targeted branch coverage additions', () => {
 
   it('renderEnhancedTable appends a table with notes when rows are present', () => {
     const doc = new LicitDocumentElement();
-    const appendSpy = jest.spyOn(doc, 'appendElement');
+    const appendSpy = vi.spyOn(doc, 'appendElement');
     const table = document.createElement('table');
     table.innerHTML =
       '<tbody><tr><td><p>OVERALL NOTE:</p><p>note body</p></td></tr></tbody>';
 
-    jest
+    vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => unknown>,
+        converter,
         'getLicitTable'
       )
       .mockReturnValue({ rows: [{}] });
-    jest
+    vi
       .spyOn(
-        converter as unknown as Record<string, (...args: unknown[]) => unknown>,
+        converter,
         'extractNote'
       )
       .mockReturnValue([document.createElement('p')]);
@@ -4572,7 +4572,7 @@ describe('LicitConverter targeted branch coverage additions', () => {
   });
 
   it('addCell handles empty cells with no child nodes', () => {
-    const row = { addCell: jest.fn() } as unknown as LicitTableRowElement;
+    const row = { addCell: vi.fn() } as unknown as LicitTableRowElement;
     const td = document.createElement('td');
 
     converter['addCell'](td, row, {

@@ -14,7 +14,10 @@ describe('getImageSizeFromBase64', () => {
       width: 1,
       height: 1,
     } as HTMLImageElement;
-    jest.spyOn(globalThis, 'Image').mockReturnValue(mockImg);
+    function mockImageCtor(): HTMLImageElement {
+      return mockImg;
+    }
+    vi.spyOn(globalThis, 'Image').mockImplementation(mockImageCtor);
     const p = getImageSizeFromBase64(base64, 1);
     mockImg.onload(null!); // Simulate image load
     const result = await p;
@@ -46,7 +49,7 @@ describe('getImageSizeFromBase64', () => {
 
 describe('transform.utils coverage additions', () => {
   beforeEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('base64ToFile converts base64 image to File', () => {
@@ -58,7 +61,7 @@ describe('transform.utils coverage additions', () => {
   });
 
   it('applyImageSizes applies width and height attributes to all img tags', async () => {
-    jest.spyOn(globalThis, 'Image').mockImplementation(() => {
+    function mockImageCtor(): HTMLImageElement {
       let onloadHandler: null | ((value: unknown) => void) = null;
       let onerrorHandler: null | ((value: unknown) => void) = null;
       const image = {
@@ -81,7 +84,8 @@ describe('transform.utils coverage additions', () => {
         },
       };
       return image as unknown as HTMLImageElement;
-    });
+    }
+    vi.spyOn(globalThis, 'Image').mockImplementation(mockImageCtor);
 
     const dom = new DOMParser().parseFromString(
       '<div><img src="data:image/png;base64,QUJD" /><img src="data:image/png;base64,QUJD" /></div>',
@@ -119,7 +123,7 @@ describe('transform.utils coverage additions', () => {
     expect(content).toHaveLength(3);
     expect((content[0].attrs as { id?: string }).id).toBe('chspace');
     expect((content[1].attrs as { styleName?: string }).styleName).toBe('TableTitle');
-    expect(((content[2].content as Array<Record<string, unknown>>)[0].text as string)).toBe(
+    expect(((content[2].content as Array<Record<string, unknown>>)[0].text)).toBe(
       'kept'
     );
   });
@@ -177,7 +181,7 @@ describe('transform.utils coverage additions', () => {
 
   it('updateImageSrc uses fallback and sets src/srcRelative when upload fails', async () => {
     const img = document.createElement('img');
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await transformUtils.updateImageSrc(
       new File(['x'], 'a.png', { type: 'image/png' }),
@@ -192,7 +196,7 @@ describe('transform.utils coverage additions', () => {
   });
 
   it('updateSource warns on image-size extraction failure and still uploads', async () => {
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const img = document.createElement('img');
 
     img.setAttribute('src', 'data:image/png;base64,QUJD');
@@ -218,11 +222,12 @@ describe('transform.utils coverage additions', () => {
       width: 0,
       height: 0,
     };
-    jest
-      .spyOn(globalThis, 'Image')
-      .mockImplementation(() => mockImage as unknown as HTMLImageElement);
+    function mockImageCtor(): HTMLImageElement {
+      return mockImage as unknown as HTMLImageElement;
+    }
+    vi.spyOn(globalThis, 'Image').mockImplementation(mockImageCtor);
 
-    const updateSrc = jest.fn().mockResolvedValue('https://example.com/new.png');
+    const updateSrc = vi.fn().mockResolvedValue('https://example.com/new.png');
     await transformUtils.updateSource(img, 'img-1', updateSrc);
 
     expect(warnSpy).toHaveBeenCalledWith(
@@ -251,9 +256,10 @@ describe('transform.utils coverage additions', () => {
         onloadHandler = handler;
       },
     };
-    jest
-      .spyOn(globalThis, 'Image')
-      .mockImplementation(() => mockImage as unknown as HTMLImageElement);
+    function mockImageCtor(): HTMLImageElement {
+      return mockImage as unknown as HTMLImageElement;
+    }
+    vi.spyOn(globalThis, 'Image').mockImplementation(mockImageCtor);
 
     await transformUtils.applyImageSize(img);
 
@@ -279,7 +285,7 @@ describe('transform.utils coverage additions', () => {
 
   it('updateSource does nothing if img has no src', async () => {
     const img = document.createElement('img');
-    const updateSrc = jest.fn();
+    const updateSrc = vi.fn();
 
     await transformUtils.updateSource(img, 'img-1', updateSrc);
 
@@ -292,7 +298,10 @@ describe('transform.utils coverage additions', () => {
       width: 1,
       height: 1,
     } as HTMLImageElement;
-    jest.spyOn(globalThis, 'Image').mockReturnValue(mockImg);
+    function mockImageCtor(): HTMLImageElement {
+      return mockImg;
+    }
+    vi.spyOn(globalThis, 'Image').mockImplementation(mockImageCtor);
     // Don't call onload, so it times out
 
     await expect(getImageSizeFromBase64(base64, 1)).rejects.toThrow('Image load timeout');

@@ -1,29 +1,36 @@
 /**
  * @license MIT
  * @copyright Copyright 2026 Modus Operandi Inc. All Rights Reserved.
- * @jest-environment jsdom
  */
 
-import type { Message } from './types';
+import type { Message, MessageSink } from './types';
 import JSZip from 'jszip';
 import * as DocumentPreprocessUtils from './preprocess.utils';
-jest.mock('jszip', () => ({
+vi.mock('jszip', () => ({
   __esModule: true,
   default: {
-    loadAsync: jest.fn(),
+    loadAsync: vi.fn(),
   },
 }));
 
-jest.mock('./transform.docx', () => ({
-  DocxTransformer: jest.fn().mockImplementation((_docType: string, logFn) => ({
-    transform: (_arrayBuffer: ArrayBuffer) => {
-      logFn('info', 'Style ID: Heading1)');
-      logFn('info', 'Style ID: Heading1)');
-      logFn('info', 'Style ID: BodyText)');
-      return Promise.resolve();
-    },
-  })),
-}));
+vi.mock('./transform.docx', () => {
+  function MockDocxTransformer(
+    _docType: string,
+    logFn: MessageSink
+  ): { transform: (arrayBuffer: ArrayBuffer) => Promise<void> } {
+    return {
+      transform: (_arrayBuffer: ArrayBuffer) => {
+        logFn('info', 'Style ID: Heading1)');
+        logFn('info', 'Style ID: Heading1)');
+        logFn('info', 'Style ID: BodyText)');
+        return Promise.resolve();
+      },
+    };
+  }
+  return {
+    DocxTransformer: vi.fn().mockImplementation(MockDocxTransformer),
+  };
+});
 
 describe('DocumentPreprocessUtils', () => {
   let service = DocumentPreprocessUtils;
@@ -235,12 +242,12 @@ function stringToArrayBuffer(str: string): ArrayBuffer {
 }
 
 describe('DocumentPreprocessUtils coverage additions', () => {
-  const loadAsync = JSZip.loadAsync as unknown as jest.Mock;
-  let confirmSpy: jest.SpiedFunction<typeof globalThis.confirm>;
+  const loadAsync = JSZip.loadAsync as unknown as Mock;
+  let confirmSpy: MockInstance<typeof globalThis.confirm>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    confirmSpy = jest.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    vi.clearAllMocks();
+    confirmSpy = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
   });
 
   it('should parse and de-duplicate style ids', () => {
@@ -293,7 +300,7 @@ describe('DocumentPreprocessUtils coverage additions', () => {
   it('should reject zip with excessive file count when user declines', async () => {
     confirmSpy.mockReturnValue(false);
     const files = Object.fromEntries(
-      Array.from({ length: 10001 }, (_, i) => [`${i}.htm`, { async: jest.fn() }])
+      Array.from({ length: 10001 }, (_, i) => [`${i}.htm`, { async: vi.fn() }])
     );
     loadAsync.mockResolvedValue({ files });
 
@@ -305,21 +312,21 @@ describe('DocumentPreprocessUtils coverage additions', () => {
   it('should read .htm files and merge unique styles', async () => {
     const files = {
       'a.htm': {
-        async: jest
+        async: vi
           .fn()
           .mockResolvedValue(
             new TextEncoder().encode('<div class="a b"></div>').buffer
           ),
       },
       'b.htm': {
-        async: jest
+        async: vi
           .fn()
           .mockResolvedValue(
             new TextEncoder().encode('<p class="b c"></p>').buffer
           ),
       },
       'readme.txt': {
-        async: jest
+        async: vi
           .fn()
           .mockResolvedValue(new TextEncoder().encode('ignore').buffer),
       },

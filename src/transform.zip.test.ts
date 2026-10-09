@@ -9,21 +9,21 @@ import JSZip from 'jszip';
 
 import { parseFrameMakerHTM5Zip } from './transform.zip';
 import { findBorderedImagePadding } from './image-padding.utils';
-const actualZipUtils = jest.requireActual<typeof import('./zip.utils')>(
+const actualZipUtils = await vi.importActual<typeof import('./zip.utils')>(
   './zip.utils'
 );
 
-jest.mock('./zip.utils');
-jest.mock('./transform.utils');
+vi.mock('./zip.utils');
+vi.mock('./transform.utils');
 
 describe('transform.zip', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('parseFrameMakerHTM5Zip', () => {
     it('should throw error when no file is provided', async () => {
-      const updateSrc = jest.fn();
+      const updateSrc = vi.fn();
       await expect(parseFrameMakerHTM5Zip(null!, updateSrc)).rejects.toThrow(
         'No file provided for parsing.'
       );
@@ -33,11 +33,11 @@ describe('transform.zip', () => {
       const mockFile = new File([''], 'test.zip', { type: 'application/zip' });
       const mockZip = {
         files: {},
-        file: jest.fn().mockReturnValue([]),
+        file: vi.fn().mockReturnValue([]),
       };
-      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
+      (zipUtils.openZip as Mock).mockResolvedValue(mockZip);
 
-      const updateSrc = jest.fn();
+      const updateSrc = vi.fn();
       await expect(parseFrameMakerHTM5Zip(mockFile, updateSrc)).rejects.toThrow(
         'No HTM files found in the ZIP archive.'
       );
@@ -49,15 +49,15 @@ describe('transform.zip', () => {
         files: {
           'test.htm': {
             name: 'test.htm',
-            async: jest.fn().mockResolvedValue(''),
+            async: vi.fn().mockResolvedValue(''),
           },
         },
-        file: jest.fn().mockReturnValue([]),
+        file: vi.fn().mockReturnValue([]),
       };
-      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
-      (transformUtils.updateImageSrc as jest.Mock).mockResolvedValue('');
+      (zipUtils.openZip as Mock).mockResolvedValue(mockZip);
+      (transformUtils.updateImageSrc as Mock).mockResolvedValue('');
 
-      const updateSrc = jest.fn().mockResolvedValue('data:image/png;base64,');
+      const updateSrc = vi.fn().mockResolvedValue('data:image/png;base64,');
       await expect(
         parseFrameMakerHTM5Zip(mockFile, updateSrc)
       ).rejects.toBeInstanceOf(Error);
@@ -69,19 +69,19 @@ describe('transform.zip', () => {
         files: {
           'test.htm': {
             name: 'test.htm',
-            async: jest
+            async: vi
               .fn()
               .mockResolvedValue(
                 '<html lang="en-US"><head><title>Test</title></head><body></body></html>'
               ),
           },
         },
-        file: jest.fn().mockReturnValue([]),
+        file: vi.fn().mockReturnValue([]),
       };
-      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
-      (transformUtils.updateImageSrc as jest.Mock).mockResolvedValue('');
+      (zipUtils.openZip as Mock).mockResolvedValue(mockZip);
+      (transformUtils.updateImageSrc as Mock).mockResolvedValue('');
 
-      const updateSrc = jest.fn().mockResolvedValue('data:image/png;base64,');
+      const updateSrc = vi.fn().mockResolvedValue('data:image/png;base64,');
       await expect(
         parseFrameMakerHTM5Zip(mockFile, updateSrc)
       ).rejects.toBeInstanceOf(Error);
@@ -93,19 +93,19 @@ describe('transform.zip', () => {
         files: {
           'test.htm': {
             name: 'test.htm',
-            async: jest
+            async: vi
               .fn()
               .mockResolvedValue(
                 '<html lang="en-US"><head><title>Test</title></head><body><span>test</span></body></html>'
               ),
           },
         },
-        file: jest.fn().mockReturnValue([]),
+        file: vi.fn().mockReturnValue([]),
       };
-      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
-      (transformUtils.updateImageSrc as jest.Mock).mockResolvedValue('');
+      (zipUtils.openZip as Mock).mockResolvedValue(mockZip);
+      (transformUtils.updateImageSrc as Mock).mockResolvedValue('');
 
-      const updateSrc = jest.fn().mockResolvedValue('data:image/png;base64,');
+      const updateSrc = vi.fn().mockResolvedValue('data:image/png;base64,');
       const result = await parseFrameMakerHTM5Zip(mockFile, updateSrc);
       expect(Array.isArray(result)).toBe(true);
     });
@@ -122,24 +122,24 @@ describe('transform.zip', () => {
         files: {
           'book/chapter/test.htm': {
             name: 'book/chapter/test.htm',
-            async: jest.fn().mockResolvedValue(html),
+            async: vi.fn().mockResolvedValue(html),
           },
           'book/STYLES.CSS': {
             name: 'book/STYLES.CSS',
-            async: jest
+            async: vi
               .fn()
               .mockResolvedValue(
                 'p.CellBody { font-size: 12pt; font-family: "Times New Roman"; font-weight: Bold; } td.Shaded { background-color: #bfebff; }'
               ),
           },
         },
-        file: jest.fn().mockReturnValue([]),
+        file: vi.fn().mockReturnValue([]),
       };
-      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
+      (zipUtils.openZip as Mock).mockResolvedValue(mockZip);
 
       const result = await parseFrameMakerHTM5Zip(
         new File([''], 'styles.zip'),
-        jest.fn().mockResolvedValue('')
+        vi.fn().mockResolvedValue('')
       );
       const table = result[0] as HTMLTableElement;
 
@@ -168,27 +168,27 @@ describe('transform.zip', () => {
         files: {
           'toc.js': {
             name: 'toc.js',
-            async: jest.fn().mockResolvedValue(tocContent),
+            async: vi.fn().mockResolvedValue(tocContent),
           },
           'chapter1.htm': {
             name: 'chapter1.htm',
-            async: jest
+            async: vi
               .fn()
               .mockResolvedValue(
                 '<html lang="en-US"><head><title>Ch1</title></head><body><span>test</span></body></html>'
               ),
           },
         },
-        file: jest
+        file: vi
           .fn()
           .mockReturnValueOnce([
-            { name: 'toc.js', async: jest.fn().mockResolvedValue(tocContent) },
+            { name: 'toc.js', async: vi.fn().mockResolvedValue(tocContent) },
           ])
           .mockReturnValueOnce([]),
       };
-      (zipUtils.openZip as jest.Mock).mockResolvedValue(mockZip);
+      (zipUtils.openZip as Mock).mockResolvedValue(mockZip);
 
-      const updateSrc = jest.fn().mockResolvedValue('');
+      const updateSrc = vi.fn().mockResolvedValue('');
       const result = await parseFrameMakerHTM5Zip(mockFile, updateSrc);
       expect(Array.isArray(result)).toBe(true);
     });
@@ -325,7 +325,7 @@ describe('findBorderedImagePadding', () => {
 
 describe('transform.zip coverage additions', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('uses toc.htm ordering and normalizes _NEWC links', async () => {
@@ -336,27 +336,27 @@ describe('transform.zip coverage additions', () => {
 
     const zip = {
       files: {
-        'toc.htm': { name: 'toc.htm', async: jest.fn().mockResolvedValue(tocHtm) },
+        'toc.htm': { name: 'toc.htm', async: vi.fn().mockResolvedValue(tocHtm) },
         'appendix.htm': {
           name: 'appendix.htm',
-          async: jest
+          async: vi
             .fn()
             .mockResolvedValue('<html lang="en-US"><head><title>A</title></head><body><p id="a">A</p></body></html>'),
         },
         'Chapter 1.htm': {
           name: 'Chapter 1.htm',
-          async: jest
+          async: vi
             .fn()
             .mockResolvedValue('<html lang="en-US"><head><title>C</title></head><body><p id="c">C</p></body></html>'),
         },
       },
-      file: jest
+      file: vi
         .fn()
         .mockReturnValueOnce([])
-        .mockReturnValueOnce([{ async: jest.fn().mockResolvedValue(tocHtm) }]),
+        .mockReturnValueOnce([{ async: vi.fn().mockResolvedValue(tocHtm) }]),
     };
 
-    (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
+    (zipUtils.openZip as Mock).mockResolvedValue(zip);
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'a.zip'),
@@ -375,21 +375,21 @@ describe('transform.zip coverage additions', () => {
       files: {
         'book/toc.js': {
           name: 'book/toc.js',
-          async: jest.fn().mockResolvedValue(tocJs),
+          async: vi.fn().mockResolvedValue(tocJs),
         },
         'book/chapter.htm': {
           name: 'book/chapter.htm',
-          async: jest
+          async: vi
             .fn()
             .mockResolvedValue('<html lang="en-US"><head><title>T</title></head><body><p id="ok">OK</p></body></html>'),
         },
       },
-      file: jest
+      file: vi
         .fn()
-        .mockReturnValueOnce([{ async: jest.fn().mockResolvedValue(tocJs) }]),
+        .mockReturnValueOnce([{ async: vi.fn().mockResolvedValue(tocJs) }]),
     };
 
-    (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
+    (zipUtils.openZip as Mock).mockResolvedValue(zip);
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'b.zip'),
@@ -404,15 +404,15 @@ describe('transform.zip coverage additions', () => {
       files: {
         'doc.htm': {
           name: 'doc.htm',
-          async: jest
+          async: vi
             .fn()
             .mockResolvedValue('<!DOCTYPE HTML PUBLIC "old"><html lang="en-US"><body><p>x</p></body></html>'),
         },
       },
-      file: jest.fn().mockReturnValue([]),
+      file: vi.fn().mockReturnValue([]),
     };
 
-    (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
+    (zipUtils.openZip as Mock).mockResolvedValue(zip);
 
     await expect(
       parseFrameMakerHTM5Zip(new File(['x'], 'c.zip'), () => Promise.resolve('x'))
@@ -424,15 +424,15 @@ describe('transform.zip coverage additions', () => {
       files: {
         'doc.htm': {
           name: 'doc.htm',
-          async: jest
+          async: vi
             .fn()
             .mockResolvedValue('<?xml version="1.0"?><html lang="en-US"><body><p>x</p></body></html>'),
         },
       },
-      file: jest.fn().mockReturnValue([]),
+      file: vi.fn().mockReturnValue([]),
     };
 
-    (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
+    (zipUtils.openZip as Mock).mockResolvedValue(zip);
 
     await expect(
       parseFrameMakerHTM5Zip(new File(['x'], 'd.zip'), () => Promise.resolve('x'))
@@ -444,15 +444,15 @@ describe('transform.zip coverage additions', () => {
       files: {
         'doc.htm': {
           name: 'doc.htm',
-          async: jest
+          async: vi
             .fn()
             .mockResolvedValue('<html><head><title>x</title></head><body><p>x</p></body></html>'),
         },
       },
-      file: jest.fn().mockReturnValue([]),
+      file: vi.fn().mockReturnValue([]),
     };
 
-    (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
+    (zipUtils.openZip as Mock).mockResolvedValue(zip);
 
     await expect(
       parseFrameMakerHTM5Zip(new File(['x'], 'e.zip'), () => Promise.resolve('x'))
@@ -467,14 +467,14 @@ describe('transform.zip coverage additions', () => {
       files: {
         'doc.htm': {
           name: 'doc.htm',
-          async: jest.fn().mockResolvedValue(html),
+          async: vi.fn().mockResolvedValue(html),
         },
       },
-      file: jest.fn().mockReturnValue([]),
+      file: vi.fn().mockReturnValue([]),
     };
 
-    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    (zipUtils.openZip as Mock).mockResolvedValue(zip);
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'f.zip'),
@@ -502,26 +502,26 @@ describe('transform.zip coverage additions', () => {
       files: {
         'doc.htm': {
           name: 'doc.htm',
-          async: jest.fn().mockResolvedValue(html),
+          async: vi.fn().mockResolvedValue(html),
         },
         'images/pic.png': {
           name: 'images/pic.png',
-          async: jest.fn().mockResolvedValue(blob),
+          async: vi.fn().mockResolvedValue(blob),
         },
       },
-      file: jest.fn().mockReturnValue([]),
+      file: vi.fn().mockReturnValue([]),
     };
 
     Object.defineProperty(URL, 'createObjectURL', {
-      value: jest.fn(() => 'blob://x'),
+      value: vi.fn(() => 'blob://x'),
       configurable: true,
     });
     Object.defineProperty(URL, 'revokeObjectURL', {
-      value: jest.fn(),
+      value: vi.fn(),
       configurable: true,
     });
 
-    jest.spyOn(globalThis, 'Image').mockImplementation(() => {
+    function mockImageCtor(): HTMLImageElement {
       let onloadHandler: null | ((value: unknown) => void) = null;
       let onerrorHandler: null | ((value: unknown) => void) = null;
       const image = {
@@ -544,38 +544,41 @@ describe('transform.zip coverage additions', () => {
         },
       };
       return image as unknown as HTMLImageElement;
-    });
+    }
+    vi.spyOn(globalThis, 'Image').mockImplementation(mockImageCtor);
 
-    (transformUtils.updateImageSrc as jest.Mock).mockRejectedValueOnce(
+    (transformUtils.updateImageSrc as Mock).mockRejectedValueOnce(
       new Error('upload failed')
     );
 
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    (zipUtils.openZip as jest.Mock).mockResolvedValue(zip);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    (zipUtils.openZip as Mock).mockResolvedValue(zip);
 
     const result = await parseFrameMakerHTM5Zip(
       new File(['x'], 'g.zip'),
       () => Promise.resolve('x')
     );
+    // Allow queued image onload callbacks (mocked via setTimeout) to run
+    await new Promise((resolve) => setTimeout(resolve, 0));
     const img = result.find((node) => node.tagName === 'IMG') as HTMLImageElement;
 
-    expect((URL.createObjectURL as jest.Mock).mock.calls.length).toBeGreaterThan(0);
-    expect((URL.revokeObjectURL as jest.Mock).mock.calls.length).toBeGreaterThan(0);
+    expect((URL.createObjectURL as Mock).mock.calls.length).toBeGreaterThan(0);
+    expect((URL.revokeObjectURL as Mock).mock.calls.length).toBeGreaterThan(0);
     expect(img.width).toBe(200);
     expect(img.height).toBe(100);
-    expect((transformUtils.updateImageSrc as jest.Mock).mock.calls.length).toBeGreaterThan(0);
+    expect((transformUtils.updateImageSrc as Mock).mock.calls.length).toBeGreaterThan(0);
     expect(errorSpy).toHaveBeenCalledWith('Error processing pic.png:', expect.any(Error));
   });
 });
 
 describe('openZip coverage additions merged', () => {
-  let loadAsyncSpy: jest.SpiedFunction<typeof JSZip.loadAsync>;
-  let confirmSpy: jest.SpiedFunction<typeof globalThis.confirm>;
+  let loadAsyncSpy: MockInstance<typeof JSZip.loadAsync>;
+  let confirmSpy: MockInstance<typeof globalThis.confirm>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    loadAsyncSpy = jest.spyOn(JSZip, 'loadAsync');
-    confirmSpy = jest.spyOn(globalThis, 'confirm').mockReturnValue(true);
+    vi.clearAllMocks();
+    loadAsyncSpy = vi.spyOn(JSZip, 'loadAsync');
+    confirmSpy = vi.spyOn(globalThis, 'confirm').mockReturnValue(true);
   });
 
   it('throws when file size is above 1GB and user declines', async () => {
@@ -595,7 +598,7 @@ describe('openZip coverage additions merged', () => {
     const files = Object.fromEntries(
       Array.from({ length: 10001 }, (_, i) => [`${i}.htm`, {}])
     );
-    loadAsyncSpy.mockResolvedValue({ files } as never);
+    loadAsyncSpy.mockResolvedValue({ files });
 
     await expect(actualZipUtils.openZip(new File(['x'], 'many.zip'))).rejects.toThrow(
       'Total number of files exceeded the limit 10000'
@@ -603,7 +606,7 @@ describe('openZip coverage additions merged', () => {
   });
 
   it('throws when zip has no files', async () => {
-    loadAsyncSpy.mockResolvedValue({ files: {} } as never);
+    loadAsyncSpy.mockResolvedValue({ files: {} });
 
     await expect(actualZipUtils.openZip(new File(['x'], 'empty.zip'))).rejects.toThrow(
       'No files found in the zip'
@@ -612,7 +615,7 @@ describe('openZip coverage additions merged', () => {
 
   it('returns parsed zip for valid file', async () => {
     const zip = { files: { 'one.htm': {} } };
-    loadAsyncSpy.mockResolvedValue(zip as never);
+    loadAsyncSpy.mockResolvedValue(zip);
 
     await expect(actualZipUtils.openZip(new File(['x'], 'ok.zip'))).resolves.toBe(zip);
   });
