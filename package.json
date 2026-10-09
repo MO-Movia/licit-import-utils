@@ -34,9 +34,6 @@
       "optional": true
     }
   },
-  "dependencies": {
-    "uuid": "^14.0.2"
-  },
   "devDependencies": {
     "@modusoperandi/eslint-config": "^3.0.4",
     "@modusoperandi/mammoth": "^1.13.0",

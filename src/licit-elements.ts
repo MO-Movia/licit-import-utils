@@ -4,7 +4,6 @@
  */
 
 import { getCapcoFromNode } from './capco.util';
-import { v4 as uuid } from 'uuid';
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return */
 
 /*
@@ -910,7 +909,7 @@ export class NewLicitParagraphElement extends LicitElement {
       : 'Left';
     this.capco = getCapcoFromNode(node);
     if (undefined === this.selectionId || this.selectionId === '') {
-      this.selectionId = uuid();
+      this.selectionId = crypto.randomUUID();
     }
     this.ConvertMarks(node, infoIconData, renderedContentList);
   }
